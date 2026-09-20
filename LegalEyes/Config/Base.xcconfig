@@ -1,0 +1,10 @@
+// Shared build settings. Secrets live in Secrets.xcconfig (git-ignored).
+#include? "Secrets.xcconfig"
+
+APP_BUNDLE_ID = legal.discover.legaleyes
+APP_URL_SCHEME = legaleyes
+// Defaults so the project builds (e.g. on CI) without real credentials.
+// Real values in Secrets.xcconfig override these.
+DEVELOPMENT_TEAM =
+META_APP_ID = 0
+CLIENT_TOKEN = 0
