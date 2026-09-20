@@ -6,15 +6,19 @@ import MWDATMockDevice
 
 @main
 struct LegalEyesApp: App {
-    @State private var glasses: GlassesController
-    @State private var configureError: String? = nil
+    /// nil when `Wearables.configure()` threw (e.g. placeholder MWDAT plist values).
+    @State private var glasses: GlassesController?
+    @State private var configureError: String?
 
     init() {
         var configureError: String? = nil
+        var configured = false
         do {
             try Wearables.configure()
+            configured = true
         } catch {
-            configureError = "Wearables.configure failed: \(error.localizedDescription)"
+            configureError = "Wearables.configure failed: \(error)"
+            print("[LegalEyes] \(configureError!)")
         }
 
         #if DEBUG
@@ -26,15 +30,28 @@ struct LegalEyesApp: App {
         }
         #endif
 
-        _glasses = State(wrappedValue: GlassesController(wearables: Wearables.shared))
+        _glasses = State(wrappedValue: configured ? GlassesController(wearables: Wearables.shared) : nil)
         _configureError = State(wrappedValue: configureError)
     }
 
     var body: some Scene {
         WindowGroup {
-            ContentView(glasses: glasses, configureError: configureError)
-                // The Meta AI app returns to us on legaleyes:// after registration.
-                .onOpenURL { url in Task { await glasses.handle(url: url) } }
+            if let glasses {
+                ContentView(glasses: glasses, configureError: nil)
+                    // The Meta AI app returns to us on legaleyes:// after registration.
+                    .onOpenURL { url in Task { await glasses.handle(url: url) } }
+            } else {
+                NavigationStack {
+                    List {
+                        Section("Toolkit not configured") {
+                            Text(configureError ?? "Unknown error").foregroundStyle(.red)
+                            Text("Fill LegalEyes/Config/Secrets.xcconfig with real MetaAppID, ClientToken and Team ID, then rebuild.")
+                                .font(.footnote)
+                        }
+                    }
+                    .navigationTitle("LegalEyes")
+                }
+            }
         }
     }
 }
