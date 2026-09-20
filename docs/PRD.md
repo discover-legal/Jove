@@ -1,6 +1,6 @@
 # LegalEyes — Product Requirements Document
 
-Version 0.1 — 2026-09-20. Owner: h@discover.legal. Status: agreed decisions from
+Version 0.2 — 2026-09-20. Owner: h@discover.legal. Status: agreed decisions from
 discovery; every item below was an explicit choice, not an assumption.
 
 ## 1. Summary
@@ -30,12 +30,15 @@ Non-goals (v1)
 - App Store distribution: impossible with DAT; Developer Mode / release
   channel only.
 - Glasses audio: not in DAT 0.9.0; phone microphone only.
-- Cloud AI extraction: reserved for v2 via a backend endpoint.
+- Cloud AI extraction: reserved for v2 via a backend endpoint. v1 uses the
+  on-device Apple Foundation Models LLM.
+- Support for phones without Apple Intelligence hardware.
 - Languages other than English.
 
 ## 3. Users and context
 - Primary user: one lawyer (the owner), Oakley Meta glasses, iPhone 17 Pro,
-  iOS 17+. Later: a few lawyers at one firm.
+  iOS 26+, Apple Intelligence capable (A17 Pro / A18 or later). Older
+  phones are explicitly unsupported. Later: a few lawyers at one firm.
 - Setting: in-person intake in the lawyer's office or a client site.
   Consent to record is the lawyer's responsibility and is not enforced by
   the app, but the app records that the lawyer attested consent.
@@ -46,25 +49,26 @@ Non-goals (v1)
 |---|---|---|
 | D1 | Documentation | PRD and plan live as Markdown in the repo. |
 | D2 | Capture trigger | Automatic detection with manual override (phone button, glasses captouch). |
-| D3 | Intake form | Full form: identity, contact, address, matter type, parties, referral source, urgency, notes, firm-defined custom fields. |
+| D3 | Intake form | Full form: identity, contact, address, matter type, parties, referral source, urgency, notes, firm-defined custom fields. Matter types and per-matter fields come from an editable JSON catalog (`Resources/MatterTypes.json`), overridable by the firm API. |
 | D4 | Audio | Phone-mic recording plus on-device transcription (Apple Speech). |
 | D5 | Backend | New REST API built by the owner; app targets the contract in §8. |
 | D6 | Document processing | On-device crop, perspective correction, and OCR (Apple Vision). |
 | D7 | Local protection | App-level encryption (CryptoKit envelope, key in Secure Enclave) plus Face ID on launch and after 5 minutes in background. |
-| D8 | Google | Sign-in identity plus Drive upload scope. |
+| D8 | Google | Sign-in identity plus Drive upload. Drive mirror ships in v1 behind a settings toggle, default on, with enough to test end to end. |
 | D9 | KYC | Photo of ID front and back via glasses or phone; no parsing in v1. |
 | D10 | Conflicts | Out of scope. App emits typed, structured party records only. |
 | D11 | Device-less | MockDeviceKit toggle in debug builds and a phone-camera fallback in production. |
 | D12 | Sync | Continuous: each artifact uploads as captured; interview finalized at end. |
 | D13 | Party capture | Structured typed fields, entered by lawyer, with suggestions from transcript and OCR that the lawyer confirms. |
 | D14 | Transport | JSON records for all metadata; binaries as multipart parts referenced by SHA-256. |
-| D15 | iOS target | iOS 17+. |
+| D15 | iOS target | iOS 26+, Apple Intelligence capable devices only. The app leverages the on-device neural engine and Foundation Models; older phones are out of scope. |
 | D16 | Users v1 | Owner only. |
-| D17 | Suggestion engine | On-device Apple NaturalLanguage in v1; backend extraction endpoint reserved for v2. |
+| D17 | Suggestion engine | On-device Apple Foundation Models (`FoundationModels` framework, `@Generable` structured output) for party and field extraction and interview summary, with NaturalLanguage tagging as a fast pre-pass. Backend Claude extraction endpoint reserved for v2. |
 | D18 | Retention | Keep 30 days after server acknowledgement, then purge. Ledger manifest kept as receipt. |
 | D19 | Biometrics | Face ID on launch and after 5 minutes in background. |
 | D20 | Language | English only (en-US, en-CA, en-GB selectable). |
 | D21 | Flow | Home screen offers both "Start with form" and "Start recording"; lawyer chooses per interview. |
+| D22 | Hosting | Firm API may run locally (dev stub), on Azure (preferred), or AWS. App is host-agnostic: one base URL in firm config drives the network allow-list. |
 
 ## 5. Functional requirements
 
@@ -116,15 +120,25 @@ Non-goals (v1)
 
 ### 5.5 Intake form and parties
 - FR-18 Form sections: Client identity (name, DOB, phone, email), Address,
-  Matter (type from firm list, description, urgency), Parties, Referral
+  Matter (type from the matter-type catalog, description, urgency, plus the per-matter fields the catalog defines), Parties, Referral
   source, Notes, Custom fields (key/value schema fetched from the firm API,
   cached).
 - FR-19 Party record: `{ id, role: client|adverse|related|witness|other,
   kind: person|organisation, givenNames, familyName, organisationName,
   aliases[], dob?, address?, source: typed|transcript|ocr, confirmed: bool }`.
-- FR-20 Suggestions: NaturalLanguage name and organisation entities from
-  transcript segments and OCR text appear as chips; lawyer accepts (becomes a
-  confirmed party) or dismisses. Dismissals are recorded.
+- FR-20 Suggestions: the on-device Foundation Models LLM is prompted with
+  new transcript segments and OCR text and returns a `@Generable` list of
+  candidate parties (name, kind, likely role, evidence quote) and candidate
+  form values (e.g. address, DOB, matter type). NaturalLanguage entity
+  tagging runs first as a cheap filter. Candidates appear as chips; lawyer
+  accepts (becomes a confirmed party or field value) or dismisses.
+  Dismissals are recorded. Prompts and outputs never leave the device.
+- FR-20a At interview end the same model produces a short structured
+  summary (issues, requested outcome, deadlines mentioned) that the lawyer
+  edits before finalize. Stored as a ledger entry.
+- FR-20b If Apple Intelligence is unavailable (model not downloaded, device
+  unsupported), suggestions degrade to NaturalLanguage tagging and the UI
+  says so. This is a degraded state, not a supported configuration.
 - FR-21 Form autosaves every change; each save is a ledger entry with the
   form's hash.
 
@@ -152,8 +166,12 @@ Non-goals (v1)
   as its ledger entry exists. Exponential backoff, resumable per artifact.
 - FR-30 Server acknowledges each artifact by hash; finalize is accepted only
   when all artifacts are acknowledged.
-- FR-31 Optional Drive mirror: bundle folder per interview written after
-  finalize (feature flag, off by default).
+- FR-31 Drive mirror: after finalize, a folder per interview
+  (`LegalEyes/<yyyy-mm-dd> <client name> <interview id>`) is written to the
+  lawyer's firm Drive containing corrected pages, audio, transcript, form
+  JSON, summary, and ledger manifest. Settings toggle, default on. Upload
+  uses the same resumable queue as the firm API. Drive file ids are recorded
+  as ledger entries.
 
 ### 5.9 Development and demo
 - FR-32 Debug builds expose MockDeviceKit controls and a bundled sample
@@ -170,8 +188,9 @@ Non-goals (v1)
 
 ## 7. Privacy and compliance
 - Meta receives only registration and attestation traffic from the DAT SDK.
-- Apple on-device Speech, Vision, and NaturalLanguage are used with
-  `requiresOnDeviceRecognition = true` where the API offers it.
+- Apple on-device Speech, Vision, NaturalLanguage, and Foundation Models
+  are used; `requiresOnDeviceRecognition = true` where the API offers it.
+  Foundation Models runs entirely on the neural engine.
 - Google receives the sign-in and, if enabled, Drive writes.
 - A release-build network audit (mitmproxy on a test phone) is a release
   gate.
@@ -194,7 +213,23 @@ Record kinds: `interview.created`, `consent.attested`, `form.saved`,
 `page.deleted`, `page.tagged`, `audio.chunk`, `transcript.segment`,
 `transcript.final`, `interview.finalized`.
 
+### 8.1 Hosting options for the firm API
+The app does not care where the API runs. It stores one base URL plus the
+expected TLS certificate pins in firm config, and the network allow-list is
+derived from it. Three supported deployments:
+
+| Option | Shape | Notes |
+|---|---|---|
+| Local (dev) | Stub server in this repo on the Mac or LAN | Used for slices 1–6 and CI. HTTP allowed only in debug builds. |
+| Azure (preferred) | Container Apps or App Service for the API, Blob Storage for artifacts, Azure Database for PostgreSQL for records, Key Vault for secrets | Validate the Google ID token server-side (Google JWKS), or federate Google into Entra ID. Blob SAS URLs can later replace multipart if uploads grow. |
+| AWS | ECS Fargate or Lambda + API Gateway, S3, RDS Postgres, Secrets Manager | Same contract; S3 pre-signed URLs are the equivalent of Blob SAS. |
+
+Requirements on any host: TLS 1.2+, data residency in the firm's
+jurisdiction, chain verification on finalize, idempotent artifact ingest by
+chainHash, and audit logging of every read.
+
 ## 9. Open items awaiting owner input
-- Firm matter-type list and custom field schema (or accept a placeholder).
-- Whether Drive mirror is wanted in v1 or only reserved.
-- Server hosting and where the API will run (affects allow-list).
+- Review and edit the default matter-type catalog in
+  `LegalEyes/Resources/MatterTypes.json`.
+- Choose Azure vs AWS vs local for the first real deployment when Slice 6 starts.
+- Confirm the Drive folder naming and whether audio goes to Drive or only to the firm API.

@@ -7,11 +7,11 @@ on:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+        run: sudo xcode-select -s /Applications/Xcode_26.0.app
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate project
@@ -29,6 +29,6 @@ jobs:
           xcodebuild test \
             -project LegalEyes.xcodeproj \
             -scheme LegalEyes \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
             CODE_SIGNING_ALLOWED=NO \
             | xcpretty && exit ${PIPESTATUS[0]}

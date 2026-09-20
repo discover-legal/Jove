@@ -20,9 +20,14 @@ XcodeGen project, DAT package, Info.plist, `GlassesController`,
 Exit criteria: CI builds and the two ledger tests pass. Not yet met; first
 push will show compile errors to fix.
 
+## Slice 0.5 — Matter-type catalog (done)
+`Resources/MatterTypes.json` with 32 defaults across 10 categories and
+per-matter custom fields; `MatterTypeCatalog` loader with remote override.
+
 ## Slice 1 — Compile, register, stream (est. 2–3 sessions)
 1. Push, read CI errors, correct DAT type names against `search_dat_docs`.
-2. Bump deployment target to iOS 17 (D15). Adopt `@Observable`.
+2. Deployment target iOS 26 (D15). Adopt `@Observable`. Add an
+   Apple-Intelligence availability check on launch.
 3. Add bundled `sample-doc.mp4` (H.265) and `sample-page.jpg` for mock.
 4. XCUITest: launch with `--ui-testing`, start mock test server, pair, power
    on, don, verify stream state reaches `streaming`.
@@ -60,9 +65,14 @@ Exit: 10-minute test interview yields 10 chunks and a segmented transcript.
    TranscriptSegment, LedgerEntry.
 2. Form UI per FR-18 with autosave and hash-per-save ledger entries.
 3. Party editor per FR-19 with role and kind.
-4. `Suggester`: NaturalLanguage `NLTagger` name-type tagging over transcript
-   segments and OCR text; chips UI; accept/dismiss events (FR-20, D17).
-5. Config fetch and cache for matter types and custom fields (FR-18).
+4. `Suggester`: Foundation Models `LanguageModelSession` with `@Generable`
+   `PartyCandidate` and `FieldCandidate` types, fed incrementally with
+   transcript segments and OCR text; NaturalLanguage `NLTagger` pre-filter;
+   chips UI; accept/dismiss events (FR-20, D17). Degraded path when the
+   model is unavailable (FR-20b).
+4a. Interview summary generation at end (FR-20a), editable before finalize.
+5. `MatterTypeCatalog` (done in slice 0.5): bundled JSON plus `/v1/config`
+   override and cache (FR-18).
 6. Consent attestation gate (FR-6). Home screen with both entry points (D21).
 
 Exit: complete an interview end to end offline; export ledger JSON verifies.
@@ -82,7 +92,9 @@ Exit: files on disk are unreadable without the app; Face ID prompts as specified
 3. API client per PRD §8: create, artifact multipart, ack check, finalize,
    config (D14).
 4. Finalize flow and upload progress UI (FR-8, FR-30).
-5. Drive mirror behind feature flag (FR-31).
+5. Drive mirror: folder per interview, resumable, settings toggle default on,
+   Drive file ids into the ledger (FR-31, D8). Test with a personal Drive
+   before the firm Workspace.
 6. Stub server in repo (small Node or Python) implementing §8 for local and
    CI testing until the firm API exists.
 
@@ -100,7 +112,8 @@ Exit: all PRD functional requirements demonstrable; audit shows egress only
 to firm API, Google, Apple, and Meta registration.
 
 ## v2 backlog (not scheduled)
-- Backend Claude extraction endpoint for parties and fields (D17).
+- Backend Claude extraction endpoint for parties and fields when on-device
+  quality is insufficient (D17).
 - KYC parsing (MRZ/OCR) and third-party verification (D9).
 - Glasses audio when DAT exposes it (D4).
 - Multi-lawyer, multi-firm (D16).
@@ -112,4 +125,5 @@ to firm API, Google, Apple, and Meta registration.
 | meta-wearables-dat-ios | 0 | Glasses access |
 | GRDB.swift | 4 | SQLite with encryption support and migrations |
 | GoogleSignIn-iOS | 6 | Google identity and Drive scope |
+| GoogleAPIClientForREST/Drive | 6 | Drive folder and resumable file upload |
 | Nothing for OCR, speech, NLP, crypto | — | Apple frameworks only, per privacy posture |

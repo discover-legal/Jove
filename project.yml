@@ -2,8 +2,8 @@ name: LegalEyes
 options:
   bundleIdPrefix: legal.discover
   deploymentTarget:
-    iOS: "17.0"
-  xcodeVersion: "16.0"
+    iOS: "26.0"
+  xcodeVersion: "26.0"
   createIntermediateGroups: true
 configs:
   Debug: debug
