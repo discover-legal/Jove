@@ -54,7 +54,5 @@ setup and automatic conflict checks. Optional: ID capture for KYC.
    manifest), conflict-check trigger, KYC ID capture.
 
 ## Open questions
-- Firm backend API shape (REST? existing case-management vendor?).
-- Which third-party AI/OCR provider is approved, if any, and its data-residency terms.
-- Whether interview audio needs live transcription or only recording.
-- Retention and deletion policy on the phone after successful sync.
+Resolved 2026-09-20; see the decisions register in `PRD.md` (D1–D21).
+Remaining items are listed in `PRD.md` §9.

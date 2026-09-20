@@ -2,7 +2,7 @@ name: LegalEyes
 options:
   bundleIdPrefix: legal.discover
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "17.0"
   xcodeVersion: "16.0"
   createIntermediateGroups: true
 configs:
