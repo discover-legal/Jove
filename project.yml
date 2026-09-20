@@ -29,10 +29,10 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID)
         DEVELOPMENT_TEAM: $(DEVELOPMENT_TEAM)
         CODE_SIGN_STYLE: Automatic
-        SWIFT_VERSION: "5.9"
+        SWIFT_VERSION: "6.0"
         TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        SWIFT_STRICT_CONCURRENCY: minimal
+        SWIFT_STRICT_CONCURRENCY: complete
     dependencies:
       - package: MetaWearablesDAT
         product: MWDATCore

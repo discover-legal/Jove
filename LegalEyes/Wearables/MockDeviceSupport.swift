@@ -1,36 +1,50 @@
 import Foundation
 #if DEBUG
-import MWDATCore
+import Observation
 import MWDATMockDevice
 
-/// Debug-only helper so the whole flow can be exercised in the Simulator
-/// and on CI without glasses. Production builds compile this out.
+/// Debug-only: drive the SDK without hardware. A mock device must be powered on,
+/// donned, and unfolded before a session will start and stream.
+@Observable
 @MainActor
-final class MockDeviceSupport: ObservableObject {
-    @Published private(set) var enabled = false
-    @Published private(set) var lastError: String? = nil
-    private var device: MockDevice? = nil
+final class MockDeviceSupport {
+    private(set) var enabled: Bool
+    private(set) var device: MockGlasses? = nil
+    private(set) var isPoweredOn = false
+    private(set) var isDonned = false
+    var lastError: String? = nil
 
-    func enable() {
-        MockDeviceKit.shared.enable()
-        enabled = true
+    @ObservationIgnored private let kit: MockDeviceKitInterface
+
+    init(kit: MockDeviceKitInterface = MockDeviceKit.shared) {
+        self.kit = kit
+        self.enabled = kit.isEnabled
+        self.device = kit.pairedDevices.compactMap { $0 as? MockGlasses }.first
     }
 
-    func disable() {
-        MockDeviceKit.shared.disable()
-        device = nil
-        enabled = false
+    func setEnabled(_ on: Bool) {
+        if on { kit.enable() } else { kit.disable(); device = nil; isPoweredOn = false; isDonned = false }
+        enabled = on
     }
 
     func pairGlasses() {
-        do {
-            device = try MockDeviceKit.shared.pairGlasses(model: .rayBanMeta)
-        } catch {
-            lastError = "pairGlasses: \(error)"
-        }
+        do { device = try kit.pairGlasses(model: .rayBanMeta) }
+        catch { lastError = "pairGlasses: \(error.localizedDescription)" }
     }
 
-    /// Point the mock camera at a bundled H.265 clip (add `sample-doc.mp4` to the target).
+    /// Power on, don, unfold in one step: the state a real user is in when they start an interview.
+    func wear() {
+        guard let device else { lastError = "Pair first"; return }
+        device.powerOn(); isPoweredOn = true
+        device.don(); isDonned = true
+        device.unfold()
+    }
+
+    func takeOff() {
+        device?.doff(); isDonned = false
+    }
+
+    /// Point the mock camera at a bundled H.265 clip (`sample-doc.mp4` in Resources).
     func useSampleVideo() {
         guard let url = Bundle.main.url(forResource: "sample-doc", withExtension: "mp4") else {
             lastError = "sample-doc.mp4 not in bundle"; return
