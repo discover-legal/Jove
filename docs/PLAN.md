@@ -36,8 +36,30 @@ per-matter custom fields; `MatterTypeCatalog` loader with remote override.
 5. On the iPhone 17 Pro: Developer Mode registration with Oakley Meta,
    camera permission, live preview, manual capture. Record firmware and Meta
    AI versions in README.
+6. **Hardware checklist** (results go in `docs/hardware-findings.md`):
+   - [ ] Capture 5 photos via the app. Then open the Meta AI app gallery and
+         the glasses' own media: do any of the 5 appear? Wait 10 minutes on
+         Wi-Fi and check again. Check iOS Photos too.
+   - [ ] With the phone on a monitored Wi-Fi network (mitmproxy or router
+         logs), capture 5 photos and note every host contacted by the app
+         and by the Meta AI app during the session.
+   - [ ] Legibility: photograph a dense single-spaced letter, a two-column
+         contract page, a driver's licence, and a passport data page at
+         30 cm, 45 cm, and 60 cm while seated. Run Vision OCR on each and
+         record character accuracy against the known text.
+   - [ ] Glasses battery: stream continuously and log battery every 10
+         minutes until 20 percent. Repeat with capture-on-demand only.
+   - [ ] Backgrounding: while streaming, take a phone call, lock the phone,
+         and switch apps. Record what state the session and stream land in
+         and whether they recover on return.
+   - [ ] Bluetooth audio: check whether the glasses appear as an audio
+         input route on the phone and record 60 seconds through it. Compare
+         quality against the phone mic.
+   - [ ] Captouch: tap and tap-and-hold while streaming; record what the
+         SDK reports.
 
-Exit: manual page capture from real glasses lands in the ledger.
+Exit: manual page capture from real glasses lands in the ledger, and every
+checklist item has a recorded answer.
 
 ## Slice 2 — Document detection and processing (est. 3 sessions)
 1. `DocumentDetector`: `VNDetectDocumentSegmentationRequest` on each frame,
@@ -75,13 +97,24 @@ Exit: 10-minute test interview yields 10 chunks and a segmented transcript.
 4a. Interview summary generation at end (FR-20a), editable before finalize.
 5. `MatterTypeCatalog` (done in slice 0.5): bundled JSON plus `/v1/config`
    override and cache (FR-18).
-6. Consent attestation gate (FR-6). Home screen with both entry points (D21).
+6. Consent attestation gate with "who is present" list (FR-6). Home screen
+   with both entry points (D21).
+7. Interview templates per matter type: the catalog's `fields` drive extra
+   questions; add a `questions` array to the JSON schema.
+8. "Medical document" flag on a page that routes capture to the phone
+   camera and excludes it from glasses data (compliance C2).
+9. Manual "client speaking" toggle to tag transcript segments, since
+   on-device Speech has no diarization.
 
 Exit: complete an interview end to end offline; export ledger JSON verifies.
 
-## Slice 5 — Security (est. 2 sessions)
+## Slice 5 — Security (est. 3 sessions)
 1. Secure Enclave key, per-interview AES-GCM keys, encrypted file store and
-   encrypted SQLite (FR-25).
+   encrypted SQLite (FR-25). Exclude the data directory from iCloud backup.
+1a. Sign every ledger entry with a Secure Enclave P-256 key; publish the
+   public key at interview creation so the server can verify authorship,
+   not just ordering (FR-22a).
+1b. App Attest on the firm API to bind uploads to a genuine app instance.
 2. Face ID gate on launch and after 5 minutes background (FR-26, D19).
 3. Network allow-list wrapper around `URLSession` (FR-27).
 4. Retention job: purge 30 days after ack (FR-28, D18).
@@ -93,7 +126,9 @@ Exit: files on disk are unreadable without the app; Face ID prompts as specified
 2. `UploadQueue`: persistent, per-artifact, resumable, backoff (FR-29).
 3. API client per PRD §8: create, artifact multipart, ack check, finalize,
    config (D14).
-4. Finalize flow and upload progress UI (FR-8, FR-30).
+4. Finalize flow and upload progress UI (FR-8, FR-30). Server-issued
+   timestamps recorded against each acknowledged entry.
+4a. Amendments after finalize as new ledger entries (FR-22b).
 5. Drive mirror: folder per interview, resumable, settings toggle default on,
    Drive file ids into the ledger (FR-31, D8). Test with a personal Drive
    before the firm Workspace.
@@ -102,18 +137,31 @@ Exit: files on disk are unreadable without the app; Face ID prompts as specified
 
 Exit: airplane-mode interview uploads fully once connectivity returns.
 
-## Slice 7 — Hardening and release gate (est. 2 sessions)
+## Slice 7 — Hardening and release gate (est. 3 sessions)
+0. Compliance deliverables: privacy policy, `SECURITY.md` with a reporting
+   address, service-provider register complete, retention-rule citation
+   (compliance C3, C4, C9).
 1. XCUITest coverage of the full mock interview on CI (FR-33).
 2. Release-build network audit with mitmproxy; document results (§7).
 3. Ledger PDF receipt (FR-24).
 4. Battery and latency measurements against §6.
 5. Wearables Developer Center release channel build; install on the phone
-   without Developer Mode.
+   without Developer Mode. Confirm Apple-side distribution path for
+   colleagues (internal TestFlight vs ad hoc) before inviting anyone.
+6. Monthly smoke test reminder so camera permission is not revoked for
+   inactivity (compliance C10).
 
 Exit: all PRD functional requirements demonstrable; audit shows egress only
 to firm API, Google, Apple, and Meta registration.
 
 ## v2 backlog (not scheduled)
+- Glasses battery indicator and capture-on-demand mode if hardware tests
+  show streaming drains the glasses too fast.
+- Glasses microphone via Bluetooth headset route if the Slice 1 test shows
+  acceptable quality.
+- Client-facing consent screen and e-signature.
+- Post-intake actions: engagement letter, retainer, conflict result
+  feedback loop.
 - Backend Claude extraction endpoint for parties and fields when on-device
   quality is insufficient (D17).
 - KYC parsing (MRZ/OCR) and third-party verification (D9).

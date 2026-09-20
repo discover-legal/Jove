@@ -86,8 +86,11 @@ Non-goals (v1)
 - FR-5 Home screen lists interviews (draft, in progress, uploading, acknowledged,
   purged) with two entry points: "Start with form" and "Start recording".
 - FR-6 Starting an interview creates an interview record with a UUID, start
-  time, operator, and a consent attestation toggle the lawyer must set before
-  recording begins.
+  time, operator, a consent attestation the lawyer must set before recording
+  begins, and a list of who is present (client, interpreter, family, other).
+- FR-6a A page can be flagged "medical" before capture; medical pages are
+  captured with the phone camera only and excluded from glasses-derived data
+  (see `COMPLIANCE.md` C2).
 - FR-7 During an interview the screen shows: live glasses preview (or phone
   camera), detection status, recording timer, running transcript, captured
   pages strip, and the form.
@@ -146,8 +149,15 @@ Non-goals (v1)
 - FR-22 Every artifact and event gets a ledger entry: SHA-256 of payload,
   hash chain over previous entry, timestamp, operator, device id (glasses
   serial or phone identifierForVendor), app version.
+- FR-22a Each ledger entry is signed with a Secure Enclave key whose public
+  half is registered with the server at interview creation, so the server
+  verifies authorship as well as ordering.
+- FR-22b Records are never edited. Corrections after finalize are appended
+  as amendment entries referencing the original.
+- FR-22c The server records its own receipt time per entry; device time is
+  informational only.
 - FR-23 Ledger is verifiable on device and by the server; server rejects any
-  bundle whose chain fails.
+  bundle whose chain or signatures fail.
 - FR-24 Manifest export: the ledger for an interview can be exported as JSON
   and as a human-readable PDF receipt.
 
@@ -187,13 +197,18 @@ Non-goals (v1)
 - Accessibility: Dynamic Type, VoiceOver labels on all controls.
 
 ## 7. Privacy and compliance
+See `COMPLIANCE.md` for the Meta policy review and the decisions it needs.
 - Meta receives only registration and attestation traffic from the DAT SDK.
 - Apple on-device Speech, Vision, NaturalLanguage, and Foundation Models
   are used; `requiresOnDeviceRecognition = true` where the API offers it.
   Foundation Models runs entirely on the neural engine.
 - Google receives the sign-in and, if enabled, Drive writes.
 - A release-build network audit (mitmproxy on a test phone) is a release
-  gate.
+  gate, and a Slice 1 hardware test establishes whether SDK captures reach
+  the Meta AI app or Meta servers.
+- The app's data directory is excluded from iCloud backup.
+- No client content is ever sent to Meta for support, review, or bug
+  reports; Integration Review uses synthetic documents only.
 - Consent attestation recorded per interview; the app does not enforce
   jurisdiction rules.
 
