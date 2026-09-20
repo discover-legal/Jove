@@ -43,13 +43,16 @@ final class CustodyLedger {
         return entry
     }
 
-    /// Recomputes every chain hash. Returns the first broken sequence number, or nil if intact.
+    /// Recomputes every chain hash. Returns the position (0-based) of the first
+    /// entry that breaks the chain, or nil if the ledger is intact.
     func verify() -> Int? {
         var prev = "genesis"
-        for e in entries {
+        for (position, e) in entries.enumerated() {
             let input = "\(prev)|\(e.sha256)|\(e.sequence)|\(iso.string(from: e.timestamp))"
             let expected = Self.hex(SHA256.hash(data: Data(input.utf8)))
-            if e.previousHash != prev || e.chainHash != expected { return e.sequence }
+            if e.sequence != position || e.previousHash != prev || e.chainHash != expected {
+                return position
+            }
             prev = e.chainHash
         }
         return nil
