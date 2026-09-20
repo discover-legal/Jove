@@ -17,15 +17,17 @@ Decisions referenced as D-numbers come from the PRD decisions register.
 XcodeGen project, DAT package, Info.plist, `GlassesController`,
 `CustodyLedger`, mock support, CI workflow, discovery doc.
 
-Exit criteria: CI builds and the two ledger tests pass. Not yet met; first
-push will show compile errors to fix.
+Exit criteria met 2026-09-20: CI builds on macOS 26 / Xcode 26.6 against an
+iPhone 17 Pro simulator and all tests pass. DAT API names were verified
+against Meta's CameraAccess sample (async registration, `ListenerTokenBag`,
+`Camera`/`Stream`, six-state `DeviceSessionState`, `MockGlasses`).
 
 ## Slice 0.5 — Matter-type catalog (done)
 `Resources/MatterTypes.json` with 32 defaults across 10 categories and
 per-matter custom fields; `MatterTypeCatalog` loader with remote override.
 
 ## Slice 1 — Compile, register, stream (est. 2–3 sessions)
-1. Push, read CI errors, correct DAT type names against `search_dat_docs`.
+1. ~~Push, read CI errors, correct DAT type names.~~ Done in slice 0.
 2. Deployment target iOS 26 (D15). Adopt `@Observable`. Add an
    Apple-Intelligence availability check on launch.
 3. Add bundled `sample-doc.mp4` (H.265) and `sample-page.jpg` for mock.
