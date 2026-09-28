@@ -1,179 +1,159 @@
-# LegalEyes — Delivery Plan
+# LegalEyes — plan
 
-Companion to `PRD.md`. Each slice ends with a CI-green build, a demo path
-that works in the Simulator with MockDeviceKit, and a commit on `main`.
-Decisions referenced as D-numbers come from the PRD decisions register.
+## What it is
 
-## Working agreements
-- Linux workstation authors code; GitHub Actions macOS runner is the
-  compiler until a Mac is at hand. Expect the first slice to need a
-  compile-fix pass.
-- The `wearables` MCP server (`search_dat_docs`) is consulted before touching
-  any DAT API.
-- No new dependency without a line in this file explaining why.
-- Every artifact type gets a ledger entry the moment it exists (FR-22).
+A web service with one job: given **scanned pages** and a **data schema**, tag
+every piece of text with the schema field it gives a value for, and emit the
+result as a JSONL graph for later machines. It is fully automatic, with no human
+review. It **tags and does not choose**: if three chunks all look like
+`client.person.full_name`, all three are tagged with their scores, and picking
+one is the consumer's job.
 
-## Slice 0 — Scaffold (done, commit b26fdc6)
-XcodeGen project, DAT package, Info.plist, `GlassesController`,
-`CustodyLedger`, mock support, CI workflow, discovery doc.
+The previous iOS / Meta-glasses app is tagged `ios-final` in git.
 
-Exit criteria met 2026-09-20: CI builds on macOS 26 / Xcode 26.6 against an
-iPhone 17 Pro simulator and all tests pass. DAT API names were verified
-against Meta's CameraAccess sample (async registration, `ListenerTokenBag`,
-`Camera`/`Stream`, six-state `DeviceSessionState`, `MockGlasses`).
+## Inputs
 
-## Slice 0.5 — Matter-type catalog (done)
-`Resources/MatterTypes.json` with 32 defaults across 10 categories and
-per-matter custom fields; `MatterTypeCatalog` loader with remote override.
+- **Pages**: PDFs and/or images (PNG, JPEG, TIFF). Each PDF page is rasterised
+  at 200 dpi, and each image frame is one page.
+- **Schema**: a JSON Schema subset.
+  - The root is `type: object`. Objects nest via `properties`; `type: array`
+    takes `items` that are an object or a scalar; scalars are `string`,
+    `number`, `integer` or `boolean`. Arrays of arrays are not supported.
+  - Model hints: `description`, `examples`, and `x-not-for` (ours: what belongs
+    in a sibling field instead). On an array, the array's hints describe its items.
+  - Paths are dotted, with `[]` for array items: `parties[].contact.address.city`.
 
-## Slice 1 — Compile, register, stream (est. 2–3 sessions)
-1. ~~Push, read CI errors, correct DAT type names.~~ Done in slice 0.
-2. Deployment target iOS 26 (D15). Adopt `@Observable`. Add an
-   Apple-Intelligence availability check on launch.
-3. Add bundled `sample-doc.mp4` (H.265) and `sample-page.jpg` for mock.
-4. XCUITest: launch with `--ui-testing`, start mock test server, pair, power
-   on, don, verify stream state reaches `streaming`.
-5. On the iPhone 17 Pro: Developer Mode registration with Oakley Meta,
-   camera permission, live preview, manual capture. Record firmware and Meta
-   AI versions in README.
-6. **Hardware checklist** (results go in `docs/hardware-findings.md`):
-   - [ ] Capture 5 photos via the app. Then open the Meta AI app gallery and
-         the glasses' own media: do any of the 5 appear? Wait 10 minutes on
-         Wi-Fi and check again. Check iOS Photos too.
-   - [ ] With the phone on a monitored Wi-Fi network (mitmproxy or router
-         logs), capture 5 photos and note every host contacted by the app
-         and by the Meta AI app during the session.
-   - [ ] Legibility: photograph a dense single-spaced letter, a two-column
-         contract page, a driver's licence, and a passport data page at
-         30 cm, 45 cm, and 60 cm while seated. Run Vision OCR on each and
-         record character accuracy against the known text.
-   - [ ] Glasses battery: stream continuously and log battery every 10
-         minutes until 20 percent. Repeat with capture-on-demand only.
-   - [ ] Backgrounding: while streaming, take a phone call, lock the phone,
-         and switch apps. Record what state the session and stream land in
-         and whether they recover on return.
-   - [ ] Bluetooth audio: check whether the glasses appear as an audio
-         input route on the phone and record 60 seconds through it. Compare
-         quality against the phone mic.
-   - [ ] Captouch: tap and tap-and-hold while streaming; record what the
-         SDK reports.
+`schemas/legal_intake.schema.json` is the reference schema: Ontario law-firm
+intake with 15 top-level branches, 121 leaf fields and 26 internal nodes, at
+most 15 children per node and 4 levels deep. Its examples use Ontario courts,
+tribunals, IDs and file-number formats. SIN and OHIP numbers are deliberately
+absent.
 
-Exit: manual page capture from real glasses lands in the ledger, and every
-checklist item has a recorded answer.
+## Pipeline
 
-## Slice 2 — Document detection and processing (est. 3 sessions)
-1. `DocumentDetector`: `VNDetectDocumentSegmentationRequest` on each frame,
-   stability gate (FR-9), perceptual hash de-duplication, cooldown.
-2. Auto-capture wiring to `capturePhoto` with haptic and flash (FR-10).
-3. Manual override button; investigate captouch exposure in DAT (FR-11).
-4. `PageProcessor`: crop to quad, `CIPerspectiveCorrection`, JPEG, then
-   `VNRecognizeTextRequest` on device (FR-12). Three ledger entries per page.
-5. Phone camera fallback using `AVCaptureSession` behind the same
-   `FrameSource` protocol as the glasses stream (FR-14, D11).
-6. Page strip UI with tag (ID front/back) and delete (FR-13).
+```
+ingest ──► ocr ──► layout ──► tag ──► emit (JSONL graph)
+```
 
-Exit: hold three different pages up to the glasses; three corrected pages
-with OCR text appear, no duplicates, no false captures on the desk.
+1. **ingest**: hash every input file, rasterise each page to PNG, and hash every
+   page. Page ids are `p0001`… in upload order.
+2. **ocr** (pluggable): RapidOCR, run locally on CPU. It uses PaddleOCR's English
+   recognition model, because the bundled Chinese+English model drops spaces
+   between English words. That model downloads once from Hugging Face, is checked
+   against a pinned SHA-256, and is cached in `~/.cache/legaleyes`.
+3. **layout**: page → **block** → **line** → **word**.
+   - OCR fragments on the same baseline are merged back into one line, but
+     columns far apart stay separate lines.
+   - A vertical gap of more than 0.8 line heights starts a new block.
+   - Word boxes are estimated from character offsets.
+4. **tag**: see below.
+5. **emit**: see the output section below.
 
-## Slice 3 — Audio and transcript (est. 2 sessions)
-1. `AudioRecorder`: `AVAudioEngine` to AAC, 60-second chunk rotation, chunk
-   ledger entries (FR-15). Background audio mode.
-2. `Transcriber`: `SFSpeechRecognizer` with on-device recognition, per-segment
-   timestamps, language picker en-US/en-CA/en-GB (FR-16, FR-17, D20).
-3. Running transcript view.
+## Tagging: the schema tree meets the document tree
 
-Exit: 10-minute test interview yields 10 chunks and a segmented transcript.
+This follows TypeSafe's
+[hierarchical classification cookbook](https://docs.typesafe.ai/cookbooks/hierarchical_classification).
+Every internal schema node becomes a **Choice** over its direct children plus
+`none`. Each option carries its description, examples, `not_for` and child
+names. A path's score is the geometric mean of its edge probabilities.
+**Separation** is the best path's score divided by the runner-up's.
 
-## Slice 4 — Intake form and parties (est. 3 sessions)
-1. Data model (GRDB): Interview, FormSnapshot, Party, Page, AudioChunk,
-   TranscriptSegment, LedgerEntry.
-2. Form UI per FR-18 with autosave and hash-per-save ledger entries.
-3. Party editor per FR-19 with role and kind.
-4. `Suggester`: Foundation Models `LanguageModelSession` with `@Generable`
-   `PartyCandidate` and `FieldCandidate` types, fed incrementally with
-   transcript segments and OCR text; NaturalLanguage `NLTagger` pre-filter;
-   chips UI; accept/dismiss events (FR-20, D17). Degraded path when the
-   model is unavailable (FR-20b).
-4a. Interview summary generation at end (FR-20a), editable before finalize.
-5. `MatterTypeCatalog` (done in slice 0.5): bundled JSON plus `/v1/config`
-   override and cache (FR-18).
-6. Consent attestation gate with "who is present" list (FR-6). Home screen
-   with both entry points (D21).
-7. Interview templates per matter type: the catalog's `fields` drive extra
-   questions; add a `questions` array to the JSON schema.
-8. "Medical document" flag on a page that routes capture to the phone
-   camera and excludes it from glasses data (compliance C2).
-9. Manual "client speaking" toggle to tag transcript segments, since
-   on-device Speech has no diarization.
+- **Fan-out.** Every block is asked every internal node's Choice in one go:
+  26 questions for the reference schema. Because every edge gets a probability,
+  every path can be scored exactly, and no beam pruning is needed.
+- **Clear answer** (separation ≥ 1.5, set by `LE_SEPARATION`): the chunk is
+  tagged with its top 3 paths. `none` is a real answer (`#none` for the root,
+  `client#none` inside `client`).
+- **Ambiguous answer**: the chunk probably holds several things. It is split
+  into its parts (block → lines → words; single-child levels are skipped).
+  The parts are re-asked **from the schema node where the two best paths
+  diverged**, not from the root.
+  - Example: "Name: Jane Doe  DOB: 1980" is clearly `client`, but torn between
+    name and DOB. Its words are re-asked from `client`, and each word sees its
+    line as context.
+- **Array items**: when a chunk is split inside an array item node, that chunk
+  becomes the item's **instance anchor**, and all its parts inherit it. So a
+  block tagged `parties[]` whose lines split into name and role is one party.
+- **Words**: runs of consecutive words with the same tag and anchor are merged
+  into **spans**. "Jane" and "Doe" become the span "Jane Doe".
 
-Exit: complete an interview end to end offline; export ledger JSON verifies.
+### Choosers (pluggable)
 
-## Slice 5 — Security (est. 3 sessions)
-1. Secure Enclave key, per-interview AES-GCM keys, encrypted file store and
-   encrypted SQLite (FR-25). Exclude the data directory from iCloud backup.
-1a. Sign every ledger entry with a Secure Enclave P-256 key; publish the
-   public key at interview creation so the server can verify authorship,
-   not just ordering (FR-22a).
-1b. App Attest on the firm API to bind uploads to a genuine app instance.
-2. Face ID gate on launch and after 5 minutes background (FR-26, D19).
-3. Network allow-list wrapper around `URLSession` (FR-27).
-4. Retention job: purge 30 days after ack (FR-28, D18).
+The tagger needs one operation: given a question, return a probability for
+each option. Chooser output is never trusted: unknown options and bad numbers
+are dropped, the rest are renormalised, and unanswered questions produce warnings.
 
-Exit: files on disk are unreadable without the app; Face ID prompts as specified.
+| Chooser | What it is |
+|---|---|
+| `llm` (default, local) | Any OpenAI-compatible endpoint; the default is Ollama `qwen2.5:7b`. The model *states* the probabilities, so its separations are rougher. |
+| `jev` | TypeSafe Jev via `typesafe-sdk`. It returns real option probabilities. Requests are packed to Jev's limits (32k tokens for state + longest question, 64k for everything, budgeted in bytes). A reference-schema block costs about 33 KB, so roughly 5 blocks fit per request, at about $0.0004 per block. **Page text leaves the machine.** |
+| `fake` | Rule-driven, for tests. |
 
-## Slice 6 — Identity and sync (est. 3 sessions)
-1. Google Sign-In with Drive scope; tokens in Keychain (FR-1, FR-2, D8).
-2. `UploadQueue`: persistent, per-artifact, resumable, backoff (FR-29).
-3. API client per PRD §8: create, artifact multipart, ack check, finalize,
-   config (D14).
-4. Finalize flow and upload progress UI (FR-8, FR-30). Server-issued
-   timestamps recorded against each acknowledged entry.
-4a. Amendments after finalize as new ledger entries (FR-22b).
-5. Drive mirror: folder per interview, resumable, settings toggle default on,
-   Drive file ids into the ledger (FR-31, D8). Test with a personal Drive
-   before the firm Workspace.
-6. Stub server in repo (small Node or Python) implementing §8 for local and
-   CI testing until the firm API exists.
+## Output: JSONL graph
 
-Exit: airplane-mode interview uploads fully once connectivity returns.
+One JSON object per line. The order is `job`, `page`, `node`, `edge`, `warning`.
 
-## Slice 7 — Hardening and release gate (est. 3 sessions)
-0. Compliance deliverables: privacy policy, `SECURITY.md` with a reporting
-   address, service-provider register complete, retention-rule citation
-   (compliance C3, C4, C9).
-1. XCUITest coverage of the full mock interview on CI (FR-33).
-2. Release-build network audit with mitmproxy; document results (§7).
-3. Ledger PDF receipt (FR-24).
-4. Battery and latency measurements against §6.
-5. Wearables Developer Center release channel build; install on the phone
-   without Developer Mode. Confirm Apple-side distribution path for
-   colleagues (internal TestFlight vs ad hoc) before inviting anyone.
-6. Monthly smoke test reminder so camera permission is not revoked for
-   inactivity (compliance C10).
+```jsonc
+{"type":"job","job_id":"…","created_at":"…","schema_sha256":"…",
+ "inputs":[{"filename":"a.pdf","sha256":"…","pages":["p0001"]}],
+ "ocr":{"provider":"rapidocr","rec_model":"en_PP-OCRv3_rec_infer.onnx"},
+ "chooser":{"provider":"jev","model":"jev-latest"},"separation_threshold":1.5}
+{"type":"page","page_id":"p0001","source":"a.pdf","source_page":1,"sha256":"…",
+ "width":1700,"height":2200,"tags":["client.person.full_name"],"placed":true}
+{"type":"node","id":"p0001/b02/l01/s02","kind":"span","page_id":"p0001",
+ "bbox":[82,147,241,175],"text":"Jane Doe"}          // kind: block | line | span
+{"type":"edge","rel":"contains","from":"p0001/b02/l01","to":"p0001/b02/l01/s02"}
+{"type":"edge","rel":"within","from":"p0001/b02","to":"client.person",
+ "score":0.94,"separation":1.04,"asked_from":""}     // split: parts were re-asked from here
+{"type":"edge","rel":"tagged","from":"p0001/b02/l01/s02","to":"client.person.full_name",
+ "rank":1,"score":0.91,"separation":6.2,"asked_from":"client.person","instances":{}}
+{"type":"edge","rel":"tagged","from":"p0001/b01","to":"#none","rank":1, …}
+{"type":"warning","code":"unanswered","detail":"p0001/b03 at client"}
+```
 
-Exit: all PRD functional requirements demonstrable; audit shows egress only
-to firm API, Google, Apple, and Meta registration.
+- The node ids encode the containment path (`page/block/line/span`).
+- A node that was **split** gets a `within` edge. A node that was **not split** gets
+  `tagged` edges, ranks 1 to 3; spans get rank 1 only.
+- `instances` maps array item paths (e.g. `parties[]`) to the anchoring node
+  id. Tags that share an anchor belong to the same item.
+- The hashes let a downstream system prove which exact bytes a tag came from.
 
-## v2 backlog (not scheduled)
-- Glasses battery indicator and capture-on-demand mode if hardware tests
-  show streaming drains the glasses too fast.
-- Glasses microphone via Bluetooth headset route if the Slice 1 test shows
-  acceptable quality.
-- Client-facing consent screen and e-signature.
-- Post-intake actions: engagement letter, retainer, conflict result
-  feedback loop.
-- Backend Claude extraction endpoint for parties and fields when on-device
-  quality is insufficient (D17).
-- KYC parsing (MRZ/OCR) and third-party verification (D9).
-- Glasses audio when DAT exposes it (D4).
-- Multi-lawyer, multi-firm (D16).
-- French and other languages (D20).
+## Web surface
 
-## Dependencies to add and why
-| Package | Slice | Why |
-|---|---|---|
-| meta-wearables-dat-ios | 0 | Glasses access |
-| GRDB.swift | 4 | SQLite with encryption support and migrations |
-| GoogleSignIn-iOS | 6 | Google identity and Drive scope |
-| GoogleAPIClientForREST/Drive | 6 | Drive folder and resumable file upload |
-| Nothing for OCR, speech, NLP, crypto | — | Apple frameworks only, per privacy posture |
+- `GET /`: a bare upload form (files + schema)
+- `POST /jobs`: multipart `files` + `schema` (JSON text); the schema is checked on
+  upload. Returns `{job_id}`.
+- `GET /jobs/{id}`: `{status: queued|running|done|failed, error}`
+- `GET /jobs/{id}/result.jsonl`: the output
+
+Jobs run in the background, in-process, and store their state under `data/jobs/<id>/`.
+
+## Configuration (env)
+
+| var | default |
+|---|---|
+| `LE_OCR` | `rapidocr` |
+| `LE_OCR_REC_MODEL` | *(verified English model, auto-downloaded)* |
+| `LE_CHOOSER` | `llm` |
+| `LE_LLM_BASE_URL` / `LE_LLM_MODEL` / `LE_LLM_API_KEY` | `http://localhost:11434/v1` / `qwen2.5:7b` / — |
+| `LE_JEV_MODEL` | `jev-latest` |
+| `TYPESAFE_API_KEY` | *(required for `jev`)* |
+| `LE_SEPARATION` | `1.5` |
+| `LE_DATA_DIR` | `./data` |
+
+## Status and next steps
+
+- **Done:** the whole pipeline, tested with fake choosers (28 tests); real OCR
+  and layout checked on a rendered form; Jev request packing and response
+  parsing checked against the SDK's own types.
+- **Next: run it for real.** Put real Ontario scans through Jev (needs a key)
+  and through Ollama. Build a small labelled evaluation set and a scorer
+  (per-field precision and recall on spans, and whether list items group
+  correctly). Tune `LE_SEPARATION` and the block gap on that set.
+- **Cost:** block fan-out asks all 26 nodes every time. Asking level by level
+  would cut tokens but add round trips. Only worth it if cost matters.
+- **Layout:** tables and multi-column pages; word boxes from OCR character
+  boxes rather than estimates.
+- **Documents:** splitting page runs into documents and classifying them
+  (DocJev-style) would add a document level above blocks.
+- **Later:** a job queue, auth, and a review UI (explicitly out of scope for now).
