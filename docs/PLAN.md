@@ -23,7 +23,16 @@ The previous iOS / Meta-glasses app is tagged `ios-final` in git.
     in a sibling field instead). On an array, the array's hints describe its items.
   - Paths are dotted, with `[]` for array items: `parties[].contact.address.city`.
 
-`schemas/legal_intake.schema.json` is the reference schema: Ontario law-firm
+The root may also carry `x-instructions`: standing context for every question,
+such as whose point of view the data takes. A job may add its own `context`
+(e.g. "Our firm: Harper & Leung LLP. Our client: Jane Doe."). Both go into Jev's
+shared state, and every question is told to read them.
+
+Schemas:
+- `schemas/flyer.schema.json`: ads, event flyers, posters and posted notices
+  (publisher, partners, headline, event and performers, offer, description,
+  rules, legal references, calls to action, contact). 34 fields.
+- `schemas/legal_intake.schema.json` is the reference schema: Ontario law-firm
 intake with 15 top-level branches, 121 leaf fields and 26 internal nodes, at
 most 15 children per node and 4 levels deep. Its examples use Ontario courts,
 tribunals, IDs and file-number formats. SIN and OHIP numbers are deliberately
@@ -38,6 +47,10 @@ ingest ──► ocr ──► layout ──► tag ──► emit (JSONL graph)
 1. **ingest**: hash every input file, rasterise each page to PNG, and hash every
    page. Page ids are `p0001`… in upload order.
 2. **ocr** (pluggable). This was chosen by measurement on `eval/ocr`; see its README.
+   - **Born-digital PDF pages** use their own text layer: exact text, no GPU,
+     about 0.1 s per page. Lines are boxed from pdfium's character boxes,
+     scaled to the rendered image. Pages with under 40 characters of text
+     layer go to OCR.
    - **Engine:** RapidOCR 3 with the PP-OCRv6 small models, run locally on CPU.
      RapidOCR fetches the models once and checks them against pinned SHA-256s.
    - **Space recovery:** the recogniser sometimes drops spaces
@@ -100,8 +113,13 @@ names. A path's score is the geometric mean of its edge probabilities.
   - a multi-line block tagged with a single field (the MATTER block also names
     parties and amounts);
   - a line with two or more "Label:" pairs ("Full name: …  Date of birth: …").
+- **Parts see their parent's text** as context: "22 King Street West" only
+  reads as a party's address next to "Ms. Jane Doe".
 - **Array items**: when a chunk is split inside an array item node, that chunk
-  becomes the item's **instance anchor**, and all its parts inherit it. So a
+  becomes the item's **instance anchor**, and all its parts inherit it. A
+  forced split of a clear chunk anchors its whole path. Words anchor to their
+  line, the smallest unit that can hold a list item, so "Smith & Co. LLP" split
+  into words is still one party. So a
   block tagged `parties[]` whose lines split into name and role is one party.
 - **Words**: runs of consecutive words with the same tag and anchor are merged
   into **spans**. "Jane" and "Doe" become the span "Jane Doe".
@@ -174,6 +192,13 @@ Jobs run in the background, in-process, and store their state under `data/jobs/<
 
 ## Status and next steps
 
+- **Tagging with Jev (2026-09-29):** it works as designed on the synthetic
+  intake form and demand letter, a real Divisional Court endorsement, a gig
+  flyer and a transit-stop notice (the last two with the flyer schema). Tagging
+  takes about 2 s per page, and the time is dominated by OCR. Known weak spots:
+  - reasoning prose gets shredded into single words with low-confidence tags;
+  - roles printed apart from names ("Applicant") become their own list item;
+  - logo clusters on signs are jumbled by layout.
 - **Done:** the whole pipeline (39 tests). The OCR was benchmarked and tuned on
   `eval/ocr` (31 pages): word F1 went from 0.83 to 0.975 and number recall from
   0.74 to 0.92. Scans, faxes and photos are essentially perfect. The real

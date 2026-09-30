@@ -46,7 +46,9 @@ def make_ocr() -> Ocr:
             model=os.environ.get("LE_VLM_MODEL", LLM_MODEL),
             threshold=float(os.environ.get("LE_OCR_REREAD_BELOW", "0.98")),
         )
-    return ocr
+    from .ocr import TextLayerFirst
+
+    return TextLayerFirst(ocr)
 
 
 def make_chooser() -> Chooser:

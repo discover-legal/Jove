@@ -62,7 +62,7 @@ class _Task:
 
 class Tagger:
     def __init__(self, schema: SchemaNode, chooser: Chooser, separation: float = 1.5,
-                 keep: int = 3, workers: int = 8):
+                 keep: int = 3, workers: int = 8, context: str | None = None):
         self.schema = schema
         self.chooser = chooser
         self.separation = separation
@@ -70,10 +70,14 @@ class Tagger:
         self.workers = workers
         self._by_path = {n.path: n for n in schema.internal_nodes()}
         self.warnings: list[dict] = []
+        # Standing context (schema x-instructions + per-job context) goes in Jev's
+        # shared state, and every question is told to read it.
+        self.context = {k: v for k, v in (("schema_instructions", schema.instructions),
+                                          ("job_context", context)) if v}
 
     def tag(self, pages: dict[str, list[DocNode]]) -> list[Decision]:
         """``pages`` maps page id to that page's blocks, in reading order."""
-        state = {pid: _state(pid, blocks) for pid, blocks in pages.items()}
+        state = {pid: _state(pid, blocks, self.context) for pid, blocks in pages.items()}
         tasks = [_Task(b, self.schema, None, {}) for blocks in pages.values() for b in blocks]
         decisions: list[Decision] = []
         while tasks:
@@ -124,20 +128,26 @@ class Tagger:
                 instances = dict(t.instances)
                 for n in top[0].nodes:
                     if n.is_array_item:
-                        instances.setdefault(n.path, t.doc.id)
+                        instances.setdefault(n.path, _anchor(t.doc))
                 decisions.append(Decision(t.doc, t.start.path, top, separation, False, instances=instances))
                 continue
 
             # A forced split re-asks from where this chunk was asked: the values
             # it holds may sit in different branches (a MATTER block names parties).
-            within = t.start if forced and separation >= self.separation else _divergence(top[0], top[1])
+            clear = forced and separation >= self.separation
+            within = t.start if clear else _divergence(top[0], top[1])
             instances = dict(t.instances)
-            for n in top[0].nodes[: top[0].nodes.index(within) + 1]:
+            # Anchor the array items this chunk sits in. For a forced split of a clear
+            # chunk that's its whole path: the block *is* one party even though its
+            # lines are re-asked from where it was asked.
+            anchored = top[0].nodes if clear else top[0].nodes[: top[0].nodes.index(within) + 1]
+            for n in anchored:
                 if n.is_array_item:
-                    instances.setdefault(n.path, t.doc.id)
+                    instances.setdefault(n.path, _anchor(t.doc))
             decisions.append(Decision(t.doc, t.start.path, top, separation, True, within.path, instances))
-            # Words are meaningless alone: give them their line. Lines have the page state.
-            context = t.doc.text if parts[0].kind == "word" else t.context
+            # Parts see the chunk they came from: "22 King Street West" is only a
+            # party's address next to "Ms. Jane Doe".
+            context = t.doc.text
             follow_up.extend(_Task(p, within, context, instances) for p in parts)
         return decisions, follow_up
 
@@ -152,6 +162,7 @@ class Tagger:
         labels[NONE] = f"{node.path}#none"
 
         where = f"the {node.path} section of the schema" if node.path else "the schema"
+        pov = " Interpret it as state.context describes." if self.context else ""
         context = f" It appears inside: {t.context!r}." if t.context else ""
         return Question(
             instructions=(
@@ -159,6 +170,7 @@ class Tagger:
                 + f"Text {t.doc.id} ({t.doc.kind}) reads: {t.doc.text!r}.{context}"
                 + f" Which option of {where} does this text give a value for?"
                 + " If it covers several options, choose the one most of it belongs to."
+                + pov
             ),
             options=options,
             subject=t.doc.text,
@@ -182,6 +194,12 @@ def _holds_several(doc: DocNode, top: Path) -> bool:
     if doc.kind == "block" and len(doc.children) > 1:
         return True
     return doc.kind != "word" and len(_LABEL.findall(doc.text)) >= 2
+
+
+def _anchor(doc: DocNode) -> str:
+    """The smallest chunk that can hold a list item is a line: "Smith & Co. LLP"
+    split into words is still one party, so words anchor to their line."""
+    return doc.id.rsplit("/", 1)[0] if doc.kind == "word" else doc.id
 
 
 def _criterion(n: SchemaNode) -> dict:
@@ -226,5 +244,6 @@ def _parts(doc: DocNode) -> list[DocNode]:
     return parts
 
 
-def _state(page_id: str, blocks: list[DocNode]) -> dict:
-    return {"page": page_id, "blocks": [{"id": b.id, "text": b.text} for b in blocks]}
+def _state(page_id: str, blocks: list[DocNode], context: dict | None = None) -> dict:
+    state = {"page": page_id, "blocks": [{"id": b.id, "text": b.text} for b in blocks]}
+    return {"context": context, **state} if context else state

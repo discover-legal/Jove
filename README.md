@@ -28,7 +28,8 @@ The first run downloads the PP-OCRv6 models (hash-checked by RapidOCR).
 The OCR benchmark lives in [eval/ocr](eval/ocr/README.md).
 
 ```sh
-curl -F files=@scan.pdf -F schema=@schemas/legal_intake.schema.json localhost:8000/jobs
+curl -F files=@scan.pdf -F schema=@schemas/legal_intake.schema.json \
+     -F "context=Our firm: Harper & Leung LLP. Our client: Jane Doe." localhost:8000/jobs
 curl localhost:8000/jobs/<id>
 curl localhost:8000/jobs/<id>/result.jsonl
 ```

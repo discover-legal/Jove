@@ -3,7 +3,8 @@
 Paths are dotted with ``[]`` for array items (``parties[].name``). Besides
 ``description``, nodes may carry ``examples`` (JSON Schema) and ``x-not-for``
 (ours): what belongs in a sibling instead. Both help a model tell similar
-siblings apart.
+siblings apart. The root may carry ``x-instructions``: standing context for
+every question, such as whose point of view the data takes.
 """
 
 import re
@@ -27,6 +28,7 @@ class SchemaNode:
     not_for: str | None = None
     is_array_item: bool = False
     children: list["SchemaNode"] = field(default_factory=list)
+    instructions: str | None = None  # root only: ``x-instructions``, e.g. whose point of view
 
     @property
     def leaf(self) -> bool:
@@ -59,7 +61,10 @@ class Field:
 def build_tree(schema: dict) -> SchemaNode:
     if not isinstance(schema, dict) or schema.get("type") != "object":
         raise SchemaError("schema root must be {\"type\": \"object\", ...}")
-    return _node(schema, "", "", schema)
+    root = _node(schema, "", "", schema)
+    if isinstance(schema.get("x-instructions"), str):
+        root.instructions = schema["x-instructions"]
+    return root
 
 
 def flatten(schema: dict) -> dict[str, Field]:

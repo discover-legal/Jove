@@ -21,6 +21,8 @@ textarea{width:100%;height:14rem;font:13px monospace}</style>
 <form method="post" action="/jobs" enctype="multipart/form-data">
 <p><label>Scanned pages (PDF / images)<br><input type="file" name="files" multiple required></label></p>
 <p><label>Schema (JSON Schema)<br><textarea name="schema" required></textarea></label></p>
+<p><label>Context (optional: whose file this is, e.g. "Our firm: Harper &amp; Leung LLP. Our client: Jane Doe.")<br>
+<input name="context" style="width:100%"></label></p>
 <p><button>Submit</button></p>
 </form>"""
 
@@ -47,11 +49,11 @@ def create_app(
     def set_status(d: Path, status: str, error: str | None = None) -> None:
         (d / "status.json").write_text(json.dumps({"status": status, "error": error}))
 
-    def work(job_id: str, d: Path, files: list[tuple[str, bytes]], schema: dict) -> None:
+    def work(job_id: str, d: Path, files: list[tuple[str, bytes]], schema: dict, context: str | None) -> None:
         set_status(d, "running")
         try:
             pipeline.run(job_id, d, files, schema, make_ocr(), make_chooser(),
-                         separation if separation is not None else config.separation())
+                         separation if separation is not None else config.separation(), context=context)
         except Exception as e:
             set_status(d, "failed", f"{type(e).__name__}: {e}")
         else:
@@ -62,7 +64,8 @@ def create_app(
         return FORM
 
     @app.post("/jobs")
-    async def submit(background: BackgroundTasks, files: list[UploadFile], schema: str = Form(...)):
+    async def submit(background: BackgroundTasks, files: list[UploadFile], schema: str = Form(...),
+                     context: str | None = Form(None)):
         try:
             parsed = json.loads(schema)
             build_tree(parsed)
@@ -74,7 +77,7 @@ def create_app(
         d.mkdir(parents=True)
         (d / "schema.json").write_text(json.dumps(parsed, indent=2))
         set_status(d, "queued")
-        background.add_task(work, job_id, d, uploads, parsed)
+        background.add_task(work, job_id, d, uploads, parsed, (context or "").strip() or None)
         return {"job_id": job_id}
 
     @app.get("/jobs/{job_id}")

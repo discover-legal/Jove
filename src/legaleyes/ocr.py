@@ -91,6 +91,29 @@ def _kind(ch: str) -> str:
     return "a" if ch.isalpha() else "9" if ch.isdigit() else "."
 
 
+class TextLayerFirst:
+    """Use a born-digital PDF page's own text when it has one; OCR everything else.
+
+    Exact text, no GPU, and it keeps typography OCR can't see ("B E T W E E N :").
+    Pages with fewer than ``min_chars`` characters (scans with a stray text
+    layer, image-only pages) still go to OCR.
+    """
+
+    def __init__(self, inner: "Ocr", min_chars: int = 40):
+        self.inner = inner
+        self.min_chars = min_chars
+
+    def describe(self) -> dict:
+        return {**self.inner.describe(), "text_layer": "used when present"}
+
+    def read(self, page: Page) -> list[OcrLine]:
+        layer = page.text_layer or []
+        if sum(len(t) for t, _ in layer) >= self.min_chars:
+            return [OcrLine(t, box, 1.0, ((box[0], box[1]), (box[2], box[1]), (box[2], box[3]), (box[0], box[3])))
+                    for t, box in layer]
+        return self.inner.read(page)
+
+
 class FakeOcr:
     """Returns canned lines per page id; for tests. An empty string leaves a
     blank line, which the layout reads as a block break."""

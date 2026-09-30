@@ -4,6 +4,7 @@
   "x-jurisdiction": "Ontario, Canada",
   "title": "Legal intake",
   "description": "Everything an Ontario law firm captures when opening a matter, taken from scanned client documents: intake forms, letters, contracts, court and tribunal forms, IDs, pay stubs, invoices, ROEs and notices. Keywords: description says what a field holds, examples show typical text, x-not-for says what belongs elsewhere so that sibling fields can be told apart.",
+  "x-instructions": "Record everything from the point of view of the law firm opening this file. 'client' is the firm's own client: the person or organization the intake is about. If state.context.job_context names the firm or the client, use it. Documents from other lawyers (demand letters, pleadings, notices) are usually written for the other side: in them, 'we act for X' or 'our client X' means X is an opposing party (parties[]), and the person the letter is addressed to is often the firm's client. A letterhead or signature block belongs to whoever wrote the document: a law firm writing for the other side is opposing counsel (a party with role 'opposing counsel', or represented_by of the party it acts for).",
   "type": "object",
   "properties": {
     "client": {

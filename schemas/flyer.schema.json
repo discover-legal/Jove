@@ -1,0 +1,391 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legaleyes.local/schemas/flyer.schema.json",
+  "title": "Ads, flyers and public notices",
+  "description": "What an advertisement, event flyer, poster, handout or posted public notice says: who is behind it, what it promotes or asks, when and where, how to get in touch, and any rules or legal references.",
+  "x-instructions": "The page is an advertisement, flyer, poster or public notice. The publisher is whoever puts it out (often named as 'X presents' or shown as a logo); partners are other organizations named alongside. Logo text still names an organization. Decorative slogans are headlines, not descriptions.",
+  "type": "object",
+  "properties": {
+    "publisher": {
+      "type": "object",
+      "description": "The organization that puts out the ad or notice.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Organization name, including one shown as logo text.",
+          "examples": [
+            "Flamingo Noir Record Bar",
+            "Crime Stoppers of York Region",
+            "York Region Transit"
+          ]
+        },
+        "tagline": {
+          "type": "string",
+          "description": "The organization's own slogan or descriptor.",
+          "examples": [
+            "Barristers and Solicitors",
+            "Serving York Region since 1987"
+          ]
+        }
+      },
+      "x-not-for": "Organizations merely named as partners (partners[])."
+    },
+    "partners": {
+      "type": "array",
+      "description": "Other organizations named as partners, sponsors or co-presenters.",
+      "items": {
+        "type": "object",
+        "description": "One partner.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Partner organization.",
+            "examples": [
+              "the Regional Municipality of York",
+              "York Region Transit"
+            ]
+          },
+          "relationship": {
+            "type": "string",
+            "description": "How it relates to the publisher.",
+            "examples": [
+              "working in partnership with",
+              "sponsored by"
+            ]
+          }
+        }
+      }
+    },
+    "headline": {
+      "type": "string",
+      "description": "The main title or slogan, usually the largest text.",
+      "examples": [
+        "SUNSET SESSIONS",
+        "A SAFER COMMUNITY IS YOU",
+        "SAY IT HERE"
+      ],
+      "x-not-for": "Longer descriptive text (description[])."
+    },
+    "subheadline": {
+      "type": "string",
+      "description": "Secondary title under the headline.",
+      "examples": [
+        "ft. Al Connelly",
+        "Every Friday in September"
+      ]
+    },
+    "event": {
+      "type": "object",
+      "description": "An event being promoted.",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Event name.",
+          "examples": [
+            "Sunset Sessions",
+            "Spring Open House"
+          ]
+        },
+        "performers": {
+          "type": "array",
+          "description": "People or acts featured.",
+          "items": {
+            "type": "object",
+            "description": "One performer.",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Performer's name.",
+                "examples": [
+                  "Al Connelly",
+                  "Craig Riley"
+                ]
+              },
+              "role": {
+                "type": "string",
+                "description": "Instrument or role.",
+                "examples": [
+                  "guitar",
+                  "percussion",
+                  "bass",
+                  "keynote speaker"
+                ]
+              }
+            }
+          }
+        },
+        "date": {
+          "type": "string",
+          "description": "Event date(s).",
+          "examples": [
+            "Friday, October 3, 2025",
+            "Sept 12-14"
+          ]
+        },
+        "time": {
+          "type": "string",
+          "description": "Start/end time.",
+          "examples": [
+            "8 p.m.",
+            "doors 7:30, show 8:00"
+          ]
+        },
+        "venue_name": {
+          "type": "string",
+          "description": "Where it happens.",
+          "examples": [
+            "Flamingo Noir Record Bar"
+          ]
+        },
+        "venue_address": {
+          "type": "object",
+          "description": "A street address as printed.",
+          "properties": {
+            "street": {
+              "type": "string",
+              "description": "Number and street, unit.",
+              "examples": [
+                "474 Botsford St",
+                "1200 Bay St, Suite 300"
+              ]
+            },
+            "city": {
+              "type": "string",
+              "description": "City or town.",
+              "examples": [
+                "Newmarket",
+                "Toronto"
+              ]
+            },
+            "province": {
+              "type": "string",
+              "description": "Province or state.",
+              "examples": [
+                "ON",
+                "Ontario"
+              ]
+            },
+            "postal_code": {
+              "type": "string",
+              "description": "Postal or ZIP code.",
+              "examples": [
+                "L3Y 1S5",
+                "M5R 2A5"
+              ]
+            }
+          }
+        },
+        "price": {
+          "type": "string",
+          "description": "Ticket price or admission.",
+          "examples": [
+            "$25 advance",
+            "Free admission"
+          ]
+        }
+      },
+      "x-not-for": "The publisher's own mailing address (contact.address)."
+    },
+    "offer": {
+      "type": "object",
+      "description": "What the ad offers or promises: a discount, reward, prize or service.",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "The offer.",
+          "examples": [
+            "cash reward for information",
+            "20% off all vinyl"
+          ]
+        },
+        "conditions": {
+          "type": "string",
+          "description": "Who qualifies, restrictions.",
+          "examples": [
+            "information which leads to an arrest",
+            "while supplies last"
+          ]
+        },
+        "assurances": {
+          "type": "string",
+          "description": "Promises to the reader.",
+          "examples": [
+            "Callers never have to identify themselves or testify"
+          ]
+        }
+      }
+    },
+    "description": {
+      "type": "array",
+      "description": "Descriptive or background text: biographies, explanations, body copy. One item per sentence or line.",
+      "items": {
+        "type": "string",
+        "description": "A piece of body text.",
+        "examples": [
+          "A founding member of Newmarket's own Glass Tiger..."
+        ]
+      },
+      "x-not-for": "Headlines, rules, offers, contact details."
+    },
+    "rules": {
+      "type": "array",
+      "description": "Prohibitions, instructions or conditions of use that the notice imposes.",
+      "items": {
+        "type": "object",
+        "description": "One rule.",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "The rule as written.",
+            "examples": [
+              "No Littering",
+              "No Smoking / No Vaping",
+              "Keep dogs on leash"
+            ]
+          },
+          "clarification": {
+            "type": "string",
+            "description": "Fine print qualifying the rule.",
+            "examples": [
+              "(including e-cigarettes)"
+            ]
+          }
+        }
+      }
+    },
+    "legal_references": {
+      "type": "array",
+      "description": "Bylaws, statutes, permits or licences cited.",
+      "items": {
+        "type": "string",
+        "description": "One reference.",
+        "examples": [
+          "Bylaw #2017-7 (as amended)",
+          "Liquor licence #123456"
+        ]
+      }
+    },
+    "calls_to_action": {
+      "type": "array",
+      "description": "What the reader is urged to do.",
+      "items": {
+        "type": "string",
+        "description": "One call to action.",
+        "examples": [
+          "Say it here",
+          "Call 911 for emergencies",
+          "Thank you for supporting original music!",
+          "Book now"
+        ]
+      }
+    },
+    "contact": {
+      "type": "object",
+      "description": "How to reach the publisher or act on the ad.",
+      "properties": {
+        "phones": {
+          "type": "array",
+          "description": "Phone numbers.",
+          "items": {
+            "type": "object",
+            "description": "One phone number.",
+            "properties": {
+              "number": {
+                "type": "string",
+                "description": "The number as printed.",
+                "examples": [
+                  "1-800-222-8477",
+                  "1-866-MOVE-YRT (668-3978)",
+                  "911"
+                ]
+              },
+              "purpose": {
+                "type": "string",
+                "description": "What it is for.",
+                "examples": [
+                  "tip line",
+                  "information",
+                  "emergencies"
+                ]
+              }
+            }
+          }
+        },
+        "websites": {
+          "type": "array",
+          "description": "Web addresses.",
+          "items": {
+            "type": "string",
+            "description": "One URL.",
+            "examples": [
+              "www.1800222tips.com",
+              "yrt.ca"
+            ]
+          }
+        },
+        "emails": {
+          "type": "array",
+          "description": "Email addresses.",
+          "items": {
+            "type": "string",
+            "description": "One email.",
+            "examples": [
+              "info@example.com"
+            ]
+          }
+        },
+        "social_handles": {
+          "type": "array",
+          "description": "Social media handles or pages.",
+          "items": {
+            "type": "string",
+            "description": "One handle.",
+            "examples": [
+              "@glasstiger_al",
+              "@FLAMINGONOIRRECORDBAR"
+            ]
+          }
+        },
+        "address": {
+          "type": "object",
+          "description": "A street address as printed.",
+          "properties": {
+            "street": {
+              "type": "string",
+              "description": "Number and street, unit.",
+              "examples": [
+                "474 Botsford St",
+                "1200 Bay St, Suite 300"
+              ]
+            },
+            "city": {
+              "type": "string",
+              "description": "City or town.",
+              "examples": [
+                "Newmarket",
+                "Toronto"
+              ]
+            },
+            "province": {
+              "type": "string",
+              "description": "Province or state.",
+              "examples": [
+                "ON",
+                "Ontario"
+              ]
+            },
+            "postal_code": {
+              "type": "string",
+              "description": "Postal or ZIP code.",
+              "examples": [
+                "L3Y 1S5",
+                "M5R 2A5"
+              ]
+            }
+          }
+        }
+      },
+      "x-not-for": "The event venue (event.venue_address)."
+    }
+  }
+}

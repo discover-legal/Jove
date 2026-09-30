@@ -138,3 +138,41 @@ def test_multiline_block_with_a_field_tag_is_split():
     ds, _, _ = tag(["Jane Doe", "Jane Doe"])
     assert ds["p0001/b01"].split and ds["p0001/b01"].within == ""
     assert all(d.top[0].target == "client.name" for d in ds.values() if d.doc.kind == "line")
+
+
+def test_context_reaches_state_and_questions():
+    tree = build_tree({"type": "object", "x-instructions": "Point of view: the firm.",
+                       "properties": {"name": {"type": "string"}}})
+    chooser = FakeChooser(lambda q: None)
+    Tagger(tree, chooser, context="Our client: Jane Doe").tag({"p0001": build("p0001", lines("x"))})
+    state, questions = chooser.calls[0]
+    assert state["context"] == {"schema_instructions": "Point of view: the firm.", "job_context": "Our client: Jane Doe"}
+    assert all("state.context" in q.instructions for q in questions.values())
+
+
+def test_no_context_no_context_key():
+    chooser = FakeChooser(lambda q: None)
+    Tagger(SCHEMA, chooser).tag({"p0001": build("p0001", lines("x"))})
+    assert "context" not in chooser.calls[0][0]
+
+
+def test_forced_split_keeps_the_array_item_and_passes_block_context():
+    # A clear parties[] block of two lines is force-split and re-asked from the root;
+    # its lines stay one party and see the block's text.
+    rules = RULES | {("", "Acme\nlandlord"): "parties[]", ("parties[]", "Acme\nlandlord"): "parties[].name"}
+    ds, chooser, _ = tag(["Acme", "landlord"], rules=rules)
+    block = ds["p0001/b01"]
+    assert block.split and block.within == ""
+    inst = {d.doc.text: d.instances.get("parties[]") for d in ds.values() if d.doc.kind == "line"}
+    assert inst == {"Acme": "p0001/b01", "landlord": "p0001/b01"}
+    line_qs = [q for _, qs in chooser.calls[1:] for q in qs.values()]
+    assert all("Acme\\nlandlord" in q.instructions for q in line_qs)
+
+
+def test_words_anchor_list_items_to_their_line():
+    rules = RULES | {("", "Acme Holdings"): {"parties[]": 0.5, "client": 0.45},
+                     ("", "Acme"): "parties[]", ("", "Holdings"): "parties[]",
+                     ("parties[]", "Holdings"): "parties[].name"}
+    ds, _, _ = tag(["Acme Holdings"], rules=rules)
+    anchors = {d.instances.get("parties[]") for d in ds.values() if d.doc.kind == "word"}
+    assert anchors == {"p0001/b01/l01"}

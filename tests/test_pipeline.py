@@ -115,3 +115,33 @@ def test_numpy_boxes_serialize(tmp_path):
 
     out = run("j", tmp_path, [("b.png", png())], SCHEMA, NumpyOcr(), chooser())
     assert all(json.loads(line) for line in out.read_text().splitlines())
+
+
+
+def test_pdf_text_layer_is_used(tmp_path):
+    from pathlib import Path
+
+    from legaleyes.ingest import ingest
+    from legaleyes.ocr import TextLayerFirst
+
+    class Never:
+        def describe(self):
+            return {}
+
+        def read(self, page):
+            raise AssertionError("OCR must not run on a born-digital page")
+
+    pdf_bytes = (Path(__file__).parent.parent / "eval/ocr/real/divct_endorsement.pdf").read_bytes()
+    _, pages = ingest([("e.pdf", pdf_bytes)], tmp_path)
+    lines = TextLayerFirst(Never()).read(pages[0])
+    texts = [l.text for l in lines]
+    assert "Court File No. 490/00" in texts and "SUPERIOR COURT OF JUSTICE" in texts
+    box = lines[texts.index("Court File No. 490/00")].bbox
+    assert 0 < box[0] < box[2] <= pages[0].width and 0 < box[1] < box[3] < pages[0].height / 4  # top right of page
+
+
+def test_images_have_no_text_layer(tmp_path):
+    from legaleyes.ingest import ingest
+
+    _, pages = ingest([("b.png", png())], tmp_path)
+    assert pages[0].text_layer is None

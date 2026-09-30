@@ -6,8 +6,8 @@ from legaleyes.ocr import OcrLine
 from legaleyes.ingest import Page
 
 
-def _page(path: Path) -> Page:
-    return Page("p0001", path.name, 1, path, "", 0, 0)
+def _page(path) -> Page:
+    return path if isinstance(path, Page) else Page("p0001", path.name, 1, path, "", 0, 0)
 
 
 def rapidocr_baseline():
@@ -34,6 +34,8 @@ def _rapid3(det_ver, det_type, det_lang, rec_ver, rec_type, rec_lang, **extra):
         })
 
         def read(path):
+
+            path = getattr(path, "image_path", path)  # bench may pass a Page
             r = engine(str(path))
             out = []
             for box, text, score in zip(r.boxes if r.boxes is not None else [], r.txts or [], r.scores or []):
@@ -105,6 +107,8 @@ def pre(base: str, *steps):
         inner = ENGINES[base]()
 
         def read(path):
+
+            path = getattr(path, "image_path", path)  # bench may pass a Page
             img = cv2.imread(str(path))
             for step in steps:
                 img = step(img)
@@ -190,6 +194,8 @@ def vlm_reread(base: str, model="qwen3.5:9b-16k", threshold=0.95, min_similarity
         inner = ENGINES[base]()
 
         def read(path):
+
+            path = getattr(path, "image_path", path)  # bench may pass a Page
             lines = inner(path)
             img = cv2.imread(str(path))
             for i, line in enumerate(lines):
@@ -253,6 +259,7 @@ def vlm_page(model, prompt="Text Recognition:"):
     """Whole-page transcription; lines get stacked fake boxes so layout keeps their order."""
     def factory():
         def read(path):
+            path = getattr(path, "image_path", path)  # bench may pass a Page
             lines = [l.strip() for l in vlm_page_text(path, model, prompt).splitlines() if l.strip()]
             return [OcrLine(t, (0, i * 30, 10 * len(t), i * 30 + 20), 1.0) for i, t in enumerate(lines)]
         return read

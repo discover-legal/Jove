@@ -6,8 +6,10 @@ uv run python eval/ocr/bench.py app           # score what the app ships
 uv run python eval/ocr/bench.py v6_small      # or any engine in engines.py
 ```
 
-- `real/`: real captures with hand transcriptions (currently one bar flyer
-  photographed under low light: blurred, italic, angled).
+- `real/`: real captures. A bar flyer photographed under low light (blurred,
+  italic, angled), a torn transit-stop notice at night (reflective, multi-panel),
+  both hand-transcribed; and a born-digital Divisional Court endorsement PDF,
+  whose truth is its own text layer.
 - `synthetic/`: six Ontario legal pages (intake form, demand letter, court
   endorsement, pay stub, N4 notice, italic notes). Each is rendered as `scan`,
   `photo` (perspective, tilt, blur, uneven light, JPEG), `fax`, `hard`
@@ -66,3 +68,12 @@ Lessons:
   pages that discards real lines; keep them and let the vote repair them.
 - **8 GB VRAM:** deepseek-ocr (8.7 GB) doesn't fit. The shipped trio doesn't fit
   together either, so Ollama swaps models; that's most of the 40 s on shaky pages.
+
+## Round 3 (2026-09-29)
+
+- The layout step now does an XY-cut into regions (tables stay whole) and splits
+  rows between very different text sizes. Photo CER 0.027 → 0.016, fax
+  0.028 → 0.017, hard 0.018 → 0.007.
+- The PDF text layer is used when present. The court endorsement went from f1
+  0.933 / numbers 0.571 (plain OCR) to 0.992 / 1.000, at 0.1 s per page.
+- Real set: court PDF f1 0.992, flyer 0.942, transit sign 0.922.

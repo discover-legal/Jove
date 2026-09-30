@@ -15,12 +15,12 @@ from .tagger import Decision, Tagger
 
 
 def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict,
-        ocr: Ocr, chooser: Chooser, separation: float = 1.5) -> Path:
+        ocr: Ocr, chooser: Chooser, separation: float = 1.5, context: str | None = None) -> Path:
     tree = build_tree(schema)
     inputs, pages = ingest(files, job_dir / "pages")
     blocks = {p.page_id: layout.build(p.page_id, ocr.read(p)) for p in pages}
 
-    tagger = Tagger(tree, chooser, separation=separation)
+    tagger = Tagger(tree, chooser, separation=separation, context=context)
     decisions = tagger.tag(blocks)
 
     records: list[dict] = [{
@@ -32,6 +32,7 @@ def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict
         "ocr": ocr.describe(),
         "chooser": chooser.describe(),
         "separation_threshold": separation,
+        "context": context,
     }]
     nodes, edges = _graph(blocks, decisions)
 

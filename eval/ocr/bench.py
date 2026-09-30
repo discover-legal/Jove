@@ -51,9 +51,20 @@ def cases(only: str | None):
         if only and only != sub:
             continue
         for txt in sorted((ROOT / sub).glob("*.txt")):
-            img = next(txt.parent.glob(txt.stem + ".*[gG]"))
+            img = next(p for p in txt.parent.glob(txt.stem + ".*") if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".pdf"))
             variant = "real" if sub == "real" else txt.stem.split(".")[-1]
             yield txt.stem, variant, img, txt.read_text()
+
+
+def _pages(path: Path) -> list[Path]:
+    """Images as-is; PDFs rasterised (text layer ignored) into a cache next to results."""
+    if path.suffix.lower() != ".pdf":
+        return [path]
+    from legaleyes.ingest import ingest
+
+    out = ROOT / "results" / "pages" / path.stem
+    _, pages = ingest([(path.name, path.read_bytes())], out)
+    return pages  # Page objects keep the PDF text layer for engines that use it
 
 
 def main() -> None:
@@ -70,10 +81,9 @@ def main() -> None:
         if args.variant and variant != args.variant:
             continue
         t = time.time()
-        lines = engine(img)
-        secs = time.time() - t
-        blocks = build("p0001", lines)
-        got = "\n".join(l.text for b in blocks for l in b.children)
+        pages = _pages(img)
+        got = "\n".join(l.text for p in pages for b in build("p", engine(p)) for l in b.children)
+        secs = (time.time() - t) / len(pages)
         s = score(truth, got) | {"name": name, "variant": variant, "secs": secs}
         rows.append(s)
         print(f"{name:<34} cer={s['cer']:.3f} f1={s['word_f1']:.3f} num={s['num_rec']:.3f} {secs:5.1f}s", flush=True)
