@@ -1,0 +1,378 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legaleyes.local/schemas/document_structure.schema.json",
+  "title": "Document structure",
+  "description": "The anatomy of a legal or business document: which part of the page a piece of text is (letterhead, caption, title, parties, addressee, body, form labels and values, signature, footer), independent of what the text means legally.",
+  "x-instructions": "Tag the role the text plays in the document's layout, not its legal meaning. A letterhead belongs to whoever issued or sent the document (a court, tribunal, law firm or ministry), never to the person it is about or addressed to. On forms, printed captions that name a field ('Tenant's name:', 'Street Number:') are form labels; what was written or typed into the field is a form value.",
+  "type": "object",
+  "properties": {
+    "letterhead": {
+      "type": "object",
+      "description": "The printed header identifying the document's issuer or sender.",
+      "properties": {
+        "organization": {
+          "type": "string",
+          "description": "Issuer's name, department or logo text.",
+          "examples": [
+            "Tribunal Services Department",
+            "Smith & Co. LLP",
+            "Information and Privacy Commissioner of Ontario"
+          ]
+        },
+        "tagline": {
+          "type": "string",
+          "description": "Descriptor under the name.",
+          "examples": [
+            "Barristers and Solicitors"
+          ]
+        },
+        "address": {
+          "type": "string",
+          "description": "The issuer's postal address, any part of it.",
+          "examples": [
+            "2 Bloor Street East, Suite 1400",
+            "Toronto, Ontario M4W 1A8"
+          ]
+        },
+        "phones": {
+          "type": "array",
+          "description": "The issuer's phone, fax or TTY numbers.",
+          "items": {
+            "type": "string",
+            "description": "One number with its label.",
+            "examples": [
+              "Tel: 416-326-3333",
+              "Fax: 416-325-9188"
+            ]
+          }
+        },
+        "emails": {
+          "type": "array",
+          "description": "The issuer's email addresses.",
+          "items": {
+            "type": "string",
+            "description": "One email.",
+            "examples": [
+              "info@example.ca"
+            ]
+          }
+        },
+        "website": {
+          "type": "string",
+          "description": "The issuer's web address.",
+          "examples": [
+            "http://www.ipc.on.ca"
+          ]
+        }
+      },
+      "x-not-for": "The addressee's details (addressee) and contact details inside the body."
+    },
+    "title": {
+      "type": "string",
+      "description": "What the document is: its title or type.",
+      "examples": [
+        "Notice to End your Tenancy Early",
+        "COSTS ENDORSEMENT",
+        "REASONS FOR DECISION",
+        "ORDER PO-2917"
+      ],
+      "x-not-for": "Section headings inside the document (headings[])."
+    },
+    "form_code": {
+      "type": "string",
+      "description": "A form's number, version or revision code.",
+      "examples": [
+        "N4",
+        "Version 1",
+        "N4 (2026/09)",
+        "Form 14A"
+      ]
+    },
+    "caption": {
+      "type": "object",
+      "description": "A court or tribunal case caption: court, file numbers, panel and the parties block.",
+      "properties": {
+        "court": {
+          "type": "string",
+          "description": "Court or tribunal name.",
+          "examples": [
+            "COURT OF APPEAL FOR ONTARIO",
+            "SUPERIOR COURT OF JUSTICE",
+            "(DIVISIONAL COURT)"
+          ]
+        },
+        "file_numbers": {
+          "type": "array",
+          "description": "Docket, court file, citation or appeal numbers.",
+          "items": {
+            "type": "string",
+            "description": "One number.",
+            "examples": [
+              "DOCKET: C69486",
+              "Court File No. 490/00",
+              "CITATION: ... 2022 ONCA 250",
+              "Appeal PA07-159"
+            ]
+          }
+        },
+        "panel": {
+          "type": "string",
+          "description": "Judges or adjudicators hearing it.",
+          "examples": [
+            "Rouleau, van Rensburg and Roberts JJ.A."
+          ]
+        },
+        "parties": {
+          "type": "array",
+          "description": "The parties block, one party per item.",
+          "items": {
+            "type": "object",
+            "description": "One party in the caption.",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Party name(s).",
+                "examples": [
+                  "Crosslinx Transit Solutions General Partnership",
+                  "PUBLIC GUARDIAN AND TRUSTEE"
+                ]
+              },
+              "role": {
+                "type": "string",
+                "description": "Procedural role.",
+                "examples": [
+                  "Applicants",
+                  "(Respondents)",
+                  "Plaintiffs (Appellants)"
+                ]
+              }
+            }
+          }
+        },
+        "connector": {
+          "type": "string",
+          "description": "Words joining the parties.",
+          "examples": [
+            "BETWEEN:",
+            "- and -",
+            "B E T W E E N :"
+          ]
+        }
+      }
+    },
+    "dates": {
+      "type": "array",
+      "description": "Document dates with what they mark.",
+      "items": {
+        "type": "object",
+        "description": "One date.",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "The date as printed.",
+            "examples": [
+              "DATE: 20220324",
+              "September 4, 2024",
+              "31/03/2025"
+            ]
+          },
+          "meaning": {
+            "type": "string",
+            "description": "What it dates, if said.",
+            "examples": [
+              "heard",
+              "dated",
+              "signed",
+              "termination date"
+            ]
+          }
+        }
+      },
+      "x-not-for": "Dates that are form values (form.values[])."
+    },
+    "references": {
+      "type": "array",
+      "description": "File or reference numbers outside a caption.",
+      "items": {
+        "type": "string",
+        "description": "One reference.",
+        "examples": [
+          "Our File: ABC-99",
+          "Your File: 24-0117"
+        ]
+      }
+    },
+    "counsel": {
+      "type": "array",
+      "description": "Appearances: lawyers and whom they act for.",
+      "items": {
+        "type": "string",
+        "description": "One appearance line.",
+        "examples": [
+          "Sharon Vogel, Peter Wardle, for the appellants",
+          "Jamie Macdonald, for the respondents Export Development Canada"
+        ]
+      }
+    },
+    "addressee": {
+      "type": "object",
+      "description": "Who the document is addressed to.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Addressee name.",
+          "examples": [
+            "Ms. Jane Doe",
+            "To: Jane Doe (Tenant)"
+          ]
+        },
+        "address": {
+          "type": "string",
+          "description": "The addressee's postal address, any part of it.",
+          "examples": [
+            "2 Bloor Street East, Suite 1400",
+            "Toronto, Ontario M4W 1A8"
+          ]
+        }
+      }
+    },
+    "salutation": {
+      "type": "string",
+      "description": "Opening greeting.",
+      "examples": [
+        "Dear Ms. Doe:"
+      ]
+    },
+    "subject_line": {
+      "type": "string",
+      "description": "A 'Re:' or subject line.",
+      "examples": [
+        "Re: Unpaid rent - 22 King Street West, Unit 4"
+      ]
+    },
+    "headings": {
+      "type": "array",
+      "description": "Section headings inside the document.",
+      "items": {
+        "type": "string",
+        "description": "One heading.",
+        "examples": [
+          "ABOUT THE ARTIST",
+          "NATURE OF THE APPEAL:",
+          "WHAT YOU NEED TO KNOW",
+          "Signature"
+        ]
+      }
+    },
+    "body": {
+      "type": "array",
+      "description": "Running prose: reasons, narrative, explanation, instructions to the reader.",
+      "items": {
+        "type": "string",
+        "description": "A sentence or line of prose.",
+        "examples": [
+          "We all agree the application must be dismissed.",
+          "If another rent payment becomes due ..."
+        ]
+      }
+    },
+    "form": {
+      "type": "object",
+      "description": "A fillable form's parts.",
+      "properties": {
+        "labels": {
+          "type": "array",
+          "description": "Printed captions that name a field.",
+          "items": {
+            "type": "string",
+            "description": "One label.",
+            "examples": [
+              "Tenant's name:",
+              "Street Number:",
+              "Postal Code:",
+              "Rent Period From: (dd/mm/yyyy)"
+            ]
+          },
+          "x-not-for": "The values typed or written into the fields (values[])."
+        },
+        "values": {
+          "type": "array",
+          "description": "What was written or typed into a field.",
+          "items": {
+            "type": "string",
+            "description": "One filled-in value.",
+            "examples": [
+              "Marcus Oyelaran and Priya Oyelaran",
+              "3,780.00",
+              "15/04/2025"
+            ]
+          },
+          "x-not-for": "Printed captions (labels[])."
+        },
+        "checkboxes": {
+          "type": "array",
+          "description": "Checkbox or option captions.",
+          "items": {
+            "type": "string",
+            "description": "One option.",
+            "examples": [
+              "Landlord",
+              "Representative"
+            ]
+          }
+        }
+      }
+    },
+    "signature_block": {
+      "type": "object",
+      "description": "Closing, signature and signer.",
+      "properties": {
+        "closing": {
+          "type": "string",
+          "description": "Complimentary close.",
+          "examples": [
+            "Yours truly,"
+          ]
+        },
+        "signer": {
+          "type": "string",
+          "description": "Signer's name or signature.",
+          "examples": [
+            "per: Wei Chen",
+            "\"Carnwath J.\"",
+            "D. Whitcombe"
+          ]
+        },
+        "signer_organization": {
+          "type": "string",
+          "description": "Signer's firm or office.",
+          "examples": [
+            "Smith & Co. LLP"
+          ]
+        }
+      }
+    },
+    "footer": {
+      "type": "object",
+      "description": "Running page furniture.",
+      "properties": {
+        "page_number": {
+          "type": "string",
+          "description": "Page numbering.",
+          "examples": [
+            "Page: 2",
+            "- 2 -",
+            "Page 1 of 3"
+          ]
+        },
+        "legal_line": {
+          "type": "string",
+          "description": "Copyright or printer lines.",
+          "examples": [
+            "© King's Printer for Ontario, 2026"
+          ]
+        }
+      }
+    }
+  }
+}

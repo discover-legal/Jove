@@ -32,6 +32,13 @@ Schemas:
 - `schemas/flyer.schema.json`: ads, event flyers, posters and posted notices
   (publisher, partners, headline, event and performers, offer, description,
   rules, legal references, calls to action, contact). 34 fields.
+- `schemas/document_structure.schema.json`: a document's anatomy (letterhead,
+  title, form code, caption with parties, dates, references, counsel,
+  addressee, headings, body, form labels / values / checkboxes, signature
+  block, footer), independent of legal meaning. On the IPC order it put the
+  letterhead's address and phones under `letterhead` (the legal schema had
+  given them to the client). On the N4 it separated printed labels from
+  filled values.
 - `schemas/legal_intake.schema.json` is the reference schema: Ontario law-firm
 intake with 15 top-level branches, 121 leaf fields and 26 internal nodes, at
 most 15 children per node and 4 levels deep. Its examples use Ontario courts,
