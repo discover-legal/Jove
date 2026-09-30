@@ -22,10 +22,14 @@ Probabilities for one question should sum to 1."""
 
 
 class LlmChooser:
-    def __init__(self, base_url: str, model: str, api_key: str = "", batch: int = 8, timeout: float = 600):
+    def __init__(self, base_url: str, model: str, api_key: str = "", batch: int = 8, timeout: float = 600,
+                 reasoning: str | None = "none"):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.batch = batch
+        # Thinking models (Qwen 3.x) can spend minutes reasoning and return empty
+        # content; "none" turns that off. None omits the parameter entirely.
+        self.reasoning = reasoning
         self._headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         self._timeout = timeout
 
@@ -49,25 +53,30 @@ class LlmChooser:
             "page": state,
             "questions": {k: {"question": q.instructions, "options": q.options} for k, q in batch.items()},
         }, ensure_ascii=False)
-        resp = httpx.post(
-            f"{self.base_url}/chat/completions",
-            headers=self._headers,
-            timeout=self._timeout,
-            json={
-                "model": self.model,
-                "temperature": 0,
-                "response_format": {"type": "json_object"},
-                "messages": [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}],
-            },
-        )
+        body = {
+            "model": self.model,
+            "temperature": 0,
+            "response_format": {"type": "json_object"},
+            "messages": [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}],
+        }
+        if self.reasoning is not None:
+            body["reasoning_effort"] = self.reasoning
+        resp = httpx.post(f"{self.base_url}/chat/completions", headers=self._headers, timeout=self._timeout, json=body)
         resp.raise_for_status()
-        return parse_reply(resp.json()["choices"][0]["message"]["content"])
+        return parse_reply(resp.json()["choices"][0]["message"].get("content") or "")
 
 
 def parse_reply(content: str) -> dict:
+    """Answers from a model reply; {} if unparseable (the tagger warns per question)."""
     text = content.strip()
     if text.startswith("```"):
         text = text.strip("`").removeprefix("json").strip()
-    data = json.loads(text)
-    answers = data.get("answers") if isinstance(data, dict) else None
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    # Small models sometimes drop the {"answers": ...} wrapper; the bare map is unambiguous.
+    answers = data.get("answers", data)
     return answers if isinstance(answers, dict) else {}

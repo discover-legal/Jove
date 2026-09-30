@@ -15,15 +15,17 @@ The reference schema is [schemas/legal_intake.schema.json](schemas/legal_intake.
 uv sync --extra ocr --extra jev
 
 # local (default): any OpenAI-compatible endpoint, e.g. Ollama
-ollama pull qwen2.5:7b
+ollama pull qwen3.5:9b-16k      # tagging + OCR number witness
+ollama pull glm-ocr             # OCR second reader
+ollama pull granite3.2-vision   # OCR hallucination check
 uv run uvicorn legaleyes.web:app
 
 # or TypeSafe Jev
 LE_CHOOSER=jev TYPESAFE_API_KEY=... uv run uvicorn legaleyes.web:app
 ```
 
-The first run downloads RapidOCR's English recognition model (9 MB, hash-checked)
-to `~/.cache/legaleyes`.
+The first run downloads the PP-OCRv6 models (hash-checked by RapidOCR).
+The OCR benchmark lives in [eval/ocr](eval/ocr/README.md).
 
 ```sh
 curl -F files=@scan.pdf -F schema=@schemas/legal_intake.schema.json localhost:8000/jobs

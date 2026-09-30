@@ -57,3 +57,14 @@ def test_legal_schema_fan_out_fits_and_runs():
     assert decisions
     first = client.calls[0]
     assert len(first) == len(tree.internal_nodes())
+
+
+def test_halves_batch_on_max_tokens_exceeded():
+    class TooBig(FakeClient):
+        def system_one(self, state, questions, model=None):
+            if len(questions) > 2:
+                raise RuntimeError('400 {"detail":{"error_type":"max_tokens_exceeded"}}')
+            return super().system_one(state, questions, model)
+    client = TooBig()
+    out = JevChooser(client=client).choose({"page": "p"}, {f"k{i}": q() for i in range(5)})
+    assert len(out) == 5 and all(len(c) <= 2 for c in client.calls)

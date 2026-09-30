@@ -1,11 +1,9 @@
 """OCR backends. Each returns text lines with pixel bounding boxes."""
 
-import hashlib
+import re
+import statistics
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Protocol
-
-import httpx
 
 from .ingest import Page
 
@@ -15,6 +13,7 @@ class OcrLine:
     text: str
     bbox: tuple[float, float, float, float]  # x0, y0, x1, y1
     confidence: float | None = None
+    quad: tuple[tuple[float, float], ...] | None = None  # corners TL, TR, BR, BL when the engine gives them
 
 
 class Ocr(Protocol):
@@ -22,45 +21,74 @@ class Ocr(Protocol):
     def read(self, page: Page) -> list[OcrLine]: ...
 
 
-# RapidOCR's bundled recogniser is Chinese+English and drops spaces between
-# English words ("CLIENTINTAKEFORM"). PaddleOCR's English model keeps them.
-EN_REC_URL = "https://huggingface.co/SWHL/RapidOCR/resolve/main/PP-OCRv3/en_PP-OCRv3_rec_infer.onnx"
-EN_REC_SHA256 = "ef7abd8bd3629ae57ea2c28b425c1bd258a871b93fd2fe7c433946ade9b5d9ea"
-
-
-def english_rec_model(cache: Path | None = None) -> Path:
-    """Fetch the English recognition model once, verified against a pinned hash."""
-    path = (cache or Path.home() / ".cache" / "legaleyes") / "en_PP-OCRv3_rec_infer.onnx"
-    if path.exists() and hashlib.sha256(path.read_bytes()).hexdigest() == EN_REC_SHA256:
-        return path
-    data = httpx.get(EN_REC_URL, follow_redirects=True, timeout=300).raise_for_status().content
-    if hashlib.sha256(data).hexdigest() != EN_REC_SHA256:
-        raise RuntimeError("English OCR model download failed its hash check")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp")
-    tmp.write_bytes(data)
-    tmp.replace(path)
-    return path
-
-
 class RapidOcr:
-    def __init__(self, rec_model: Path | None = None):
-        from rapidocr_onnxruntime import RapidOCR
+    """RapidOCR 3 with PaddleOCR's PP-OCRv6 small models, run locally on CPU.
 
-        self._rec_model = rec_model or english_rec_model()
-        self._engine = RapidOCR(rec_model_path=str(self._rec_model))
+    Picked on eval/ocr: against PP-OCRv3/v5 and v6 medium it was the best on
+    photos and faxes, and as fast as the old baseline. RapidOCR downloads its
+    models on first use and checks them against pinned SHA-256s.
+    """
+
+    def __init__(self):
+        from rapidocr import LangDet, LangRec, ModelType, OCRVersion, RapidOCR
+
+        self._engine = RapidOCR(params={
+            "Global.log_level": "error",
+            # Keep low-scoring lines (default drops < 0.5): on shaky photos the detector
+            # finds them but recognition is poor, and the re-read stage can repair them.
+            "Global.text_score": 0.0,
+            "Det.ocr_version": OCRVersion.PPOCRV6, "Det.model_type": ModelType.SMALL, "Det.lang_type": LangDet.EN,
+            "Rec.ocr_version": OCRVersion.PPOCRV6, "Rec.model_type": ModelType.SMALL, "Rec.lang_type": LangRec.EN,
+        })
 
     def describe(self) -> dict:
-        return {"provider": "rapidocr", "rec_model": self._rec_model.name}
+        return {"provider": "rapidocr", "models": "PP-OCRv6 small (en)"}
 
     def read(self, page: Page) -> list[OcrLine]:
-        result, _ = self._engine(str(page.image_path))
+        r = self._engine(str(page.image_path), return_word_box=True, return_single_char_box=True)
         lines = []
-        for box, text, score in result or []:
-            xs = [p[0] for p in box]
-            ys = [p[1] for p in box]
-            lines.append(OcrLine(text, (min(xs), min(ys), max(xs), max(ys)), float(score)))
+        chars_per_line = r.word_results or [None] * len(r.txts or [])
+        for box, text, score, chars in zip(r.boxes if r.boxes is not None else [], r.txts or [], r.scores or [], chars_per_line):
+            xs, ys = [p[0] for p in box], [p[1] for p in box]
+            bbox = (float(min(xs)), float(min(ys)), float(max(xs)), float(max(ys)))  # numpy -> float for JSON
+            lines.append(OcrLine(respace(text, chars), bbox, float(score),
+                                 tuple((float(x), float(y)) for x, y in box)))
         return lines
+
+
+def respace(text: str, chars) -> str:
+    """Put back spaces the recogniser dropped.
+
+    Uses per-character boxes: a gap wider than 0.8x the median character width
+    where the character kind changes (letter/digit/punctuation) is a space
+    ("expires2027-04-03" -> "expires 2027-04-03"). Box positions are coarse
+    estimates, so gaps inside words ("Acm e") are ignored. A colon glued to
+    a following capital ("ID:Ontario") is split too; times like 10:00 are not.
+    """
+    text = re.sub(r"(?<=[A-Za-z]):(?=[A-Z])", ": ", text)
+    if not chars:
+        return text
+    boxes = [(c[0], min(p[0] for p in c[2]), max(p[0] for p in c[2])) for c in chars if c and len(c) >= 3]
+    widths = [b[2] - b[1] for b in boxes if b[2] > b[1]]
+    if len(boxes) < 3 or not widths:
+        return text
+    threshold = 0.8 * statistics.median(widths)
+    out, k = [], 0
+    for i, ch in enumerate(text):
+        if ch.isspace():
+            out.append(ch)
+            continue
+        if k < len(boxes) and boxes[k][0] == ch:
+            wide = k and boxes[k][1] - boxes[k - 1][2] >= threshold
+            if wide and out and not out[-1].isspace() and _kind(out[-1]) != _kind(ch):
+                out.append(" ")
+            k += 1
+        out.append(ch)
+    return "".join(out) if k == len(boxes) else text  # boxes didn't align: leave text alone
+
+
+def _kind(ch: str) -> str:
+    return "a" if ch.isalpha() else "9" if ch.isdigit() else "."
 
 
 class FakeOcr:

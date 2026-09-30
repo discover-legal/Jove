@@ -15,14 +15,38 @@ def separation() -> float:
     return float(os.environ.get("LE_SEPARATION", "1.5"))
 
 
+LLM_BASE_URL = "http://localhost:11434/v1"
+LLM_MODEL = "qwen3.5:9b-16k"
+
+
 def make_ocr() -> Ocr:
     name = os.environ.get("LE_OCR", "rapidocr")
-    if name == "rapidocr":
-        from .ocr import RapidOcr
+    if name != "rapidocr":
+        raise ValueError(f"unknown LE_OCR {name!r}")
+    from .ocr import RapidOcr
 
-        model = os.environ.get("LE_OCR_REC_MODEL")
-        return RapidOcr(Path(model) if model else None)
-    raise ValueError(f"unknown LE_OCR {name!r}")
+    ocr: Ocr = RapidOcr()
+    mode = os.environ.get("LE_OCR_REREAD", "vote")
+    if mode == "vote":
+        from .vote import LineVote
+
+        ocr = LineVote(
+            ocr,
+            base_url=os.environ.get("LE_LLM_BASE_URL", LLM_BASE_URL),
+            reader=os.environ.get("LE_OCR_READER", "glm-ocr"),
+            tiebreaker=os.environ.get("LE_OCR_TIEBREAKER", "granite3.2-vision"),
+            escalation=os.environ.get("LE_OCR_ESCALATION", LLM_MODEL),
+        )
+    elif mode == "vlm":
+        from .reread import VlmReread
+
+        ocr = VlmReread(
+            ocr,
+            base_url=os.environ.get("LE_LLM_BASE_URL", LLM_BASE_URL),
+            model=os.environ.get("LE_VLM_MODEL", LLM_MODEL),
+            threshold=float(os.environ.get("LE_OCR_REREAD_BELOW", "0.98")),
+        )
+    return ocr
 
 
 def make_chooser() -> Chooser:
@@ -31,9 +55,10 @@ def make_chooser() -> Chooser:
         from .llm import LlmChooser
 
         return LlmChooser(
-            base_url=os.environ.get("LE_LLM_BASE_URL", "http://localhost:11434/v1"),
-            model=os.environ.get("LE_LLM_MODEL", "qwen2.5:7b"),
+            base_url=os.environ.get("LE_LLM_BASE_URL", LLM_BASE_URL),
+            model=os.environ.get("LE_LLM_MODEL", LLM_MODEL),
             api_key=os.environ.get("LE_LLM_API_KEY", ""),
+            reasoning=os.environ.get("LE_LLM_REASONING", "none") or None,
         )
     if name == "jev":
         from .jev import JevChooser

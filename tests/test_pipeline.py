@@ -99,3 +99,19 @@ def test_web_bad_upload_fails_job(tmp_path):
                          data={"schema": json.dumps(SCHEMA)}).json()["job_id"]
     status = client.get(f"/jobs/{job_id}").json()
     assert status["status"] == "failed" and "not a PDF or readable image" in status["error"]
+
+
+def test_numpy_boxes_serialize(tmp_path):
+    import numpy as np
+
+    from legaleyes.ocr import OcrLine
+
+    class NumpyOcr:
+        def describe(self):
+            return {"provider": "numpy"}
+
+        def read(self, page):
+            return [OcrLine("Jane Doe", tuple(np.float32(v) for v in (0, 0, 80, 18)), 0.99)]
+
+    out = run("j", tmp_path, [("b.png", png())], SCHEMA, NumpyOcr(), chooser())
+    assert all(json.loads(line) for line in out.read_text().splitlines())

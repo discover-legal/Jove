@@ -65,7 +65,7 @@ def _graph(blocks: dict[str, list[layout.DocNode]], decisions: list[Decision]) -
 
     def node(n: layout.DocNode, parent: str) -> None:
         nodes.append({"type": "node", "id": n.id, "kind": n.kind, "page_id": n.page_id,
-                      "bbox": [round(v, 1) for v in n.bbox], "text": n.text})
+                      "bbox": [round(float(v), 1) for v in n.bbox], "text": n.text})
         edges.append({"type": "edge", "rel": "contains", "from": parent, "to": n.id})
         if n.id in by_id:
             edges.extend(_decision_edges(by_id[n.id]))
@@ -119,7 +119,7 @@ def _spans(line: layout.DocNode, by_id: dict[str, Decision]) -> list[dict]:
         spans.append({
             "id": span_id,
             "text": " ".join(d.doc.text for d in run),
-            "bbox": [min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes)],
+            "bbox": [round(float(f(b[i] for b in boxes)), 1) for f, i in ((min, 0), (min, 1), (max, 2), (max, 3))],
             "edge": {"type": "edge", "rel": "tagged", "from": span_id, "to": run[0].top[0].target, "rank": 1,
                      "score": round(sum(d.top[0].score for d in run) / len(run), 4),
                      "asked_from": run[0].asked_from,

@@ -1,0 +1,13 @@
+ACME LOGISTICS INC.            PAY STATEMENT
+Employee: John Smith            Employee ID: 004417
+Position: Warehouse Supervisor  Pay period: 2024-06-01 to 2024-06-15
+EARNINGS              HOURS     RATE       AMOUNT
+Regular               80.00     27.50    2,200.00
+Overtime               6.50     41.25      268.13
+Vacation pay                                98.73
+GROSS PAY                                2,566.86
+DEDUCTIONS
+CPP                                        140.23
+EI                                          42.10
+Income tax                                 388.51
+NET PAY                                  1,996.02

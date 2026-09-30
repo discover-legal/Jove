@@ -37,14 +37,37 @@ ingest ──► ocr ──► layout ──► tag ──► emit (JSONL graph)
 
 1. **ingest**: hash every input file, rasterise each page to PNG, and hash every
    page. Page ids are `p0001`… in upload order.
-2. **ocr** (pluggable): RapidOCR, run locally on CPU. It uses PaddleOCR's English
-   recognition model, because the bundled Chinese+English model drops spaces
-   between English words. That model downloads once from Hugging Face, is checked
-   against a pinned SHA-256, and is cached in `~/.cache/legaleyes`.
+2. **ocr** (pluggable). This was chosen by measurement on `eval/ocr`; see its README.
+   - **Engine:** RapidOCR 3 with the PP-OCRv6 small models, run locally on CPU.
+     RapidOCR fetches the models once and checks them against pinned SHA-256s.
+   - **Space recovery:** the recogniser sometimes drops spaces
+     ("expires2027-04-03"). They are put back from per-character boxes, but only
+     where a wide gap coincides with a letter/digit/punctuation change. A colon
+     glued to a capital ("ID:Ontario") is also split.
+   - **Recursive re-read (three-reader vote, `vote.py`):**
+     - Every line the OCR is less than 0.995 sure of is cut out of the page,
+       straightened, and read again by glm-ocr, which is trusted for words.
+     - If glm's reading looks nothing like the OCR's, granite3.2-vision checks
+       whether glm is hallucinating (the medoid wins).
+     - Every number needs a second witness. qwen3.5 is asked only for lines where
+       one is missing, and unbacked numbers revert to the OCR's visibly uncertain
+       reading.
+     - When detection finds almost nothing, glm's whole-page reading is used.
+     - All three models run locally in Ollama. The older single-model re-read is
+       still available with `LE_OCR_REREAD=vlm`.
 3. **layout**: page → **block** → **line** → **word**.
-   - OCR fragments on the same baseline are merged back into one line, but
-     columns far apart stay separate lines.
-   - A vertical gap of more than 0.8 line heights starts a new block.
+   - Page skew is estimated from the OCR box corners, and layout runs on
+     de-rotated boxes. Fragments that overlap horizontally are never the same line.
+   - A wide gap splits a line only at a *gutter*, i.e. white space shared
+     by other rows. Table rows keep each label with its value.
+   - The page is first cut into regions (recursive XY-cut): horizontal white
+     bands, then vertical gutters, but only between content whose lines don't
+     share baselines. Panels on a sign are read one after another; a table's
+     label and value columns stay together. A wide gap between text of very
+     different sizes also splits a row (a logo beside body text).
+   - A new block starts at a vertical gap of more than 0.8 line heights, or at
+     line spacing above 1.5× the median. The spacing rule matters for photos,
+     where OCR boxes are inflated.
    - Word boxes are estimated from character offsets.
 4. **tag**: see below.
 5. **emit**: see the output section below.
@@ -71,6 +94,12 @@ names. A path's score is the geometric mean of its edge probabilities.
   - Example: "Name: Jane Doe  DOB: 1980" is clearly `client`, but torn between
     name and DOB. Its words are re-asked from `client`, and each word sees its
     line as context.
+- **Forced splits.** Some chunks hold several values even when one tag clearly
+  dominates, so they are split regardless of separation and re-asked from where
+  they were asked:
+  - a multi-line block tagged with a single field (the MATTER block also names
+    parties and amounts);
+  - a line with two or more "Label:" pairs ("Full name: …  Date of birth: …").
 - **Array items**: when a chunk is split inside an array item node, that chunk
   becomes the item's **instance anchor**, and all its parts inherit it. So a
   block tagged `parties[]` whose lines split into name and role is one party.
@@ -85,8 +114,8 @@ are dropped, the rest are renormalised, and unanswered questions produce warning
 
 | Chooser | What it is |
 |---|---|
-| `llm` (default, local) | Any OpenAI-compatible endpoint; the default is Ollama `qwen2.5:7b`. The model *states* the probabilities, so its separations are rougher. |
-| `jev` | TypeSafe Jev via `typesafe-sdk`. It returns real option probabilities. Requests are packed to Jev's limits (32k tokens for state + longest question, 64k for everything, budgeted in bytes). A reference-schema block costs about 33 KB, so roughly 5 blocks fit per request, at about $0.0004 per block. **Page text leaves the machine.** |
+| `llm` (default, local) | Any OpenAI-compatible endpoint; the default is Ollama `qwen3.5:9b-16k` with thinking off. The model *states* the probabilities, and on the flyer it was overconfident enough that nothing ever split. |
+| `jev` | TypeSafe Jev via `typesafe-sdk`. It returns real option probabilities. Requests are packed to Jev's limits (32k tokens for state + longest question, 64k for everything). The budget is in bytes: we measured ~2.5 bytes/token and budget at 2.0; a batch Jev still rejects is halved and retried. A reference-schema block is about 13k tokens (~$0.0005). A whole page tags in ~2 s. **Page text leaves the machine.** |
 | `fake` | Rule-driven, for tests. |
 
 ## Output: JSONL graph
@@ -133,9 +162,11 @@ Jobs run in the background, in-process, and store their state under `data/jobs/<
 | var | default |
 |---|---|
 | `LE_OCR` | `rapidocr` |
-| `LE_OCR_REC_MODEL` | *(verified English model, auto-downloaded)* |
+| `LE_OCR_REREAD` | `vote` (or `vlm`; anything else turns re-reading off) |
+| `LE_OCR_READER` / `LE_OCR_TIEBREAKER` / `LE_OCR_ESCALATION` | `glm-ocr` / `granite3.2-vision` / `qwen3.5:9b-16k` |
 | `LE_CHOOSER` | `llm` |
-| `LE_LLM_BASE_URL` / `LE_LLM_MODEL` / `LE_LLM_API_KEY` | `http://localhost:11434/v1` / `qwen2.5:7b` / — |
+| `LE_LLM_BASE_URL` / `LE_LLM_MODEL` / `LE_LLM_API_KEY` | `http://localhost:11434/v1` / `qwen3.5:9b-16k` / — |
+| `LE_LLM_REASONING` | `none` (turns off model thinking; empty omits the parameter) |
 | `LE_JEV_MODEL` | `jev-latest` |
 | `TYPESAFE_API_KEY` | *(required for `jev`)* |
 | `LE_SEPARATION` | `1.5` |
@@ -143,9 +174,12 @@ Jobs run in the background, in-process, and store their state under `data/jobs/<
 
 ## Status and next steps
 
-- **Done:** the whole pipeline, tested with fake choosers (28 tests); real OCR
-  and layout checked on a rendered form; Jev request packing and response
-  parsing checked against the SDK's own types.
+- **Done:** the whole pipeline (39 tests). The OCR was benchmarked and tuned on
+  `eval/ocr` (31 pages): word F1 went from 0.83 to 0.975 and number recall from
+  0.74 to 0.92. Scans, faxes and photos are essentially perfect. The real
+  low-light flyer photo went from 0.31 to 0.94. The local LLM chooser was run end to end on
+  that flyer. Jev request packing and response parsing are checked against the
+  SDK's own types.
 - **Next: run it for real.** Put real Ontario scans through Jev (needs a key)
   and through Ollama. Build a small labelled evaluation set and a scorer
   (per-field precision and recall on spans, and whether list items group

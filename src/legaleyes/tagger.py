@@ -7,8 +7,9 @@ to the runner-up ("separation") says how clear the answer is. Because schemas
 are shallow, every node below the starting point is asked at once (fan-out)
 and all paths are scored exactly, so no beam pruning is needed.
 
-The recursion is ours. When a chunk's best paths are too close, the chunk
-probably holds several things: it is split into its parts (block → lines →
+The recursion is ours. When a chunk's best paths are too close, or its
+structure says it holds several values (a multi-line block given one field,
+a line with two "Label:" pairs), the chunk probably holds several things: it is split into its parts (block → lines →
 words), and the parts are re-asked starting from the schema node where the
 two best paths diverged. Parts inherit the parent's array-item anchor, so a
 block tagged ``parties[]`` whose lines then split into name and role yields
@@ -16,6 +17,7 @@ one party.
 """
 
 import math
+import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
@@ -117,7 +119,8 @@ class Tagger:
             separation = top[0].score / second if second > 0 else math.inf
 
             parts = _parts(t.doc)
-            if separation >= self.separation or not parts:
+            forced = parts and _holds_several(t.doc, top[0])
+            if (separation >= self.separation and not forced) or not parts:
                 instances = dict(t.instances)
                 for n in top[0].nodes:
                     if n.is_array_item:
@@ -125,7 +128,9 @@ class Tagger:
                 decisions.append(Decision(t.doc, t.start.path, top, separation, False, instances=instances))
                 continue
 
-            within = _divergence(top[0], top[1])
+            # A forced split re-asks from where this chunk was asked: the values
+            # it holds may sit in different branches (a MATTER block names parties).
+            within = t.start if forced and separation >= self.separation else _divergence(top[0], top[1])
             instances = dict(t.instances)
             for n in top[0].nodes[: top[0].nodes.index(within) + 1]:
                 if n.is_array_item:
@@ -160,6 +165,23 @@ class Tagger:
             node=node.path,
             labels=labels,
         )
+
+
+_LABEL = re.compile(r"(?:^|\s)[A-Za-z][A-Za-z .'/()-]{0,30}:(?=\s)")
+
+
+def _holds_several(doc: DocNode, top: Path) -> bool:
+    """Chunks that hold several values even when one tag clearly dominates.
+
+    - A multi-line block tagged with a single field: fields rarely span lines,
+      and a clear block tag hides the other lines' values.
+    - A line with two or more "Label:" pairs ("Full name: ...  Date of birth: ...").
+    """
+    if top.target.endswith("#none"):
+        return False
+    if doc.kind == "block" and len(doc.children) > 1:
+        return True
+    return doc.kind != "word" and len(_LABEL.findall(doc.text)) >= 2
 
 
 def _criterion(n: SchemaNode) -> dict:

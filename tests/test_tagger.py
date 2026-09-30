@@ -124,3 +124,17 @@ def test_normalize():
     assert normalize({"o0": -1, "o1": math.nan}, opts) is None
     assert normalize({"o0": True}, opts) is None
     assert normalize("junk", opts) is None
+
+
+def test_line_with_two_labels_is_split_even_when_clear():
+    line = "Name: Jane Doe DOB: 1980"
+    ds, _, _ = tag([line])  # RULES tag this whole line client.name confidently
+    assert ds["p0001/b01"].split
+    words = {d.doc.text: d.top[0].target for d in ds.values() if d.doc.kind == "word"}
+    assert words["Jane"] == "client.name" and words["1980"] == "client.dob"
+
+
+def test_multiline_block_with_a_field_tag_is_split():
+    ds, _, _ = tag(["Jane Doe", "Jane Doe"])
+    assert ds["p0001/b01"].split and ds["p0001/b01"].within == ""
+    assert all(d.top[0].target == "client.name" for d in ds.values() if d.doc.kind == "line")
