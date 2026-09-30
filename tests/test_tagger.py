@@ -176,3 +176,41 @@ def test_words_anchor_list_items_to_their_line():
     ds, _, _ = tag(["Acme Holdings"], rules=rules)
     anchors = {d.instances.get("parties[]") for d in ds.values() if d.doc.kind == "word"}
     assert anchors == {"p0001/b01/l01"}
+
+
+def test_gate_no_keeps_prose_whole():
+    line = "Name: Jane Doe DOB: 1980"  # would be split (ambiguous and two labels)
+    rules = RULES | {("client", line): {"client.name": 0.5, "client.dob": 0.45}}
+    blocks = build("p0001", lines(line))
+    chooser = FakeChooser(rule(rules), gate=lambda q: 0.2)
+    ds = {d.doc.id: d for d in Tagger(SCHEMA, chooser).tag({"p0001": blocks})}
+    [d] = ds.values()
+    assert not d.split and d.gate == 0.2 and d.top[0].target == "client.name"
+    [gate_qs] = chooser.gate_calls
+    [q] = gate_qs.values()
+    assert "client.name (" in q.instructions and "client.dob (" in q.instructions
+    assert set(q.options) == {"true", "false"}
+
+
+def test_gate_yes_splits():
+    line = "Name: Jane Doe DOB: 1980"
+    rules = RULES | {("client", line): {"client.name": 0.5, "client.dob": 0.45}}
+    chooser = FakeChooser(rule(rules), gate=lambda q: 0.9)
+    ds = {d.doc.id: d for d in Tagger(SCHEMA, chooser).tag({"p0001": build("p0001", lines(line))})}
+    assert ds["p0001/b01"].split and ds["p0001/b01"].gate == 0.9
+    assert any(d.doc.kind == "word" for d in ds.values())
+
+
+def test_no_gate_without_yes_no():
+    class ChoiceOnly:
+        def __init__(self):
+            self.inner = FakeChooser(rule(RULES | {("client", "Jane 1980"): {"client.name": 0.5, "client.dob": 0.45}}))
+
+        def describe(self):
+            return {}
+
+        def choose(self, state, questions):
+            return self.inner.choose(state, questions)
+
+    ds = Tagger(SCHEMA, ChoiceOnly()).tag({"p0001": build("p0001", lines("Jane 1980"))})
+    assert any(d.split and d.gate is None for d in ds)

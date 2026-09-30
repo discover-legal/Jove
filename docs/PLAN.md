@@ -113,6 +113,17 @@ names. A path's score is the geometric mean of its edge probabilities.
   - a multi-line block tagged with a single field (the MATTER block also names
     parties and amounts);
   - a line with two or more "Label:" pairs ("Full name: …  Date of birth: …").
+- **Split gate (yes/no).** Separation and the structural rules only say a
+  chunk *might* hold several values; running prose that merely mentions things
+  looks the same. So before any split, the chooser is asked one yes/no question
+  (a Jev `Noul`, one batched request per page per round) with the chunk's text
+  and its best labels so far: "should this be split and labelled piece by
+  piece?" Below 0.5 (`LE_SPLIT_GATE`), the chunk keeps its tags whole, and the
+  `split_gate` value is recorded on its edge.
+  - On the court endorsement this cut word fragments from 46 to 2, and the
+    reasoning paragraphs stay whole (P(split) 0.09–0.30).
+  - It kept every useful split: name + date of birth 0.93, phone + email
+    0.93, amount + deadline 0.77, addresses 0.81–0.85.
 - **Parts see their parent's text** as context: "22 King Street West" only
   reads as a party's address next to "Ms. Jane Doe".
 - **Array items**: when a chunk is split inside an array item node, that chunk
@@ -188,6 +199,7 @@ Jobs run in the background, in-process, and store their state under `data/jobs/<
 | `LE_JEV_MODEL` | `jev-latest` |
 | `TYPESAFE_API_KEY` | *(required for `jev`)* |
 | `LE_SEPARATION` | `1.5` |
+| `LE_SPLIT_GATE` | `0.5` (split only if the yes/no gate's P(split) ≥ this) |
 | `LE_DATA_DIR` | `./data` |
 
 ## Status and next steps
@@ -196,7 +208,6 @@ Jobs run in the background, in-process, and store their state under `data/jobs/<
   intake form and demand letter, a real Divisional Court endorsement, a gig
   flyer and a transit-stop notice (the last two with the flyer schema). Tagging
   takes about 2 s per page, and the time is dominated by OCR. Known weak spots:
-  - reasoning prose gets shredded into single words with low-confidence tags;
   - roles printed apart from names ("Applicant") become their own list item;
   - logo clusters on signs are jumbled by layout.
 - **Done:** the whole pipeline (39 tests). The OCR was benchmarked and tuned on

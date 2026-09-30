@@ -68,3 +68,16 @@ def test_halves_batch_on_max_tokens_exceeded():
     client = TooBig()
     out = JevChooser(client=client).choose({"page": "p"}, {f"k{i}": q() for i in range(5)})
     assert len(out) == 5 and all(len(c) <= 2 for c in client.calls)
+
+
+def test_yes_no_parses_noul():
+    from legaleyes.choose import YesNo
+
+    class NoulClient:
+        def system_one(self, state, questions, model=None):
+            assert all(q.type == "noul" and set(q.criteria) == {"true", "false"} for q in questions.values())
+            return SystemOneResponse.model_validate({"model": "jev-1.13.0", "usage": {},
+                "answers": {k: {"type": "noul", "noul": 0.3} for k in questions}})
+
+    out = JevChooser(client=NoulClient()).yes_no({"page": "p"}, {"g0": YesNo("split?", {"true": "y", "false": "n"}, "x")})
+    assert out == {"g0": 0.3}

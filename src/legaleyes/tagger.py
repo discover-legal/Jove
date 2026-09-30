@@ -9,7 +9,9 @@ and all paths are scored exactly, so no beam pruning is needed.
 
 The recursion is ours. When a chunk's best paths are too close, or its
 structure says it holds several values (a multi-line block given one field,
-a line with two "Label:" pairs), the chunk probably holds several things: it is split into its parts (block → lines →
+a line with two "Label:" pairs), the chunk *might* hold several things. A
+yes/no gate asks the chooser whether it really does, given the labels so far
+(prose that merely mentions things shouldn't be shredded into words). If so: it is split into its parts (block → lines →
 words), and the parts are re-asked starting from the schema node where the
 two best paths diverged. Parts inherit the parent's array-item anchor, so a
 block tagged ``parties[]`` whose lines then split into name and role yields
@@ -21,7 +23,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
-from .choose import NONE, Chooser, Question
+from .choose import NONE, Chooser, Question, YesNo
 from .layout import DocNode
 from .schema import SchemaNode
 
@@ -50,6 +52,7 @@ class Decision:
     split: bool  # True: the node was split and its parts re-asked
     within: str | None = None  # for split nodes: the schema node its parts were sent to
     instances: dict[str, str] = field(default_factory=dict)  # array node path -> anchoring doc node id
+    gate: float | None = None  # P(yes) from the split gate, when it was asked
 
 
 @dataclass
@@ -62,11 +65,12 @@ class _Task:
 
 class Tagger:
     def __init__(self, schema: SchemaNode, chooser: Chooser, separation: float = 1.5,
-                 keep: int = 3, workers: int = 8, context: str | None = None):
+                 keep: int = 3, workers: int = 8, context: str | None = None, gate: float = 0.5):
         self.schema = schema
         self.chooser = chooser
         self.separation = separation
         self.keep = keep
+        self.gate = gate  # split only if the chooser's yes/no gate says P(split) >= this
         self.workers = workers
         self._by_path = {n.path: n for n in schema.internal_nodes()}
         self.warnings: list[dict] = []
@@ -105,7 +109,8 @@ class Tagger:
 
         answers = self.chooser.choose(state, questions) if questions else {}
 
-        decisions, follow_up = [], []
+        decisions: list[Decision] = []
+        candidates = []  # (task, top, separation, parts, forced) that would split
         for t, keys in zip(tasks, asked):
             dists = {}
             for key, node in keys:
@@ -123,15 +128,18 @@ class Tagger:
             separation = top[0].score / second if second > 0 else math.inf
 
             parts = _parts(t.doc)
-            forced = parts and _holds_several(t.doc, top[0])
+            forced = bool(parts) and _holds_several(t.doc, top[0])
             if (separation >= self.separation and not forced) or not parts:
-                instances = dict(t.instances)
-                for n in top[0].nodes:
-                    if n.is_array_item:
-                        instances.setdefault(n.path, _anchor(t.doc))
-                decisions.append(Decision(t.doc, t.start.path, top, separation, False, instances=instances))
-                continue
+                decisions.append(self._final(t, top, separation))
+            else:
+                candidates.append((t, top, separation, parts, forced))
 
+        gates = self._gate(state, candidates)
+        follow_up = []
+        for (t, top, separation, parts, forced), p_split in zip(candidates, gates):
+            if p_split is not None and p_split < self.gate:
+                decisions.append(self._final(t, top, separation, gate=p_split))
+                continue
             # A forced split re-asks from where this chunk was asked: the values
             # it holds may sit in different branches (a MATTER block names parties).
             clear = forced and separation >= self.separation
@@ -144,12 +152,59 @@ class Tagger:
             for n in anchored:
                 if n.is_array_item:
                     instances.setdefault(n.path, _anchor(t.doc))
-            decisions.append(Decision(t.doc, t.start.path, top, separation, True, within.path, instances))
+            decisions.append(Decision(t.doc, t.start.path, top, separation, True, within.path, instances, p_split))
             # Parts see the chunk they came from: "22 King Street West" is only a
             # party's address next to "Ms. Jane Doe".
-            context = t.doc.text
-            follow_up.extend(_Task(p, within, context, instances) for p in parts)
+            follow_up.extend(_Task(part, within, t.doc.text, instances) for part in parts)
         return decisions, follow_up
+
+    def _final(self, t: _Task, top: list[Path], separation: float, gate: float | None = None) -> Decision:
+        instances = dict(t.instances)
+        for n in top[0].nodes:
+            if n.is_array_item:
+                instances.setdefault(n.path, _anchor(t.doc))
+        return Decision(t.doc, t.start.path, top, separation, False, instances=instances, gate=gate)
+
+    def _gate(self, state: dict, candidates: list) -> list[float | None]:
+        """Ask the chooser, yes or no, whether each candidate should really be split.
+
+        Separation and structure only say a chunk *might* hold several values;
+        running prose that merely mentions things looks the same. A decision
+        model answers that directly, given the labels found so far.
+        """
+        yes_no = getattr(self.chooser, "yes_no", None)
+        if not candidates or yes_no is None:
+            return [None] * len(candidates)
+        questions = {f"g{i}": self._gate_question(t, top) for i, (t, top, *_) in enumerate(candidates)}
+        answers = yes_no(state, questions)
+        out = []
+        for i, (t, *_rest) in enumerate(candidates):
+            p = answers.get(f"g{i}")
+            if p is None:
+                self.warnings.append({"code": "gate_unanswered", "detail": t.doc.id})
+            out.append(p)  # unanswered: split, as before the gate existed
+        return out
+
+    def _gate_question(self, t: _Task, top: list[Path]) -> YesNo:
+        labels = ", ".join(f"{_label(p.target)} ({p.score:.2f})" for p in top)
+        context = f" It appears inside: {t.context!r}." if t.context else ""
+        pov = " Interpret it as state.context describes." if self.context else ""
+        return YesNo(
+            instructions=(
+                UNTRUSTED
+                + f"Text {t.doc.id} ({t.doc.kind}) reads: {t.doc.text!r}.{context}"
+                + f" The best schema labels for it so far are: {labels}."
+                + " Should this text be split into smaller pieces and labelled piece by piece?" + pov
+            ),
+            options={
+                "true": "Yes: it holds two or more separate values that belong to different schema fields "
+                        "(e.g. a name and a date of birth, an amount and a deadline, a phone and an email), "
+                        "or a list of several items.",
+                "false": "No: it is one value, a label with its value, or running prose (reasons, narrative, "
+                         "explanation) that merely mentions things; labelling it as a whole is right.",
+            },
+            subject=t.doc.text,
+        )
 
     def _question(self, t: _Task, node: SchemaNode) -> Question:
         options: dict[str, dict] = {}
@@ -194,6 +249,12 @@ def _holds_several(doc: DocNode, top: Path) -> bool:
     if doc.kind == "block" and len(doc.children) > 1:
         return True
     return doc.kind != "word" and len(_LABEL.findall(doc.text)) >= 2
+
+
+def _label(target: str) -> str:
+    if target == "#none":
+        return "none of the schema"
+    return f"none of {target[:-5]}" if target.endswith("#none") else target
 
 
 def _anchor(doc: DocNode) -> str:

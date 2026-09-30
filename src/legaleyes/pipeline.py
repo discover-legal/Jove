@@ -15,12 +15,13 @@ from .tagger import Decision, Tagger
 
 
 def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict,
-        ocr: Ocr, chooser: Chooser, separation: float = 1.5, context: str | None = None) -> Path:
+        ocr: Ocr, chooser: Chooser, separation: float = 1.5, context: str | None = None,
+        gate: float = 0.5) -> Path:
     tree = build_tree(schema)
     inputs, pages = ingest(files, job_dir / "pages")
     blocks = {p.page_id: layout.build(p.page_id, ocr.read(p)) for p in pages}
 
-    tagger = Tagger(tree, chooser, separation=separation, context=context)
+    tagger = Tagger(tree, chooser, separation=separation, context=context, gate=gate)
     decisions = tagger.tag(blocks)
 
     records: list[dict] = [{
@@ -32,6 +33,7 @@ def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict
         "ocr": ocr.describe(),
         "chooser": chooser.describe(),
         "separation_threshold": separation,
+        "split_gate_threshold": gate,
         "context": context,
     }]
     nodes, edges = _graph(blocks, decisions)
@@ -90,7 +92,8 @@ def _decision_edges(d: Decision) -> list[dict]:
         idx = [n.path for n in top.nodes].index(d.within)
         score = _geomean(top.probs[:idx]) if idx else None
         return [{"type": "edge", "rel": "within", "from": d.doc.id, "to": d.within or "<root>",
-                 "score": score, "separation": _sep(d.separation), "asked_from": d.asked_from}]
+                 "score": score, "separation": _sep(d.separation), "asked_from": d.asked_from,
+                 "split_gate": d.gate}]
     out = []
     for rank, path in enumerate(d.top, start=1):
         edge = {"type": "edge", "rel": "tagged", "from": d.doc.id, "to": path.target, "rank": rank,
@@ -98,6 +101,8 @@ def _decision_edges(d: Decision) -> list[dict]:
         if rank == 1:
             edge["separation"] = _sep(d.separation)
             edge["instances"] = d.instances
+            if d.gate is not None:
+                edge["split_gate"] = round(d.gate, 4)  # asked, and it said: don't split
         out.append(edge)
     return out
 

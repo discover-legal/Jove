@@ -8,7 +8,7 @@ import json
 
 import httpx
 
-from .choose import Question, normalize
+from .choose import Question, YesNo, normalize
 
 SYSTEM_PROMPT = """\
 You classify text from scanned legal documents against a data schema.
@@ -47,6 +47,11 @@ class LlmChooser:
                 if probs is not None:
                     out[key] = probs
         return out
+
+    def yes_no(self, state: dict, questions: dict[str, YesNo]) -> dict[str, float]:
+        as_choice = {k: Question(q.instructions, {"yes": {"what": q.options["true"]}, "no": {"what": q.options["false"]}},
+                                 q.subject, "", {"yes": "yes", "no": "no"}) for k, q in questions.items()}
+        return {k: p["yes"] for k, p in self.choose(state, as_choice).items()}
 
     def _ask(self, state: dict, batch: dict[str, Question]) -> dict:
         prompt = json.dumps({

@@ -9,7 +9,7 @@ answers max_tokens_exceeded, the batch is halved and retried.
 
 import json
 
-from .choose import Question, normalize
+from .choose import Question, YesNo, normalize
 
 MAX_STATE_QUESTION_BYTES = 64_000
 MAX_REQUEST_BYTES = 128_000
@@ -55,7 +55,24 @@ class JevChooser:
         return out
 
 
-def batches(state: dict, questions: dict[str, Question]) -> list[dict[str, Question]]:
+    def yes_no(self, state: dict, questions: dict[str, YesNo]) -> dict[str, float]:
+        from typesafe_sdk import Noul
+
+        out: dict[str, float] = {}
+        for batch in batches(state, questions):
+            response = self._client.system_one(
+                state=state,
+                questions={k: Noul(instructions=q.instructions, criteria=q.options) for k, q in batch.items()},
+                model=self.model,
+            )
+            for key in batch:
+                answer = response.answers.get(key)
+                if answer is not None and answer.type == "noul" and 0.0 <= answer.noul <= 1.0:
+                    out[key] = float(answer.noul)
+        return out
+
+
+def batches(state: dict, questions: dict) -> list[dict]:
     state_bytes = _size(state)
     out: list[dict[str, Question]] = []
     current: dict[str, Question] = {}

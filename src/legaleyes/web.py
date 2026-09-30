@@ -53,7 +53,8 @@ def create_app(
         set_status(d, "running")
         try:
             pipeline.run(job_id, d, files, schema, make_ocr(), make_chooser(),
-                         separation if separation is not None else config.separation(), context=context)
+                         separation if separation is not None else config.separation(), context=context,
+                         gate=config.split_gate())
         except Exception as e:
             set_status(d, "failed", f"{type(e).__name__}: {e}")
         else:

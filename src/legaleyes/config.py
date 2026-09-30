@@ -15,6 +15,10 @@ def separation() -> float:
     return float(os.environ.get("LE_SEPARATION", "1.5"))
 
 
+def split_gate() -> float:
+    return float(os.environ.get("LE_SPLIT_GATE", "0.5"))
+
+
 LLM_BASE_URL = "http://localhost:11434/v1"
 LLM_MODEL = "qwen3.5:9b-16k"
 

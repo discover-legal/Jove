@@ -21,10 +21,22 @@ class Question:
     labels: dict[str, str]  # option key -> schema path it stands for; for fakes and debugging
 
 
+@dataclass
+class YesNo:
+    instructions: str
+    options: dict[str, str]  # {"true": what yes means, "false": what no means}
+    subject: str
+
+
 class Chooser(Protocol):
     def describe(self) -> dict: ...
     def choose(self, state: dict, questions: dict[str, Question]) -> dict[str, dict[str, float]]:
         """Return a probability per option for each answered question key."""
+        ...
+
+    # Optional: choosers without it get no split gate (every candidate split happens).
+    def yes_no(self, state: dict, questions: dict[str, YesNo]) -> dict[str, float]:
+        """Return P(yes) for each answered question key."""
         ...
 
 
@@ -46,9 +58,16 @@ class FakeChooser:
     """Answers with ``rule(question)``: a label (0.9 on it, the rest spread), a
     {label: probability} dict, or None (0.9 on ``none``)."""
 
-    def __init__(self, rule: Callable[[Question], str | dict[str, float] | None]):
+    def __init__(self, rule: Callable[[Question], str | dict[str, float] | None],
+                 gate: Callable[[YesNo], float] | None = None):
         self.rule = rule
+        self.gate = gate or (lambda q: 1.0)  # default: always split, as before the gate existed
         self.calls: list[tuple[dict, dict[str, Question]]] = []
+        self.gate_calls: list[dict[str, YesNo]] = []
+
+    def yes_no(self, state: dict, questions: dict[str, YesNo]) -> dict[str, float]:
+        self.gate_calls.append(questions)
+        return {k: self.gate(q) for k, q in questions.items()}
 
     def describe(self) -> dict:
         return {"provider": "fake"}
