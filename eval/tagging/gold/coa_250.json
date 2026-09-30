@@ -1,0 +1,150 @@
+{
+  "file": "eval/tagging/docs/coa_2022_onca_250.pdf",
+  "schema": "schemas/legal_intake.schema.json",
+  "context": null,
+  "tags": [
+    {
+      "text": "COURT OF APPEAL FOR ONTARIO",
+      "path": "proceedings[].forum"
+    },
+    {
+      "text": "2022 ONCA 250",
+      "path": "proceedings[].case_number",
+      "alt": [
+        "matter.reference_numbers[]"
+      ]
+    },
+    {
+      "text": "C69486",
+      "path": "proceedings[].case_number",
+      "alt": [
+        "matter.reference_numbers[]"
+      ]
+    },
+    {
+      "text": "20220324",
+      "path": "events[].date",
+      "alt": [
+        "referenced_documents[].date"
+      ]
+    },
+    {
+      "text": "Rouleau, van Rensburg and Roberts JJ.A.",
+      "path": "proceedings[].judge"
+    },
+    {
+      "text": "Crosslinx Transit Solutions General Partnership",
+      "path": "parties[].name"
+    },
+    {
+      "text": "Crosslinx Transit Solutions Constructors",
+      "path": "parties[].name"
+    },
+    {
+      "text": "Applicants",
+      "path": "parties[].role"
+    },
+    {
+      "text": "Ontario Infrastructure and Lands Corporation",
+      "path": "parties[].name"
+    },
+    {
+      "text": "Metrolinx",
+      "path": "parties[].name"
+    },
+    {
+      "text": "Respondents",
+      "path": "parties[].role"
+    },
+    {
+      "text": "Sharon Vogel, Peter Wardle, Jesse Gardner and Cheryl Labiris",
+      "path": "parties[].represented_by",
+      "alt": [
+        "parties[].name"
+      ]
+    },
+    {
+      "text": "Matthew Sammon, Andrea Wheeler and Jacqueline Chan",
+      "path": "parties[].represented_by",
+      "alt": [
+        "parties[].name"
+      ]
+    },
+    {
+      "text": "January 6, 2022",
+      "path": "events[].date",
+      "alt": [
+        "proceedings[].next_hearing_date"
+      ]
+    },
+    {
+      "text": "Justice Markus Koehnen",
+      "path": "proceedings[].judge"
+    },
+    {
+      "text": "Superior Court of Justice",
+      "path": "proceedings[].forum"
+    },
+    {
+      "text": "May 17, 2021",
+      "path": "events[].date",
+      "alt": [
+        "proceedings[].filing_date",
+        "referenced_documents[].date"
+      ]
+    },
+    {
+      "text": "2021 ONSC 3567",
+      "path": "proceedings[].case_number",
+      "alt": [
+        "referenced_documents[].reference"
+      ]
+    },
+    {
+      "text": "$60,000",
+      "path": "amounts[].amount",
+      "alt": [
+        "proceedings[].orders[]"
+      ]
+    },
+    {
+      "text": "Paul Rouleau J.A.",
+      "path": "proceedings[].judge"
+    },
+    {
+      "text": "(Appellants)",
+      "path": "parties[].role"
+    },
+    {
+      "text": "(Respondents)",
+      "path": "parties[].role"
+    },
+    {
+      "text": "K. van Rensburg J.A.",
+      "path": "proceedings[].judge"
+    },
+    {
+      "text": "L.B. Roberts J.A.",
+      "path": "proceedings[].judge"
+    },
+    {
+      "text": "DATE: 20220324",
+      "path": "events[].date",
+      "alt": [
+        "referenced_documents[].date",
+        "proceedings[].filing_date"
+      ]
+    },
+    {
+      "text": "[1] On March 7, 2022, we allowed the appeal, set aside the judgment and costs order of the application judge, and remitted the application for a rehearing, with costs to the appellants in the agreed upon all-inclusive amount of $60,000. [3] We agree with the respondents that the fairest disposition is to leave the issue of the application costs to the trier of fact on the rehearing of the application, including but not limited to a rehearing before a judge of the Superior Court and/or in an arbitral process. [4] Order to go accordingly.",
+      "path": "proceedings[].orders[]",
+      "region": true
+    },
+    {
+      "text": "On appeal from the judgment of Justice Markus Koehnen of the Superior Court of Justice dated May 17, 2021, with reasons reported at 2021 ONSC 3567.",
+      "path": "proceedings[].stage",
+      "region": true
+    }
+  ],
+  "groups": []
+}

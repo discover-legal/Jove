@@ -145,3 +145,14 @@ def test_images_have_no_text_layer(tmp_path):
 
     _, pages = ingest([("b.png", png())], tmp_path)
     assert pages[0].text_layer is None
+
+
+def test_filled_pdf_form_values_are_read(tmp_path):
+    from pathlib import Path
+
+    from legaleyes.ingest import ingest
+
+    pdf = (Path(__file__).parent.parent / "eval/tagging/docs/n4_filled.pdf").read_bytes()
+    _, pages = ingest([("n4.pdf", pdf)], tmp_path)
+    values = {t for p in pages for t, _ in p.text_layer}
+    assert {"Marcus Oyelaran and Priya Oyelaran", "3,780.00", "dwhitcombe@whitcombelegal.ca"} <= values

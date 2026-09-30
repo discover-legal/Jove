@@ -48,7 +48,9 @@ ingest ──► ocr ──► layout ──► tag ──► emit (JSONL graph)
    page. Page ids are `p0001`… in upload order.
 2. **ocr** (pluggable). This was chosen by measurement on `eval/ocr`; see its README.
    - **Born-digital PDF pages** use their own text layer: exact text, no GPU,
-     about 0.1 s per page. Lines are boxed from pdfium's character boxes,
+     about 0.1 s per page. Filled form fields (which live in annotations, not
+     the page text) are drawn into the page image and added to the text layer,
+     each boxed by its field. Lines are boxed from pdfium's character boxes,
      scaled to the rendered image. Pages with under 40 characters of text
      layer go to OCR.
    - **Engine:** RapidOCR 3 with the PP-OCRv6 small models, run locally on CPU.
@@ -149,19 +151,39 @@ thresholds:
   one value. List items follow the same-item answers, and a field repeating
   within an item starts a new one.
 
-### Measured (eval/tagging, 2026-09-29)
+### Measured (eval/tagging)
 
-5 documents with 87 gold values, identical cached OCR, Jev:
+**Round 1 (2026-09-29):** 5 documents, 87 gold values, identical cached OCR, Jev.
 
 | tagger | recall | precision | F1 | list items | cost |
 |---|---|---|---|---|---|
 | tree, gate only on ambiguity | 0.816 | 0.961 | 0.883 | 3/6 | $0.070 |
-| tree, gate on every splittable chunk (default) | 0.943 | 0.857 | 0.898 | 3/6 | $0.117 |
+| tree, gate on every splittable chunk | 0.943 | 0.857 | 0.898 | 3/6 | $0.117 |
 | flat | 0.908 | 0.884 | 0.896 | 3/6 | $0.107 |
 
-The win was asking the split gate about every chunk, with its labels; flat and
-tree then tie. The set is too small to separate them, so more gold documents
-are needed.
+**Round 2 (2026-09-30):** 11 documents, 222 gold values. Six were added from
+public sources:
+- two Court of Appeal for Ontario decisions (2022 ONCA 250, and 2022 ONCA 100
+  p.1), plus a fax-degraded copy of the first;
+- IPC Order PO-2917;
+- the official LTB Form N4, filled with invented values, as a digital PDF and
+  as a phone-photo copy.
+
+| tagger | recall | precision | F1 | tokens | cost |
+|---|---|---|---|---|---|
+| tree | 0.847 | 0.760 | 0.801 | ~13.2M | ~$0.55 |
+| **flat (default)** | **0.865** | **0.807** | **0.835** | ~10.3M | ~$0.43 |
+
+Flat wins most on degraded scans: on the faxed decision it found 21/27 values
+against tree's 17/27. It is also about 20% cheaper. It is the default;
+`LE_TAGGER=tree` restores the tree.
+
+Real errors both taggers still make:
+- a tribunal's letterhead address and phones are tagged as the *client's*
+  contact details;
+- blank form labels ("Street Number: Street Name:") get tagged as values;
+- a party's role printed on a separate line doesn't attach to the party;
+- performers named inside prose are missed.
 
 ### Choosers (pluggable)
 
@@ -228,7 +250,7 @@ Jobs run in the background, in-process, and store their state under `data/jobs/<
 | `TYPESAFE_API_KEY` | *(required for `jev`)* |
 | `LE_SEPARATION` | `1.5` |
 | `LE_SPLIT_GATE` | `0.5` (split only if the yes/no gate's P(split) ≥ this) |
-| `LE_TAGGER` | `tree` (or `flat`) |
+| `LE_TAGGER` | `flat` (or `tree`) |
 | `LE_DATA_DIR` | `./data` |
 
 ## Status and next steps

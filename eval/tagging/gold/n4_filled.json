@@ -1,0 +1,190 @@
+{
+  "file": "eval/tagging/docs/n4_filled.pdf",
+  "schema": "schemas/legal_intake.schema.json",
+  "context": "Our firm: Harper & Leung LLP. Our client: Marcus Oyelaran, the tenant.",
+  "tags": [
+    {
+      "text": "3,780.00",
+      "path": "amounts[].amount"
+    },
+    {
+      "text": "15/04/2025",
+      "path": "matter.key_deadlines[].date",
+      "alt": [
+        "events[].date"
+      ]
+    },
+    {
+      "text": "Marcus Oyelaran",
+      "path": "client.person.full_name",
+      "alt": [
+        "parties[].name"
+      ]
+    },
+    {
+      "text": "Priya Oyelaran",
+      "path": "parties[].name",
+      "alt": [
+        "client.person.full_name",
+        "client.person.other_names[]"
+      ]
+    },
+    {
+      "text": "Lakeshore Rental Holdings Inc.",
+      "path": "parties[].name"
+    },
+    {
+      "text": "Elmwood Avenue",
+      "path": "property.address.street",
+      "alt": [
+        "client.contact.address.street",
+        "property.address.full",
+        "client.contact.address.full"
+      ]
+    },
+    {
+      "text": "1204",
+      "path": "property.address.street",
+      "alt": [
+        "client.contact.address.street",
+        "property.address.full",
+        "client.contact.address.full"
+      ]
+    },
+    {
+      "text": "Mississauga",
+      "path": "property.address.city",
+      "alt": [
+        "client.contact.address.city",
+        "property.address.full",
+        "client.contact.address.full"
+      ]
+    },
+    {
+      "text": "L5B 3X9",
+      "path": "property.address.postal_code",
+      "alt": [
+        "client.contact.address.postal_code",
+        "property.address.full",
+        "client.contact.address.full"
+      ]
+    },
+    {
+      "text": "1,890.00",
+      "path": "amounts[].amount",
+      "alt": [
+        "property.price"
+      ]
+    },
+    {
+      "text": "Whitcombe Legal Services Professional Corporation",
+      "path": "parties[].represented_by",
+      "alt": [
+        "parties[].name",
+        "parties[].organization"
+      ]
+    },
+    {
+      "text": "Whitcombe",
+      "path": "parties[].represented_by",
+      "alt": [
+        "parties[].name"
+      ]
+    },
+    {
+      "text": "University Avenue",
+      "path": "parties[].contact.address.street",
+      "alt": [
+        "parties[].contact.address.full"
+      ]
+    },
+    {
+      "text": "M5G 1S5",
+      "path": "parties[].contact.address.postal_code",
+      "alt": [
+        "parties[].contact.address.full"
+      ]
+    },
+    {
+      "text": "dwhitcombe@whitcombelegal.ca",
+      "path": "parties[].contact.emails[]"
+    },
+    {
+      "text": "(416) 555-0142",
+      "path": "parties[].contact.phones[]"
+    },
+    {
+      "text": "31/03/2025",
+      "path": "referenced_documents[].date",
+      "alt": [
+        "events[].date"
+      ]
+    },
+    {
+      "text": "Notice to End your Tenancy Early",
+      "path": "referenced_documents[].title"
+    },
+    {
+      "text": "N4",
+      "path": "referenced_documents[].title"
+    },
+    {
+      "text": "For Non-payment of Rent",
+      "path": "matter.type",
+      "alt": [
+        "matter.summary",
+        "referenced_documents[].title"
+      ]
+    },
+    {
+      "text": "ON",
+      "path": "property.address.province",
+      "alt": [
+        "client.contact.address.province",
+        "parties[].contact.address.province"
+      ]
+    },
+    {
+      "text": "Toronto",
+      "path": "parties[].contact.address.city",
+      "alt": [
+        "parties[].contact.address.full"
+      ]
+    },
+    {
+      "text": "01/02/2025",
+      "path": "amounts[].date",
+      "alt": [
+        "events[].date"
+      ]
+    },
+    {
+      "text": "28/02/2025",
+      "path": "amounts[].date",
+      "alt": [
+        "events[].date"
+      ]
+    },
+    {
+      "text": "01/03/2025",
+      "path": "amounts[].date",
+      "alt": [
+        "events[].date"
+      ]
+    },
+    {
+      "text": "31/03/2025",
+      "path": "amounts[].date",
+      "alt": [
+        "events[].date",
+        "referenced_documents[].date"
+      ]
+    },
+    {
+      "text": "I can apply to the Landlord and Tenant Board (LTB) to have you evicted if you do not:",
+      "path": "proceedings[].forum",
+      "region": true
+    }
+  ],
+  "groups": []
+}

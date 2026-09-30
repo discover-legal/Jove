@@ -13,3 +13,19 @@ come out as one list item. The gold is hand-made from the cached OCR text,
 so OCR errors appear in it as-is.
 
 Results are in docs/PLAN.md ("Measured").
+
+## Documents
+
+- `gold/` covers 11 documents, 222 values.
+- Synthetic: the intake form and demand letter (eval/ocr/synthetic).
+- Real photos: the gig flyer and the transit notice (eval/ocr/real).
+- Public Ontario documents, in `docs/`:
+  - Divisional Court endorsement (eval/ocr/real);
+  - Court of Appeal for Ontario 2022 ONCA 250 (costs endorsement), plus a
+    fax-degraded copy;
+  - 2022 ONCA 100, page 1;
+  - IPC Order PO-2917, pp. 1-2.
+- The official LTB Form N4, filled by `make_forms.py` with **invented** values:
+  a digital PDF and a phone-photo copy (image-only PDF, so it goes through OCR).
+
+Blank forms come from tribunalsontario.ca; `make_forms.py` fills them.

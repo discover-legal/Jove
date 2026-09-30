@@ -16,7 +16,7 @@ def separation() -> float:
 
 
 def tagger() -> str:
-    name = os.environ.get("LE_TAGGER", "tree")
+    name = os.environ.get("LE_TAGGER", "flat")  # measured better: docs/PLAN.md "Measured"
     if name not in ("tree", "flat"):
         raise ValueError(f"unknown LE_TAGGER {name!r}")
     return name
