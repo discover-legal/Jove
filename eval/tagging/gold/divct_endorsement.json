@@ -1,0 +1,98 @@
+{
+  "file": "eval/ocr/real/divct_endorsement.pdf",
+  "schema": "schemas/legal_intake.schema.json",
+  "context": null,
+  "tags": [
+    {
+      "text": "490/00",
+      "path": "proceedings[].case_number"
+    },
+    {
+      "text": "SUPERIOR COURT OF JUSTICE",
+      "path": "proceedings[].forum"
+    },
+    {
+      "text": "DIVISIONAL COURT",
+      "path": "proceedings[].forum"
+    },
+    {
+      "text": "Carnwath, Day and Whalen JJ.",
+      "path": "proceedings[].judge"
+    },
+    {
+      "text": "PUBLIC GUARDIAN AND TRUSTEE",
+      "path": "parties[].name"
+    },
+    {
+      "text": "Applicant",
+      "path": "parties[].role"
+    },
+    {
+      "text": "DAVID GOODIS",
+      "path": "parties[].name"
+    },
+    {
+      "text": "Senior Adjudicator",
+      "path": "parties[].role"
+    },
+    {
+      "text": "JOHN DOE",
+      "path": "parties[].name"
+    },
+    {
+      "text": "Requester",
+      "path": "parties[].role"
+    },
+    {
+      "text": "Respondents",
+      "path": "parties[].role"
+    },
+    {
+      "text": "the application must be dismissed",
+      "path": "proceedings[].orders[]"
+    },
+    {
+      "text": "Costs to Requester fixed at $3000",
+      "path": "proceedings[].orders[]",
+      "alt": [
+        "amounts[].amount",
+        "amounts[].description"
+      ]
+    },
+    {
+      "text": "December 13, 2001",
+      "path": "events[].date",
+      "alt": [
+        "referenced_documents[].date",
+        "proceedings[].filing_date"
+      ]
+    },
+    {
+      "text": "Carnwath J.",
+      "path": "proceedings[].judge"
+    },
+    {
+      "text": "ONTARIO",
+      "path": "matter.jurisdiction",
+      "alt": [
+        "proceedings[].forum"
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "array": "parties[]",
+      "texts": [
+        "PUBLIC GUARDIAN AND TRUSTEE",
+        "Applicant"
+      ]
+    },
+    {
+      "array": "parties[]",
+      "texts": [
+        "DAVID GOODIS",
+        "Senior Adjudicator"
+      ]
+    }
+  ]
+}

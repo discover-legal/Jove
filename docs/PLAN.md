@@ -135,6 +135,34 @@ names. A path's score is the geometric mean of its edge probabilities.
 - **Words**: runs of consecutive words with the same tag and anchor are merged
   into **spans**. "Jane" and "Doe" become the span "Jane Doe".
 
+### Flat boundary tagger (`LE_TAGGER=flat`)
+
+This is the alternative to the tree. OCR lines are the atoms; layout supplies
+only reading order. Grouping is Jev's decision, not a set of geometry
+thresholds:
+- **Round 1, one parallel batch per page:** every line's schema Choice fan-out
+  (with its neighbouring lines), "does it continue the previous line's value?",
+  and "is it about the same item as the line one back / two back?".
+- **Round 2:** the labelled split gate for every multi-word line.
+- **Round 3:** words of the lines that said yes.
+- **Assembly:** consecutive units that continue each other and share a tag become
+  one value. List items follow the same-item answers, and a field repeating
+  within an item starts a new one.
+
+### Measured (eval/tagging, 2026-09-29)
+
+5 documents with 87 gold values, identical cached OCR, Jev:
+
+| tagger | recall | precision | F1 | list items | cost |
+|---|---|---|---|---|---|
+| tree, gate only on ambiguity | 0.816 | 0.961 | 0.883 | 3/6 | $0.070 |
+| tree, gate on every splittable chunk (default) | 0.943 | 0.857 | 0.898 | 3/6 | $0.117 |
+| flat | 0.908 | 0.884 | 0.896 | 3/6 | $0.107 |
+
+The win was asking the split gate about every chunk, with its labels; flat and
+tree then tie. The set is too small to separate them, so more gold documents
+are needed.
+
 ### Choosers (pluggable)
 
 The tagger needs one operation: given a question, return a probability for
@@ -200,6 +228,7 @@ Jobs run in the background, in-process, and store their state under `data/jobs/<
 | `TYPESAFE_API_KEY` | *(required for `jev`)* |
 | `LE_SEPARATION` | `1.5` |
 | `LE_SPLIT_GATE` | `0.5` (split only if the yes/no gate's P(split) ≥ this) |
+| `LE_TAGGER` | `tree` (or `flat`) |
 | `LE_DATA_DIR` | `./data` |
 
 ## Status and next steps

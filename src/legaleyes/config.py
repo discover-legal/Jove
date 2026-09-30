@@ -15,6 +15,13 @@ def separation() -> float:
     return float(os.environ.get("LE_SEPARATION", "1.5"))
 
 
+def tagger() -> str:
+    name = os.environ.get("LE_TAGGER", "tree")
+    if name not in ("tree", "flat"):
+        raise ValueError(f"unknown LE_TAGGER {name!r}")
+    return name
+
+
 def split_gate() -> float:
     return float(os.environ.get("LE_SPLIT_GATE", "0.5"))
 

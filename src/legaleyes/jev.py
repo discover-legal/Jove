@@ -23,6 +23,8 @@ class JevChooser:
             client = TypeSafeClient(model=model)
         self._client = client
         self.model = model
+        self.requests = 0  # usage counters, for cost comparisons
+        self.input_tokens = 0
 
     def describe(self) -> dict:
         return {"provider": "jev", "model": self.model or "jev-latest"}
@@ -40,6 +42,7 @@ class JevChooser:
                     questions={k: Choice(instructions=q.instructions, criteria=q.options) for k, q in batch.items()},
                     model=self.model,
                 )
+                self._count(response)
             except Exception as e:
                 if "max_tokens_exceeded" in str(e) and len(batch) > 1:
                     items = list(batch.items())
@@ -55,6 +58,11 @@ class JevChooser:
         return out
 
 
+    def _count(self, response) -> None:
+        self.requests += 1
+        usage = getattr(response, "usage", None)
+        self.input_tokens += (getattr(usage, "input_tokens", None) or 0)
+
     def yes_no(self, state: dict, questions: dict[str, YesNo]) -> dict[str, float]:
         from typesafe_sdk import Noul
 
@@ -65,6 +73,7 @@ class JevChooser:
                 questions={k: Noul(instructions=q.instructions, criteria=q.options) for k, q in batch.items()},
                 model=self.model,
             )
+            self._count(response)
             for key in batch:
                 answer = response.answers.get(key)
                 if answer is not None and answer.type == "noul" and 0.0 <= answer.noul <= 1.0:

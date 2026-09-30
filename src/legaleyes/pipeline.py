@@ -16,13 +16,19 @@ from .tagger import Decision, Tagger
 
 def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict,
         ocr: Ocr, chooser: Chooser, separation: float = 1.5, context: str | None = None,
-        gate: float = 0.5) -> Path:
+        gate: float = 0.5, tagger: str = "tree") -> Path:
     tree = build_tree(schema)
     inputs, pages = ingest(files, job_dir / "pages")
     blocks = {p.page_id: layout.build(p.page_id, ocr.read(p)) for p in pages}
 
-    tagger = Tagger(tree, chooser, separation=separation, context=context, gate=gate)
-    decisions = tagger.tag(blocks)
+    if tagger == "flat":
+        from .flat import FlatTagger
+
+        engine = FlatTagger(tree, chooser, context=context, threshold=gate)
+        nodes, edges = engine.tag(blocks)
+    else:
+        engine = Tagger(tree, chooser, separation=separation, context=context, gate=gate)
+        nodes, edges = _graph(blocks, engine.tag(blocks))
 
     records: list[dict] = [{
         "type": "job",
@@ -32,11 +38,11 @@ def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict
         "inputs": [asdict(i) for i in inputs],
         "ocr": ocr.describe(),
         "chooser": chooser.describe(),
+        "tagger": tagger,
         "separation_threshold": separation,
         "split_gate_threshold": gate,
         "context": context,
     }]
-    nodes, edges = _graph(blocks, decisions)
 
     page_tags: dict[str, set[str]] = {}
     for e in edges:
@@ -50,7 +56,7 @@ def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict
         })
     records.extend(nodes)
     records.extend(edges)
-    records.extend({"type": "warning", **w} for w in tagger.warnings)
+    records.extend({"type": "warning", **w} for w in engine.warnings)
 
     out = job_dir / "result.jsonl"
     tmp = out.with_suffix(".tmp")

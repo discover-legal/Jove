@@ -61,13 +61,16 @@ class FakeChooser:
     def __init__(self, rule: Callable[[Question], str | dict[str, float] | None],
                  gate: Callable[[YesNo], float] | None = None):
         self.rule = rule
-        self.gate = gate or (lambda q: 1.0)  # default: always split, as before the gate existed
         self.calls: list[tuple[dict, dict[str, Question]]] = []
         self.gate_calls: list[dict[str, YesNo]] = []
+        # Without a gate rule the fake has no yes/no ability at all, like a chooser that lacks it.
+        self.yes_no = self._yes_no(gate) if gate else None
 
-    def yes_no(self, state: dict, questions: dict[str, YesNo]) -> dict[str, float]:
-        self.gate_calls.append(questions)
-        return {k: self.gate(q) for k, q in questions.items()}
+    def _yes_no(self, gate: Callable[[YesNo], float]):
+        def yes_no(state: dict, questions: dict[str, YesNo]) -> dict[str, float]:
+            self.gate_calls.append(questions)
+            return {k: gate(q) for k, q in questions.items()}
+        return yes_no
 
     def describe(self) -> dict:
         return {"provider": "fake"}

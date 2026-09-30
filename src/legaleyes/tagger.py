@@ -65,12 +65,16 @@ class _Task:
 
 class Tagger:
     def __init__(self, schema: SchemaNode, chooser: Chooser, separation: float = 1.5,
-                 keep: int = 3, workers: int = 8, context: str | None = None, gate: float = 0.5):
+                 keep: int = 3, workers: int = 8, context: str | None = None, gate: float = 0.5,
+                 always_gate: bool = True):
         self.schema = schema
         self.chooser = chooser
         self.separation = separation
         self.keep = keep
         self.gate = gate  # split only if the chooser's yes/no gate says P(split) >= this
+        # Ask the gate about every splittable chunk, not only ambiguous ones: a confident
+        # single label can hide a second value ("DAVID GOODIS, Senior Adjudicator, and ...").
+        self.always_gate = always_gate and getattr(chooser, "yes_no", None) is not None
         self.workers = workers
         self._by_path = {n.path: n for n in schema.internal_nodes()}
         self.warnings: list[dict] = []
@@ -128,7 +132,7 @@ class Tagger:
             separation = top[0].score / second if second > 0 else math.inf
 
             parts = _parts(t.doc)
-            forced = bool(parts) and _holds_several(t.doc, top[0])
+            forced = bool(parts) and (_holds_several(t.doc, top[0]) or self.always_gate)
             if (separation >= self.separation and not forced) or not parts:
                 decisions.append(self._final(t, top, separation))
             else:
@@ -206,7 +210,7 @@ class Tagger:
             subject=t.doc.text,
         )
 
-    def _question(self, t: _Task, node: SchemaNode) -> Question:
+    def _question(self, t: _Task, node: SchemaNode, context_prefix: str = "It appears inside") -> Question:
         options: dict[str, dict] = {}
         labels: dict[str, str] = {}
         for i, child in enumerate(node.children):
@@ -218,7 +222,7 @@ class Tagger:
 
         where = f"the {node.path} section of the schema" if node.path else "the schema"
         pov = " Interpret it as state.context describes." if self.context else ""
-        context = f" It appears inside: {t.context!r}." if t.context else ""
+        context = f" {context_prefix}: {t.context!r}." if t.context else ""
         return Question(
             instructions=(
                 UNTRUSTED
