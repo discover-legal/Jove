@@ -34,6 +34,7 @@ class DocNode:
     text: str
     children: list["DocNode"] = field(default_factory=list)
     form: bool = False  # every fragment came from a filled PDF form field
+    role: str | None = None  # layout role from a document parser ("section header", "table cell under ...")
 
 
 @dataclass

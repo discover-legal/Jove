@@ -229,6 +229,8 @@ class Tagger:
         context = f" {context_prefix}: {t.context!r}." if t.context else ""
         form = (" It was typed into a fillable form field, so it is a value, not a label."
                 if getattr(t.doc, "form", False) else "")
+        if getattr(t.doc, "role", None):
+            form += f" Layout: {t.doc.role}."
         return Question(
             instructions=(
                 UNTRUSTED

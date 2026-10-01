@@ -21,6 +21,9 @@ ocr = [
 jev = [
     "typesafe-sdk>=0.7.2",
 ]
+docling = [
+    "docling>=2.132.0",
+]
 
 [dependency-groups]
 dev = [

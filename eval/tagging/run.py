@@ -32,6 +32,9 @@ class CachedOcr:
         return {"provider": "cached", "of": "legaleyes.config.make_ocr()"}
 
     def read(self, page):
+        if page.text_layer:  # born-digital: instant, and the cache would drop newer OcrLine fields
+            self._inner = self._inner or make_ocr()
+            return self._inner.read(page)
         path = self.dir / f"{page.sha256}.json"
         if path.exists():
             return [OcrLine(d["text"], tuple(d["bbox"]), d["confidence"], tuple(map(tuple, d["quad"])) if d["quad"] else None)
@@ -48,6 +51,7 @@ def main() -> None:
     ap.add_argument("tagger", choices=["tree", "flat"])
     ap.add_argument("--only")
     ap.add_argument("--no-owners", action="store_true", help="skip the ownership pass")
+    ap.add_argument("--layout", choices=["rules", "docling"], default="rules")
     ap.add_argument("--out", help="results subdirectory (default: the tagger name)")
     args = ap.parse_args()
     out = ROOT / "results" / (args.out or args.tagger)
@@ -64,7 +68,8 @@ def main() -> None:
         with tempfile.TemporaryDirectory() as tmp:
             t = time.time()
             result = run(gold_path.stem, Path(tmp), [(src.name, src.read_bytes())], schema, ocr, chooser,
-                         context=gold.get("context"), tagger=args.tagger, owners=not args.no_owners)
+                         context=gold.get("context"), tagger=args.tagger, owners=not args.no_owners,
+                         layout_engine=args.layout)
             secs = time.time() - t
             shutil.copy(result, out / f"{gold_path.stem}.jsonl")
         total["secs"] += secs

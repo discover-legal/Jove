@@ -22,6 +22,13 @@ def tagger() -> str:
     return name
 
 
+def layout() -> str:
+    name = os.environ.get("LE_LAYOUT", "rules")
+    if name not in ("rules", "docling"):
+        raise ValueError(f"unknown LE_LAYOUT {name!r}")
+    return name
+
+
 def owners() -> bool:
     return os.environ.get("LE_OWNERS", "on") != "off"
 
