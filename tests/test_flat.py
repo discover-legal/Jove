@@ -61,3 +61,39 @@ def test_two_parties_on_one_line_are_two_items(tmp_path):
     inst = {nodes[e["from"]]["text"]: e["instances"]["parties[]"] for e in recs
             if e["type"] == "edge" and e["rel"] == "tagged" and e["rank"] == 1 and "parties[]" in (e.get("instances") or {})}
     assert inst["Acme"] == inst["landlord"] and inst["Bolt"] == inst["tenant"] and inst["Acme"] != inst["Bolt"]
+
+
+FLYER = {
+    "type": "object",
+    "properties": {
+        "description": {"type": "array", "items": {"type": "string"}},
+        "performers": {"type": "array", "x-mentions": True, "description": "People featured",
+                       "items": {"type": "object", "properties": {"name": {"type": "string"}, "role": {"type": "string"}}}},
+    },
+}
+
+
+def test_mentions_inside_prose(tmp_path):
+    line = "joined by Craig Riley (percussion) and Mike Oresco (bass)."
+    ocr = FakeOcr({"p0001": [line]})
+    names, roles = {"Craig", "Riley", "Mike", "Oresco"}, {"(percussion)", "(bass)."}
+
+    def choice(q):
+        if q.node == "" and q.subject == line:
+            return "description[]"
+        if q.node == "performers[]":
+            return "performers[].name" if q.subject in names else "performers[].role" if q.subject in roles else None
+        return None
+
+    def gate(q):
+        return 0.9 if "mention a performers" in q.instructions else 0.1
+
+    out = run("j", tmp_path, [("b.png", png())], FLYER, ocr, FakeChooser(choice, gate=gate), tagger="flat")
+    recs = [json.loads(l) for l in out.read_text().splitlines()]
+    nodes = {r["id"]: r for r in recs if r["type"] == "node"}
+    tags = [(nodes[e["from"]]["text"], e["to"], e.get("instances"), e.get("mention")) for e in recs
+            if e["type"] == "edge" and e["rel"] == "tagged" and e["rank"] == 1]
+    assert (line, "description[]", {}, None) in [(t, p, i, m) for t, p, i, m in tags]  # the line keeps its tag
+    found = {t: (p, i["performers[]"]) for t, p, i, m in tags if m}
+    assert found["Craig Riley"][0] == "performers[].name" and found["(percussion)"][0] == "performers[].role"
+    assert found["Craig Riley"][1] == found["(percussion)"][1] != found["Mike Oresco"][1] == found["(bass)."][1]

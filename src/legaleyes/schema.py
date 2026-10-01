@@ -4,7 +4,9 @@ Paths are dotted with ``[]`` for array items (``parties[].name``). Besides
 ``description``, nodes may carry ``examples`` (JSON Schema) and ``x-not-for``
 (ours): what belongs in a sibling instead. Both help a model tell similar
 siblings apart. The root may carry ``x-instructions``: standing context for
-every question, such as whose point of view the data takes.
+every question, such as whose point of view the data takes. Object or array
+nodes may carry ``x-mentions: true``: their values can appear inside prose
+(a performer named in a biography), so prose lines are searched for them.
 """
 
 import re
@@ -29,6 +31,11 @@ class SchemaNode:
     is_array_item: bool = False
     children: list["SchemaNode"] = field(default_factory=list)
     instructions: str | None = None  # root only: ``x-instructions``, e.g. whose point of view
+    mentions: bool = False  # ``x-mentions``: values of this object/list item may sit inside prose
+
+    def walk(self) -> list["SchemaNode"]:
+        """This node and every node below it, depth first."""
+        return [self] + [n for c in self.children for n in c.walk()]
 
     @property
     def leaf(self) -> bool:
@@ -83,6 +90,7 @@ def _node(node: dict, path: str, name: str, described: dict, array_item: bool = 
         examples=tuple(str(e) for e in described.get("examples", node.get("examples", []))),
         not_for=described.get("x-not-for") or node.get("x-not-for"),
         is_array_item=array_item,
+        mentions=bool(described.get("x-mentions") or node.get("x-mentions")),
     )
     if kind == "array":
         items = node.get("items")

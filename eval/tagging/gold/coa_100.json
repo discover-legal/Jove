@@ -37,27 +37,45 @@
     },
     {
       "text": "UD Trading Group Holding Pte. Limited",
-      "path": "parties[].name"
+      "path": "parties[].name",
+      "alt": [
+        "proceedings[].sides[].names[]"
+      ]
     },
     {
       "text": "Prateek Gupta",
-      "path": "parties[].name"
+      "path": "parties[].name",
+      "alt": [
+        "proceedings[].sides[].names[]"
+      ]
     },
     {
       "text": "Plaintiffs (Appellants)",
-      "path": "parties[].role"
+      "path": "parties[].role",
+      "alt": [
+        "proceedings[].sides[].role"
+      ]
     },
     {
       "text": "TransAsia Private Capital Limited",
-      "path": "parties[].name"
+      "path": "parties[].name",
+      "alt": [
+        "proceedings[].sides[].names[]"
+      ]
     },
     {
       "text": "Export Development Canada",
-      "path": "parties[].name"
+      "path": "parties[].name",
+      "alt": [
+        "proceedings[].sides[].names[]"
+      ]
     },
     {
       "text": "Defendants (Respondents)",
-      "path": "parties[].role"
+      "path": "parties[].role",
+      "alt": [
+        "proceedings[].sides[].role"
+      ]
     },
     {
       "text": "Michael D. Schafler and Ara Basmadjian",
@@ -105,5 +123,22 @@
       "region": true
     }
   ],
-  "groups": []
+  "groups": [
+    {
+      "array": "proceedings[].sides[]",
+      "texts": [
+        "UD Trading Group Holding Pte. Limited",
+        "Prateek Gupta",
+        "Plaintiffs (Appellants)"
+      ]
+    },
+    {
+      "array": "proceedings[].sides[]",
+      "texts": [
+        "TransAsia Private Capital Limited",
+        "Export Development Canada",
+        "Defendants (Respondents)"
+      ]
+    }
+  ]
 }

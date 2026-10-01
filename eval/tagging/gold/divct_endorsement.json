@@ -28,15 +28,24 @@
     },
     {
       "text": "PUBLIC GUARDIAN AND TRUSTEE",
-      "path": "parties[].name"
+      "path": "parties[].name",
+      "alt": [
+        "proceedings[].sides[].names[]"
+      ]
     },
     {
       "text": "Applicant",
-      "path": "parties[].role"
+      "path": "parties[].role",
+      "alt": [
+        "proceedings[].sides[].role"
+      ]
     },
     {
       "text": "DAVID GOODIS",
-      "path": "parties[].name"
+      "path": "parties[].name",
+      "alt": [
+        "proceedings[].sides[].names[]"
+      ]
     },
     {
       "text": "Senior Adjudicator",
@@ -44,7 +53,10 @@
     },
     {
       "text": "JOHN DOE",
-      "path": "parties[].name"
+      "path": "parties[].name",
+      "alt": [
+        "proceedings[].sides[].names[]"
+      ]
     },
     {
       "text": "Requester",
@@ -52,7 +64,10 @@
     },
     {
       "text": "Respondents",
-      "path": "parties[].role"
+      "path": "parties[].role",
+      "alt": [
+        "proceedings[].sides[].role"
+      ]
     },
     {
       "text": "the application must be dismissed",
@@ -88,7 +103,10 @@
   ],
   "groups": [
     {
-      "array": "parties[]",
+      "array": [
+        "parties[]",
+        "proceedings[].sides[]"
+      ],
       "texts": [
         "PUBLIC GUARDIAN AND TRUSTEE",
         "Applicant"
@@ -106,6 +124,14 @@
       "texts": [
         "JOHN DOE",
         "Requester"
+      ]
+    },
+    {
+      "array": "proceedings[].sides[]",
+      "texts": [
+        "DAVID GOODIS",
+        "JOHN DOE",
+        "Respondents"
       ]
     }
   ]

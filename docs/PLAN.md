@@ -245,6 +245,29 @@ and re-runs are free.
   roles.
 - The court endorsement now scores 16/16, 16/16, with 3/3 groups.
 
+**Round 4 (2026-10-01): mentions inside prose, and caption sides.**
+- `x-mentions` (on `event.performers[]`, `parties[]`, `amounts[]`): every
+  unsplit prose line of 3+ words gets a yes/no per marked field ("does it
+  mention a performer?"), batched with the split gate. Lines that say yes have
+  their words labelled within that field only. The line keeps its own tag, and
+  the mentions become extra spans flagged `mention: true`.
+- `proceedings[].sides[] { role, names[] }` in the legal schema. A field that is
+  itself a list inside an item (names[]) may repeat without starting a new
+  item.
+
+| flat tagger, new gold (14 groups) | F1 | groups |
+|---|---|---|
+| baseline, 3 runs | 0.838 / 0.839 / 0.852 (mean 0.843) | 4/14 |
+| + mentions + sides, 2 runs (credits ran out) | 0.854 / 0.846 (mean 0.850) | 5/14 |
+
+The overall difference is within noise. Per feature:
+- **Mentions** fixed the flyer: recall 10/13 → 13/13, with both performers
+  paired with their instruments ("Craig Riley" + "(percussion)", "Mike
+  Oresco" + "(bass)").
+- **Sides** mostly didn't take: Jev keeps tagging caption names as
+  `parties[].name`, and used `sides` once. The likely fix, untested, is an
+  `x-not-for` on `parties[].name` sending caption party blocks to `sides`.
+
 Real errors still made (before round 3):
 - a tribunal's letterhead address and phones are tagged as the *client's*
   contact details (fixed in round 3: `document_issuer` + ownership);

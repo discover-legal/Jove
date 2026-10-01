@@ -37,27 +37,45 @@
     },
     {
       "text": "Crosslinx Transit Solutions General Partnership",
-      "path": "parties[].name"
+      "path": "parties[].name",
+      "alt": [
+        "proceedings[].sides[].names[]"
+      ]
     },
     {
       "text": "Crosslinx Transit Solutions Constructors",
-      "path": "parties[].name"
+      "path": "parties[].name",
+      "alt": [
+        "proceedings[].sides[].names[]"
+      ]
     },
     {
       "text": "Applicants",
-      "path": "parties[].role"
+      "path": "parties[].role",
+      "alt": [
+        "proceedings[].sides[].role"
+      ]
     },
     {
       "text": "Ontario Infrastructure and Lands Corporation",
-      "path": "parties[].name"
+      "path": "parties[].name",
+      "alt": [
+        "proceedings[].sides[].names[]"
+      ]
     },
     {
       "text": "Metrolinx",
-      "path": "parties[].name"
+      "path": "parties[].name",
+      "alt": [
+        "proceedings[].sides[].names[]"
+      ]
     },
     {
       "text": "Respondents",
-      "path": "parties[].role"
+      "path": "parties[].role",
+      "alt": [
+        "proceedings[].sides[].role"
+      ]
     },
     {
       "text": "Sharon Vogel, Peter Wardle, Jesse Gardner and Cheryl Labiris",
@@ -116,11 +134,17 @@
     },
     {
       "text": "(Appellants)",
-      "path": "parties[].role"
+      "path": "parties[].role",
+      "alt": [
+        "proceedings[].sides[].role"
+      ]
     },
     {
       "text": "(Respondents)",
-      "path": "parties[].role"
+      "path": "parties[].role",
+      "alt": [
+        "proceedings[].sides[].role"
+      ]
     },
     {
       "text": "K. van Rensburg J.A.",
@@ -149,5 +173,22 @@
       "region": true
     }
   ],
-  "groups": []
+  "groups": [
+    {
+      "array": "proceedings[].sides[]",
+      "texts": [
+        "Crosslinx Transit Solutions General Partnership",
+        "Crosslinx Transit Solutions Constructors",
+        "Applicants"
+      ]
+    },
+    {
+      "array": "proceedings[].sides[]",
+      "texts": [
+        "Ontario Infrastructure and Lands Corporation",
+        "Metrolinx",
+        "(Appellants)"
+      ]
+    }
+  ]
 }

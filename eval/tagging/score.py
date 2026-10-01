@@ -61,14 +61,18 @@ def score(gold: dict, preds: list[dict]) -> dict:
     right = [p for p in preds if any(loose(g, p) for g in gold["tags"])]
     group_ids = []
     for grp in gold.get("groups", []):
-        ids = set()
-        for text in grp["texts"]:
-            hits = [p for p in preds if p["path"].startswith(grp["array"]) and
-                    (norm(text) in norm(p["text"]) or norm(p["text"]) in norm(text)) and norm(p["text"])]
-            ids |= {p["instances"].get(grp["array"]) for p in hits}
-            if not hits:
-                ids.add(None)
-        group_ids.append(ids)
+        arrays = grp["array"] if isinstance(grp["array"], list) else [grp["array"]]
+        candidates = []
+        for arr in arrays:  # the group may be satisfied under any of its arrays
+            ids = set()
+            for text in grp["texts"]:
+                hits = [p for p in preds if p["path"].startswith(arr) and
+                        (norm(text) in norm(p["text"]) or norm(p["text"]) in norm(text)) and norm(p["text"])]
+                ids |= {(arr, p["instances"].get(arr)) for p in hits}
+                if not hits:
+                    ids.add(None)
+            candidates.append(ids)
+        group_ids.append(min(candidates, key=lambda ids: (None in ids, len(ids))))
     groups_ok = [len(ids) == 1 and None not in ids and all(ids.isdisjoint(o) for j, o in enumerate(group_ids) if o is not ids)
                  for ids in group_ids]
     return {

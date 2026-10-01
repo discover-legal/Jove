@@ -716,7 +716,8 @@
           }
         }
       },
-      "x-not-for": "The client themself."
+      "x-not-for": "The client themself.",
+      "x-mentions": true
     },
     "events": {
       "type": "array",
@@ -809,7 +810,8 @@
           }
         }
       },
-      "x-not-for": "Salary (employment), property price (property), estate value (estate)."
+      "x-not-for": "Salary (employment), property price (property), estate value (estate).",
+      "x-mentions": true
     },
     "proceedings": {
       "type": "array",
@@ -841,6 +843,40 @@
               "2024-12345-I"
             ],
             "x-not-for": "The firm's own file references (matter.reference_numbers)."
+          },
+          "sides": {
+            "type": "array",
+            "description": "The sides of the case as its caption lists them: one item per side (e.g. the applicants, the respondents), with the side's procedural role and every name listed under it.",
+            "items": {
+              "type": "object",
+              "description": "One side of the caption.",
+              "properties": {
+                "role": {
+                  "type": "string",
+                  "description": "The side's procedural role, as printed.",
+                  "examples": [
+                    "Applicant",
+                    "Respondents",
+                    "Plaintiffs (Appellants)",
+                    "Defendants (Respondents)"
+                  ]
+                },
+                "names": {
+                  "type": "array",
+                  "description": "Every party name listed on this side.",
+                  "items": {
+                    "type": "string",
+                    "description": "One party name.",
+                    "examples": [
+                      "PUBLIC GUARDIAN AND TRUSTEE",
+                      "DAVID GOODIS",
+                      "Metrolinx"
+                    ]
+                  }
+                }
+              }
+            },
+            "x-not-for": "Descriptions of a party that aren't its procedural role (parties[].role: 'Senior Adjudicator', 'landlord')."
           },
           "stage": {
             "type": "string",

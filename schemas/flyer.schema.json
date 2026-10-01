@@ -112,7 +112,8 @@
                 ]
               }
             }
-          }
+          },
+          "x-mentions": true
         },
         "date": {
           "type": "string",

@@ -25,7 +25,7 @@ import math
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
-from .choose import Chooser, YesNo
+from .choose import Chooser, YesNo, is_value
 from .layout import DocNode
 from .schema import SchemaNode
 from .tagger import UNTRUSTED, Path, Tagger, _paths, _Task
@@ -54,6 +54,8 @@ class FlatTagger:
         self.workers = workers
         self._q = Tagger(schema, chooser, context=context)  # question builder + shared context
         self.warnings: list[dict] = []
+        # Objects/list items whose values may be mentioned inside prose (x-mentions).
+        self.mention_nodes = [n for n in schema.walk() if n.mentions and not n.leaf]
 
     # ------------------------------------------------------------------ public
 
@@ -95,10 +97,18 @@ class FlatTagger:
         # question can show the labels found: "city (0.41), postal code (0.35)".
         split_qs = {f"split{i}": self._split_q(l, _neighbours(lines, i), line_tops[i])
                     for i, l in enumerate(lines) if len(l.children) > 1 and line_tops[i]}
+        # Same request: does a prose line mention a value of an x-mentions field?
+        for i, l in enumerate(lines):
+            if len(l.children) >= 3 and line_tops[i]:
+                for k, m in enumerate(self.mention_nodes):
+                    if not line_tops[i][0].target.startswith(m.path):
+                        split_qs[f"men{i}_{k}"] = self._mention_q(l, m)
         yes_no = getattr(self.chooser, "yes_no", None)
         split_yes = yes_no(state, split_qs) if split_qs and yes_no else {}
         split = [i for i, l in enumerate(lines) if f"split{i}" in split_qs
                  and self._p(split_yes, f"split{i}", l.id, default=0.0) >= self.threshold]
+        mentions = [(i, k) for i in range(len(lines)) if i not in split for k in range(len(self.mention_nodes))
+                    if split_yes.get(f"men{i}_{k}", 0.0) >= self.threshold]
 
         # Round 3: words of the lines that should be split.
         word_qs, word_keys, word_yn = {}, {}, {}
@@ -109,6 +119,13 @@ class FlatTagger:
             for j in range(1, len(words)):
                 word_yn[f"cont{i}_{j}"] = self._continues_q(words[j - 1].text, words[j].text, "word",
                                                             within=lines[i].text)
+        # ... and words of prose lines that mention an x-mentions field, asked only within it.
+        mention_keys = {}
+        for i, k in mentions:
+            m = self.mention_nodes[k]
+            mention_keys[(i, k)] = [self._choices(word_qs, f"m{i}_{k}w{j}", w, lines[i].text,
+                                                  "It appears inside", start=m)
+                                    for j, w in enumerate(lines[i].children)]
         word_choices, word_yes = self._ask(state, word_qs, word_yn) if word_qs else ({}, {})
 
         # Units in reading order: unsplit lines, and the words of split lines.
@@ -127,14 +144,29 @@ class FlatTagger:
 
         values = self._merge(units)
         instances = self._items(values, yes)
-        return self._records(page_id, lines, values, instances, split)
+        nodes, edges = self._records(page_id, lines, values, instances, split)
+
+        # Mentions: extra spans inside prose lines, which keep their own tags.
+        found: list[Unit] = []
+        for (i, k), keys in mention_keys.items():
+            m = self.mention_nodes[k]
+            for j, w in enumerate(lines[i].children):
+                top = self._top(word_choices, word_qs, keys[j], w, start=m)
+                if top and is_value(top[0].target):
+                    found.append(Unit(w, i, top, _separation(top), 0.0, word=True))
+        found.sort(key=lambda u: (u.line_index, u.doc.id))
+        mvalues = self._merge(found)
+        n2, e2 = self._records(page_id, [], mvalues, self._items(mvalues, yes), [], prefix="m", mention=True)
+        return nodes + n2, edges + e2
 
     # ------------------------------------------------------------------ questions
 
-    def _choices(self, qs: dict, prefix: str, doc: DocNode, context: str, context_prefix: str) -> list:
-        task = _Task(doc, self.schema, context, {})
+    def _choices(self, qs: dict, prefix: str, doc: DocNode, context: str, context_prefix: str,
+                 start: SchemaNode | None = None) -> list:
+        start = start or self.schema
+        task = _Task(doc, start, context, {})
         out = []
-        for k, node in enumerate(self.schema.internal_nodes()):
+        for k, node in enumerate(start.internal_nodes()):
             key = f"{prefix}n{k}"
             qs[key] = self._q._question(task, node, context_prefix=context_prefix)
             out.append((key, node))
@@ -154,6 +186,20 @@ class FlatTagger:
                         "email, an amount and a deadline), or a list of several items.",
                 "false": "No: one value, a label with its value, a heading, or running prose (reasons, "
                          "narrative) that merely mentions things.",
+            },
+            subject=line.text,
+        )
+
+    def _mention_q(self, line: DocNode, m: SchemaNode) -> YesNo:
+        examples = f" (for example {', '.join(m.examples[:3])})" if m.examples else ""
+        fields = ", ".join(c.name for c in m.children)
+        return YesNo(
+            instructions=UNTRUSTED + f"Line {line.id} reads: {line.text!r}."
+            + f" Does the text itself mention a {m.name} ({m.description or m.name}){examples}:"
+            + f" a value for {fields}, even inside a sentence?" + self._pov(),
+            options={
+                "true": f"Yes: a specific {m.name} value is written in this text.",
+                "false": f"No: the text names no specific {m.name}.",
             },
             subject=line.text,
         )
@@ -202,7 +248,8 @@ class FlatTagger:
             return default
         return p
 
-    def _top(self, answers: dict, qs: dict, keys: list, doc: DocNode) -> list[Path]:
+    def _top(self, answers: dict, qs: dict, keys: list, doc: DocNode, start: SchemaNode | None = None) -> list[Path]:
+        start = start or self.schema
         dists = {}
         for key, node in keys:
             probs = answers.get(key)
@@ -210,9 +257,9 @@ class FlatTagger:
                 self.warnings.append({"code": "unanswered", "detail": f"{doc.id} at {node.path or '<root>'}"})
                 continue
             dists[node.path] = {qs[key].labels[k]: p for k, p in probs.items()}
-        if self.schema.path not in dists:
+        if start.path not in dists:
             return []
-        return sorted(_paths(self.schema, dists), key=lambda p: -p.score)[: self.keep]
+        return sorted(_paths(start, dists), key=lambda p: -p.score)[: self.keep]
 
     # ------------------------------------------------------------------ assembly
 
@@ -254,7 +301,10 @@ class FlatTagger:
                     else:
                         gap = v.line_index - other.line_index
                         p = yes.get(f"same{gap}_{v.line_index}", 0.0) if gap in (1, 2) else 0.0
-                    if p >= self.threshold and leaf not in fields.get((arr, oid), set()):
+                    # A repeated field starts a new item, unless the field is itself a list
+                    # inside the item (a side's names[]: several names, one side).
+                    repeat = leaf in fields.get((arr, oid), set()) and "[]" not in leaf[len(arr):]
+                    if p >= self.threshold and not repeat:
                         joined = oid
                         break
                 iid = joined or _anchor(v)
@@ -267,7 +317,7 @@ class FlatTagger:
             out.append(inst)
         return out
 
-    def _records(self, page_id, lines, values, instances, split):
+    def _records(self, page_id, lines, values, instances, split, prefix: str = "v", mention: bool = False):
         nodes, edges = [], []
         for line in lines:
             nodes.append(_node(line))
@@ -277,7 +327,7 @@ class FlatTagger:
             if len(members) == 1 and not v.word:
                 source = v.doc.id  # an unsplit line is its own value
             else:
-                source = f"{page_id}/v{n:03d}"
+                source = f"{page_id}/{prefix}{n:03d}"
                 kind = "span" if v.word else "segment"
                 text = (" " if v.word else "\n").join(m.text for m in members)
                 box = [min(m.bbox[0] for m in members), min(m.bbox[1] for m in members),
@@ -293,6 +343,8 @@ class FlatTagger:
                 if rank == 1:
                     edge["separation"] = None if math.isinf(v.separation) else round(v.separation, 3)
                     edge["instances"] = inst
+                    if mention:
+                        edge["mention"] = True  # found inside a prose line that keeps its own tag
                 edges.append(edge)
         return nodes, edges
 
