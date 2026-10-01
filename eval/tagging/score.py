@@ -2,7 +2,7 @@
 
     uv run python eval/tagging/score.py eval/tagging/results/<tagger>
 
-Predictions are rank-1 `tagged` edges that aren't `#none`, with their node's text.
+Predictions are rank-1 `tagged` edges that aren't `#none` or `#label`, with their node's text.
   recall     gold values found with an accepted field. Strict on text: the
              prediction must contain the value without much else (tagging a whole
              paragraph as a name doesn't count as finding the name).
@@ -35,7 +35,8 @@ def predictions(result: Path) -> list[dict]:
     return [
         {"text": nodes[e["from"]]["text"], "path": e["to"], "score": e["score"], "instances": e.get("instances") or {}}
         for e in recs
-        if e["type"] == "edge" and e["rel"] == "tagged" and e["rank"] == 1 and "#none" not in e["to"]
+        if e["type"] == "edge" and e["rel"] == "tagged" and e["rank"] == 1
+        and not e["to"].endswith(("#none", "#label"))
     ]
 
 

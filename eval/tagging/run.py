@@ -47,8 +47,10 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("tagger", choices=["tree", "flat"])
     ap.add_argument("--only")
+    ap.add_argument("--no-owners", action="store_true", help="skip the ownership pass")
+    ap.add_argument("--out", help="results subdirectory (default: the tagger name)")
     args = ap.parse_args()
-    out = ROOT / "results" / args.tagger
+    out = ROOT / "results" / (args.out or args.tagger)
     out.mkdir(parents=True, exist_ok=True)
     ocr = CachedOcr()
     total = {"secs": 0.0, "requests": 0, "tokens": 0}
@@ -62,7 +64,7 @@ def main() -> None:
         with tempfile.TemporaryDirectory() as tmp:
             t = time.time()
             result = run(gold_path.stem, Path(tmp), [(src.name, src.read_bytes())], schema, ocr, chooser,
-                         context=gold.get("context"), tagger=args.tagger)
+                         context=gold.get("context"), tagger=args.tagger, owners=not args.no_owners)
             secs = time.time() - t
             shutil.copy(result, out / f"{gold_path.stem}.jsonl")
         total["secs"] += secs

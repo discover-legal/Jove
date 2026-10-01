@@ -9,11 +9,18 @@
     },
     {
       "text": "SUPERIOR COURT OF JUSTICE",
-      "path": "proceedings[].forum"
+      "path": "proceedings[].forum",
+      "alt": [
+        "document_issuer.name"
+      ]
     },
     {
       "text": "DIVISIONAL COURT",
-      "path": "proceedings[].forum"
+      "path": "proceedings[].forum",
+      "alt": [
+        "document_issuer.name",
+        "document_issuer.department"
+      ]
     },
     {
       "text": "Carnwath, Day and Whalen JJ.",

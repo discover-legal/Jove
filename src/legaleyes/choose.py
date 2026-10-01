@@ -10,6 +10,12 @@ from dataclasses import dataclass
 from typing import Protocol
 
 NONE = "none"
+LABEL = "label"  # built-in option: text naming a field (a form caption), not giving a value
+
+
+def is_value(target: str) -> bool:
+    """True for a real field tag; False for ``...#none`` and ``...#label``."""
+    return not target.endswith(("#none", "#label"))
 
 
 @dataclass

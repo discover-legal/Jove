@@ -154,5 +154,27 @@ def test_filled_pdf_form_values_are_read(tmp_path):
 
     pdf = (Path(__file__).parent.parent / "eval/tagging/docs/n4_filled.pdf").read_bytes()
     _, pages = ingest([("n4.pdf", pdf)], tmp_path)
-    values = {t for p in pages for t, _ in p.text_layer}
-    assert {"Marcus Oyelaran and Priya Oyelaran", "3,780.00", "dwhitcombe@whitcombelegal.ca"} <= values
+    form_values = {t for p in pages for t, _, form in p.text_layer if form}
+    printed = {t for p in pages for t, _, form in p.text_layer if not form}
+    assert {"Marcus Oyelaran and Priya Oyelaran", "3,780.00", "dwhitcombe@whitcombelegal.ca"} <= form_values
+    assert "Address of Rental Unit:" in printed and "Address of Rental Unit:" not in form_values
+
+
+def test_form_values_are_marked_in_questions(tmp_path):
+    from pathlib import Path
+
+    from legaleyes.ingest import ingest
+    from legaleyes.layout import build
+    from legaleyes.ocr import TextLayerFirst
+    from legaleyes.tagger import Tagger, _Task
+    from legaleyes.schema import build_tree
+
+    pdf = (Path(__file__).parent.parent / "eval/tagging/docs/n4_filled.pdf").read_bytes()
+    _, pages = ingest([("n4.pdf", pdf)], tmp_path)
+    lines = [l for b in build("p0001", TextLayerFirst(None).read(pages[0])) for l in b.children]
+    value = next(l for l in lines if l.text == "3,780.00")
+    label = next(l for l in lines if l.text == "Address of Rental Unit:")
+    assert value.form and not label.form
+    tree = build_tree(SCHEMA)
+    q = Tagger(tree, None)._question(_Task(value, tree, None, {}), tree)
+    assert "fillable form field" in q.instructions and "label" in q.options

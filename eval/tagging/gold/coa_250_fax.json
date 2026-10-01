@@ -5,7 +5,10 @@
   "tags": [
     {
       "text": "COURT OF APPEAL FOR ONTARIO",
-      "path": "proceedings[].forum"
+      "path": "proceedings[].forum",
+      "alt": [
+        "document_issuer.name"
+      ]
     },
     {
       "text": "2022 ONCA 250",

@@ -33,6 +33,7 @@ class DocNode:
     bbox: Box
     text: str
     children: list["DocNode"] = field(default_factory=list)
+    form: bool = False  # every fragment came from a filled PDF form field
 
 
 @dataclass
@@ -40,12 +41,13 @@ class _Frag:
     text: str
     box: Box  # layout space (de-skewed)
     page_box: Box  # page space
+    form: bool = False
 
 
 def build(page_id: str, ocr: list[OcrLine]) -> list[DocNode]:
     ocr = [o for o in ocr if o.text.strip()]
     angle = skew(ocr)
-    frags = [_Frag(o.text.strip(), _deskew(o, angle), o.bbox) for o in ocr]
+    frags = [_Frag(o.text.strip(), _deskew(o, angle), o.bbox, o.form) for o in ocr]
     regions = [r for r in (_rows(region) for region in xycut(frags)) if r]
     rows = [row for region in regions for row in region]
     if not rows:
@@ -80,7 +82,7 @@ def build(page_id: str, ocr: list[OcrLine]) -> list[DocNode]:
         for li, row in enumerate(rows_in_block, start=1):
             box, text = row.page_box, row.text
             line_id = f"{block_id}/l{li:02d}"
-            lines.append(DocNode(line_id, "line", page_id, box, text, _words(line_id, page_id, box, text)))
+            lines.append(DocNode(line_id, "line", page_id, box, text, _words(line_id, page_id, box, text), form=row.form))
         out.append(DocNode(block_id, "block", page_id, _union([l.bbox for l in lines]),
                            "\n".join(l.text for l in lines), lines))
     return out
@@ -212,7 +214,8 @@ def _x_overlap(a: Box, b: Box) -> float:
 
 
 def _join(run: list[_Frag]) -> _Frag:
-    return _Frag(" ".join(f.text for f in run), _union([f.box for f in run]), _union([f.page_box for f in run]))
+    return _Frag(" ".join(f.text for f in run), _union([f.box for f in run]), _union([f.page_box for f in run]),
+                 all(f.form for f in run))
 
 
 def _words(line_id: str, page_id: str, box: Box, text: str) -> list[DocNode]:

@@ -22,6 +22,10 @@ def tagger() -> str:
     return name
 
 
+def owners() -> bool:
+    return os.environ.get("LE_OWNERS", "on") != "off"
+
+
 def split_gate() -> float:
     return float(os.environ.get("LE_SPLIT_GATE", "0.5"))
 

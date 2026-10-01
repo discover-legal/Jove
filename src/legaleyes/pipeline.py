@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from . import layout
-from .choose import Chooser
+from .choose import Chooser, is_value
 from .ingest import ingest, sha256
 from .ocr import Ocr
 from .schema import build_tree
@@ -16,7 +16,7 @@ from .tagger import Decision, Tagger
 
 def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict,
         ocr: Ocr, chooser: Chooser, separation: float = 1.5, context: str | None = None,
-        gate: float = 0.5, tagger: str = "tree") -> Path:
+        gate: float = 0.5, tagger: str = "tree", owners: bool = True) -> Path:
     tree = build_tree(schema)
     inputs, pages = ingest(files, job_dir / "pages")
     blocks = {p.page_id: layout.build(p.page_id, ocr.read(p)) for p in pages}
@@ -29,6 +29,14 @@ def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict
     else:
         engine = Tagger(tree, chooser, separation=separation, context=context, gate=gate)
         nodes, edges = _graph(blocks, engine.tag(blocks))
+    warnings = list(engine.warnings)
+    if owners and schema.get("x-owners"):
+        from .owners import Owners
+
+        standing = {k: v for k, v in (("schema_instructions", tree.instructions), ("job_context", context)) if v}
+        pass_ = Owners(schema, tree, chooser, standing)
+        edges = pass_.apply(nodes, edges)
+        warnings += pass_.warnings
 
     records: list[dict] = [{
         "type": "job",
@@ -46,7 +54,7 @@ def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict
 
     page_tags: dict[str, set[str]] = {}
     for e in edges:
-        if e["rel"] == "tagged" and e["rank"] == 1 and "#none" not in e["to"]:
+        if e["rel"] == "tagged" and e["rank"] == 1 and is_value(e["to"]):
             page_tags.setdefault(e["from"].split("/")[0], set()).add(e["to"])
     for p in pages:
         tags = sorted(page_tags.get(p.page_id, ()))
@@ -56,7 +64,7 @@ def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict
         })
     records.extend(nodes)
     records.extend(edges)
-    records.extend({"type": "warning", **w} for w in engine.warnings)
+    records.extend({"type": "warning", **w} for w in warnings)
 
     out = job_dir / "result.jsonl"
     tmp = out.with_suffix(".tmp")

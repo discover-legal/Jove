@@ -23,7 +23,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
-from .choose import NONE, Chooser, Question, YesNo
+from .choose import LABEL, NONE, Chooser, Question, YesNo, is_value
 from .layout import DocNode
 from .schema import SchemaNode
 
@@ -33,7 +33,7 @@ EPSILON = 1e-9
 
 @dataclass
 class Path:
-    target: str  # leaf path, or "<node>#none"
+    target: str  # leaf path, or "<node>#none" / "<node>#label"
     nodes: list[SchemaNode]  # internal nodes decided along the way, starting node first
     probs: list[float]
 
@@ -216,17 +216,23 @@ class Tagger:
         for i, child in enumerate(node.children):
             options[f"o{i}"] = _criterion(child)
             labels[f"o{i}"] = child.path
+        options[LABEL] = {"what": "A label or caption: the text names a field (a form caption such as "
+                                  "'Tenant's name:' or 'Street Number:', a column heading) rather than giving its value.",
+                          "not_for": "A label followed by its value on the same line ('Name: Jane Doe') is the value."}
+        labels[LABEL] = f"{node.path}#label"
         options[NONE] = {"what": "None of these: the text gives no value for any option above "
-                                 "(headings, bare labels, boilerplate, or other content)."}
+                                 "(headings, boilerplate, prose, or other content)."}
         labels[NONE] = f"{node.path}#none"
 
         where = f"the {node.path} section of the schema" if node.path else "the schema"
         pov = " Interpret it as state.context describes." if self.context else ""
         context = f" {context_prefix}: {t.context!r}." if t.context else ""
+        form = (" It was typed into a fillable form field, so it is a value, not a label."
+                if getattr(t.doc, "form", False) else "")
         return Question(
             instructions=(
                 UNTRUSTED
-                + f"Text {t.doc.id} ({t.doc.kind}) reads: {t.doc.text!r}.{context}"
+                + f"Text {t.doc.id} ({t.doc.kind}) reads: {t.doc.text!r}.{form}{context}"
                 + f" Which option of {where} does this text give a value for?"
                 + " If it covers several options, choose the one most of it belongs to."
                 + pov
@@ -248,7 +254,7 @@ def _holds_several(doc: DocNode, top: Path) -> bool:
       and a clear block tag hides the other lines' values.
     - A line with two or more "Label:" pairs ("Full name: ...  Date of birth: ...").
     """
-    if top.target.endswith("#none"):
+    if not is_value(top.target):
         return False
     if doc.kind == "block" and len(doc.children) > 1:
         return True
@@ -256,9 +262,12 @@ def _holds_several(doc: DocNode, top: Path) -> bool:
 
 
 def _label(target: str) -> str:
-    if target == "#none":
-        return "none of the schema"
-    return f"none of {target[:-5]}" if target.endswith("#none") else target
+    for suffix, word in (("#none", "none"), ("#label", "a label")):
+        if target == suffix:
+            return f"{word} of the schema"
+        if target.endswith(suffix):
+            return f"{word} of {target[: -len(suffix)]}"
+    return target
 
 
 def _anchor(doc: DocNode) -> str:
@@ -289,7 +298,8 @@ def _paths(node: SchemaNode, dists: dict[str, dict[str, float]]):
         else:
             for sub in _paths(child, dists):
                 yield Path(sub.target, [node] + sub.nodes, [p] + sub.probs)
-    yield Path(f"{node.path}#none", [node], [dist.get(f"{node.path}#none", 0.0)])
+    for suffix in ("#label", "#none"):
+        yield Path(f"{node.path}{suffix}", [node], [dist.get(f"{node.path}{suffix}", 0.0)])
 
 
 def _divergence(a: Path, b: Path) -> SchemaNode:

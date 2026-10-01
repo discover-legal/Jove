@@ -14,6 +14,7 @@ class OcrLine:
     bbox: tuple[float, float, float, float]  # x0, y0, x1, y1
     confidence: float | None = None
     quad: tuple[tuple[float, float], ...] | None = None  # corners TL, TR, BR, BL when the engine gives them
+    form: bool = False  # typed into a fillable PDF form field: certainly a value
 
 
 class Ocr(Protocol):
@@ -108,9 +109,10 @@ class TextLayerFirst:
 
     def read(self, page: Page) -> list[OcrLine]:
         layer = page.text_layer or []
-        if sum(len(t) for t, _ in layer) >= self.min_chars:
-            return [OcrLine(t, box, 1.0, ((box[0], box[1]), (box[2], box[1]), (box[2], box[3]), (box[0], box[3])))
-                    for t, box in layer]
+        if sum(len(item[0]) for item in layer) >= self.min_chars:
+            return [OcrLine(t, box, 1.0, ((box[0], box[1]), (box[2], box[1]), (box[2], box[3]), (box[0], box[3])),
+                            form=bool(rest and rest[0]))
+                    for t, box, *rest in layer]
         return self.inner.read(page)
 
 

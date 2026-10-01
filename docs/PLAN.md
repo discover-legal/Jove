@@ -133,6 +133,17 @@ names. A path's score is the geometric mean of its edge probabilities.
     reasoning paragraphs stay whole (P(split) 0.09–0.30).
   - It kept every useful split: name + date of birth 0.93, phone + email
     0.93, amount + deadline 0.77, addresses 0.81–0.85.
+- **Labels are their own answer.** Every Choice offers `label` next to `none`
+  ("the text names a field rather than giving its value"), so a form caption
+  becomes `<node>#label` instead of being forced into a field. Text typed into
+  a filled PDF form field is marked in its question as certainly a value.
+- **Ownership pass (`owners.py`, `LE_OWNERS=on`).** Schemas may declare
+  `x-owners`: per owner (client, other party, document issuer…) its name
+  fields and contact prefix. Every value tagged with an owner's name or
+  contact field gets one more Choice: *whose is it?* If the answer names
+  another owner, the tag moves to that owner's equivalent field
+  (`client.contact.address.city` → `document_issuer.contact.address.city`).
+  The answer is recorded on the edge as `owner`.
 - **Parts see their parent's text** as context: "22 King Street West" only
   reads as a party's address next to "Ms. Jane Doe".
 - **Array items**: when a chunk is split inside an array item node, that chunk
@@ -185,10 +196,33 @@ Flat wins most on degraded scans: on the faxed decision it found 21/27 values
 against tree's 17/27. It is also about 20% cheaper. It is the default;
 `LE_TAGGER=tree` restores the tree.
 
-Real errors both taggers still make:
+**Round 3 (2026-09-30):** label option, a `document_issuer` branch in the
+legal schema, and the ownership pass. Flat tagger, 11 documents, 230 gold
+values.
+
+| flat tagger | recall | precision | F1 | requests | tokens |
+|---|---|---|---|---|---|
+| round-2 setup (rescored on today's gold) | 0.835 | 0.807 | 0.820 | 273 | 10.3M |
+| + `label` option + issuer branch | 0.826 | 0.866 | 0.846 | 355 | 13.7M |
+| + ownership pass (default) | 0.826 | 0.871 | 0.848 | 364 | 13.7M |
+
+What each part did:
+- **The issuer slot and the label option did nearly all of it.** With a place
+  for letterheads, Jev puts the IPC's address and phones there itself.
+- **Labels:** 45 form captions on the N4 and 16 on the intake form now come
+  out as labels.
+- **The ownership pass** asked 102 questions, kept 99 tags, and moved 3
+  defensibly (the tenant's surname to `client` per the job context; a law
+  firm letterhead from issuer to opposing party). It is a cheap safety net
+  (+9 requests).
+- **Cost:** the extra `label` option in every Choice and the extra root branch
+  cost ~33% more tokens.
+
+Real errors still made (before round 3):
 - a tribunal's letterhead address and phones are tagged as the *client's*
-  contact details;
-- blank form labels ("Street Number: Street Name:") get tagged as values;
+  contact details (fixed in round 3: `document_issuer` + ownership);
+- blank form labels ("Street Number: Street Name:") get tagged as values
+  (fixed in round 3: `label`);
 - a party's role printed on a separate line doesn't attach to the party;
 - performers named inside prose are missed.
 
@@ -258,6 +292,7 @@ Jobs run in the background, in-process, and store their state under `data/jobs/<
 | `LE_SEPARATION` | `1.5` |
 | `LE_SPLIT_GATE` | `0.5` (split only if the yes/no gate's P(split) ≥ this) |
 | `LE_TAGGER` | `flat` (or `tree`) |
+| `LE_OWNERS` | `on` (`off` skips the ownership pass) |
 | `LE_DATA_DIR` | `./data` |
 
 ## Status and next steps

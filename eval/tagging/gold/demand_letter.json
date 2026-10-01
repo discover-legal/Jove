@@ -9,21 +9,26 @@
       "alt": [
         "parties[].represented_by",
         "parties[].organization",
-        "referenced_documents[].author"
+        "referenced_documents[].author",
+        "document_issuer.name"
       ]
     },
     {
       "text": "1200 Bay Street, Suite 300",
       "path": "parties[].contact.address.street",
       "alt": [
-        "parties[].contact.address.full"
+        "parties[].contact.address.full",
+        "document_issuer.contact.address.street",
+        "document_issuer.contact.address.full"
       ]
     },
     {
       "text": "M5R 2A5",
       "path": "parties[].contact.address.postal_code",
       "alt": [
-        "parties[].contact.address.full"
+        "parties[].contact.address.full",
+        "document_issuer.contact.address.postal_code",
+        "document_issuer.contact.address.full"
       ]
     },
     {
@@ -98,14 +103,18 @@
       "alt": [
         "client.contact.address.city",
         "parties[].contact.address.full",
-        "client.contact.address.full"
+        "client.contact.address.full",
+        "document_issuer.contact.address.city",
+        "document_issuer.contact.address.full"
       ]
     },
     {
       "text": "Ontario",
       "path": "parties[].contact.address.province",
       "alt": [
-        "parties[].contact.address.full"
+        "parties[].contact.address.full",
+        "document_issuer.contact.address.province",
+        "document_issuer.contact.address.full"
       ]
     },
     {

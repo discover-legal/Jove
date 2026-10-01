@@ -5,6 +5,30 @@
   "title": "Legal intake",
   "description": "Everything an Ontario law firm captures when opening a matter, taken from scanned client documents: intake forms, letters, contracts, court and tribunal forms, IDs, pay stubs, invoices, ROEs and notices. Keywords: description says what a field holds, examples show typical text, x-not-for says what belongs elsewhere so that sibling fields can be told apart.",
   "x-instructions": "Record everything from the point of view of the law firm opening this file. 'client' is the firm's own client: the person or organization the intake is about. If state.context.job_context names the firm or the client, use it. Documents from other lawyers (demand letters, pleadings, notices) are usually written for the other side: in them, 'we act for X' or 'our client X' means X is an opposing party (parties[]), and the person the letter is addressed to is often the firm's client. A letterhead or signature block belongs to whoever wrote the document: a law firm writing for the other side is opposing counsel (a party with role 'opposing counsel', or represented_by of the party it acts for).",
+  "x-owners": {
+    "client": {
+      "description": "the firm's own client: the person or organization the file is about",
+      "name": [
+        "client.person.full_name",
+        "client.organization.legal_name"
+      ],
+      "contact": "client.contact"
+    },
+    "party": {
+      "description": "another party: the opposing side, their lawyers or paralegals, co-tenants, family members, witnesses, or other people and organizations involved in the matter",
+      "name": [
+        "parties[].name"
+      ],
+      "contact": "parties[].contact"
+    },
+    "issuer": {
+      "description": "the court, tribunal, government office or firm that issued or sent this document (its letterhead, caption or signature)",
+      "name": [
+        "document_issuer.name"
+      ],
+      "contact": "document_issuer.contact"
+    }
+  },
   "type": "object",
   "properties": {
     "client": {
@@ -247,7 +271,8 @@
                 "phone after 6 p.m."
               ]
             }
-          }
+          },
+          "x-not-for": "Letterheads and contact details of courts, tribunals, government offices or the document's sender (document_issuer), and other parties' contact details (parties)."
         },
         "identification": {
           "type": "array",
@@ -404,6 +429,127 @@
             ]
           },
           "x-not-for": "Court case numbers (proceedings) and ID document numbers (client.identification)."
+        }
+      }
+    },
+    "document_issuer": {
+      "type": "object",
+      "description": "Who issued or sent this document: the court, tribunal, government office or law firm whose letterhead, caption or signature it carries.",
+      "x-not-for": "The firm's own client (client) and the parties to the matter (parties), even when their addresses also appear on the page.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Issuer's name, as in the letterhead or caption.",
+          "examples": [
+            "Court of Appeal for Ontario",
+            "Information and Privacy Commissioner of Ontario",
+            "Smith & Co. LLP"
+          ]
+        },
+        "department": {
+          "type": "string",
+          "description": "Office, branch or department within the issuer.",
+          "examples": [
+            "Tribunal Services Department",
+            "Family Responsibility Office"
+          ]
+        },
+        "contact": {
+          "type": "object",
+          "description": "How to reach the document's issuer.",
+          "properties": {
+            "phones": {
+              "type": "array",
+              "description": "Phone numbers for the document's issuer.",
+              "items": {
+                "type": "string",
+                "description": "A phone number, including any label such as mobile/home/work.",
+                "examples": [
+                  "(416) 555-0199",
+                  "Cell: 647-555-0142",
+                  "+1 613 555 0100 ext. 22"
+                ]
+              }
+            },
+            "emails": {
+              "type": "array",
+              "description": "Email addresses for the document's issuer.",
+              "items": {
+                "type": "string",
+                "description": "An email address.",
+                "examples": [
+                  "jane.doe@example.com"
+                ]
+              }
+            },
+            "address": {
+              "type": "object",
+              "description": "Postal or street address of the document's issuer, split into parts where the document separates them.",
+              "properties": {
+                "street": {
+                  "type": "string",
+                  "description": "Street line(s): number, street name, unit/suite/apartment, RR or PO box.",
+                  "examples": [
+                    "1200 Bay St, Suite 300",
+                    "Unit 4 - 22 King St W",
+                    "RR 2"
+                  ]
+                },
+                "city": {
+                  "type": "string",
+                  "description": "City, town or municipality.",
+                  "examples": [
+                    "Toronto",
+                    "Mississauga",
+                    "Thunder Bay"
+                  ]
+                },
+                "province": {
+                  "type": "string",
+                  "description": "Province, territory or state.",
+                  "examples": [
+                    "ON",
+                    "Ontario",
+                    "QC"
+                  ]
+                },
+                "postal_code": {
+                  "type": "string",
+                  "description": "Postal code (or US ZIP code).",
+                  "examples": [
+                    "M5R 2A5",
+                    "K1A 0B1",
+                    "L4W5K4"
+                  ]
+                },
+                "country": {
+                  "type": "string",
+                  "description": "Country, written out or as a code.",
+                  "examples": [
+                    "Canada",
+                    "CAN",
+                    "USA"
+                  ]
+                },
+                "full": {
+                  "type": "string",
+                  "description": "The whole address as a single line, when it is not split into parts.",
+                  "examples": [
+                    "22 King St W, Toronto ON M5H 1A1"
+                  ],
+                  "x-not-for": "Addresses already split into street/city/postal code on the page."
+                }
+              }
+            },
+            "website": {
+              "type": "string",
+              "description": "The issuer's web address.",
+              "examples": [
+                "http://www.ipc.on.ca",
+                "www.ontariocourts.ca"
+              ]
+            }
+          }
         }
       }
     },

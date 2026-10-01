@@ -30,8 +30,8 @@ class Page:
     sha256: str
     width: int
     height: int
-    # Born-digital PDF pages: (line text, bbox in image pixels) from the text layer.
-    text_layer: list[tuple[str, tuple[float, float, float, float]]] | None = None
+    # Born-digital PDF pages: (line text, bbox in image pixels, from a form field?) from the text layer.
+    text_layer: list[tuple[str, tuple[float, float, float, float], bool]] | None = None
 
 
 def sha256(data: bytes) -> str:
@@ -112,7 +112,7 @@ def _form_values(page, pdf) -> list[tuple[str, tuple[float, float, float, float]
             if not value or not pdfium_c.FPDFAnnot_GetRect(annot, rect):
                 continue
             out.append((value, (rect.left * scale, (page_h - rect.top) * scale,
-                                rect.right * scale, (page_h - rect.bottom) * scale)))
+                                rect.right * scale, (page_h - rect.bottom) * scale), True))
         finally:
             pdfium_c.FPDFPage_CloseAnnot(annot)
     return out
@@ -136,7 +136,7 @@ def _page_text(page) -> list[tuple[str, tuple[float, float, float, float]]] | No
             if s and boxes:
                 l, b, r, t = (min(x[0] for x in boxes), min(x[1] for x in boxes),
                               max(x[2] for x in boxes), max(x[3] for x in boxes))
-                lines.append((s, (l * scale, (page_h - t) * scale, r * scale, (page_h - b) * scale)))
+                lines.append((s, (l * scale, (page_h - t) * scale, r * scale, (page_h - b) * scale), False))
             chars.clear()
             boxes.clear()
 
