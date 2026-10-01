@@ -44,3 +44,20 @@ def test_flat_tags_splits_and_groups(tmp_path):
     bolt, tenant = tags["Bolt"][1]["parties[]"], tags["tenant"][1]["parties[]"]
     assert acme == landlord and bolt == tenant and acme != bolt
     assert recs[0]["tagger"] == "flat"
+
+
+def test_two_parties_on_one_line_are_two_items(tmp_path):
+    line = "Acme landlord Bolt tenant"
+    ocr = FakeOcr({"p0001": [line]})
+
+    def g(q):
+        return 0.9 if "hold two or more separate values" in q.instructions else 0.1
+
+    rules = RULES | {("", "Bolt"): "parties[]", ("", "tenant"): "parties[]", ("", line): "parties[]",
+                     ("parties[]", "Bolt"): "parties[].name", ("parties[]", "tenant"): "parties[].role"}
+    out = run("j", tmp_path, [("b.png", png())], SCHEMA, ocr, FakeChooser(rule(rules), gate=g), tagger="flat")
+    recs = [json.loads(l) for l in out.read_text().splitlines()]
+    nodes = {r["id"]: r for r in recs if r["type"] == "node"}
+    inst = {nodes[e["from"]]["text"]: e["instances"]["parties[]"] for e in recs
+            if e["type"] == "edge" and e["rel"] == "tagged" and e["rank"] == 1 and "parties[]" in (e.get("instances") or {})}
+    assert inst["Acme"] == inst["landlord"] and inst["Bolt"] == inst["tenant"] and inst["Acme"] != inst["Bolt"]

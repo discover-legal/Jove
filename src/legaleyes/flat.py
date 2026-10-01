@@ -15,7 +15,8 @@ the labels round 1 found (a blind version of this question missed splits the
 labelled one caught). Round 3 labels the words of lines that said yes. Then
 the result is assembled with no tuned thresholds on geometry:
 
-- consecutive units that "continue" each other and share a tag become one value;
+- adjacent words of a line that share a tag are one value; lines join when
+  they "continue" each other and share a tag;
 - list items (parties[], amounts[]...) follow the same-item answers, and a
   field repeating inside an item starts a new item (two names = two parties).
 """
@@ -220,8 +221,11 @@ class FlatTagger:
         out: list[Unit] = []
         for u in units:
             prev = out[-1] if out else None
-            if (prev and u.link >= self.threshold and prev.top[0].target == u.top[0].target
-                    and prev.word == u.word and (not u.word or prev.line_index == u.line_index)):
+            same_tag = prev is not None and prev.top[0].target == u.top[0].target and prev.word == u.word
+            # Adjacent words of one line with the same tag are one value ("Senior Adjudicator");
+            # across lines, only the "continues" answer joins them.
+            same_line_words = same_tag and u.word and prev.line_index == u.line_index
+            if same_tag and (same_line_words or (not u.word and u.link >= self.threshold)):
                 prev.members = (prev.members or [prev.doc]) + [u.doc]
                 continue
             out.append(u)
@@ -254,6 +258,10 @@ class FlatTagger:
                         joined = oid
                         break
                 iid = joined or _anchor(v)
+                if not joined and (arr, iid) in fields:
+                    # A new item whose natural anchor (the line) is already an item: two
+                    # parties on one line ("DAVID GOODIS, ..., and JOHN DOE, ..."). Anchor at the word.
+                    iid = v.doc.id
                 inst[arr] = iid
                 fields.setdefault((arr, iid), set()).add(leaf)
             out.append(inst)

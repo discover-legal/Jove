@@ -218,6 +218,33 @@ What each part did:
 - **Cost:** the extra `label` option in every Choice and the extra root branch
   cost ~33% more tokens.
 
+**Noise (2026-10-01): Jev is not deterministic.** The same document and the
+same questions give different answers run to run (2022 ONCA 100: recall
+15, 14, 15 of 18 over three runs). Three full runs of the default setup:
+
+| | F1 | |
+|---|---|---|
+| run 1 | 0.838 | |
+| run 2 | 0.839 | |
+| run 3 | 0.852 | mean 0.843 ± ~0.007 |
+
+So differences under ~0.015 F1 are noise:
+- flat vs tree (+0.034) and the label/issuer gain (+0.026) are above it;
+- the ownership pass (+0.002) is not.
+
+Compare configurations over ≥3 runs. For production, consider caching Jev
+answers by question hash: the same document then tags the same way twice,
+and re-runs are free.
+
+**Grouping fixes (2026-10-01):**
+- Two parties on one line ("DAVID GOODIS, Senior Adjudicator, and JOHN DOE,
+  Requester") are now two items: the second item anchors at its word when
+  the line anchor is taken.
+- Adjacent words in a line with the same tag are one value, whatever the
+  "continues" answer says, so "Senior Adjudicator" no longer splits into two
+  roles.
+- The court endorsement now scores 16/16, 16/16, with 3/3 groups.
+
 Real errors still made (before round 3):
 - a tribunal's letterhead address and phones are tagged as the *client's*
   contact details (fixed in round 3: `document_issuer` + ownership);
