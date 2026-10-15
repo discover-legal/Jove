@@ -4,7 +4,15 @@
 export TYPESAFE_API_KEY=...
 uv run python eval/tagging/run.py tree        # or flat; OCR is cached per page
 uv run python eval/tagging/score.py eval/tagging/results/tree [-v]
+uv run python eval/tagging/run.py flat --chooser laya --out laya   # local Laya instead of Jev
+uv run python eval/tagging/run.py flat --chooser clef --out clef   # local Clef-Flash (LE_CLEF_BASE_URL)
+uv run python eval/tagging/run.py flat --chooser clef --ocr-cache fresh --out clef_fresh   # re-OCR into cache/fresh/
+uv run python eval/tagging/chunks.py rules --ocr ppocr4            # no chooser: OCR/layout ceiling
 ```
+
+`--ocr tesseract|ppocr4|v6` (run.py and chunks.py) swaps the OCR engine
+(eval/tagging/ocr_engines.py); those engines read the page image even when
+there is a text layer, and are cached under `cache/<engine>/`.
 
 `gold/*.json` gives each document's expected values: text, field (`path`), any
 accepted alternatives (`alt`), and `region` for spans where any piece tagged

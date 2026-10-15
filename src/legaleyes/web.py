@@ -14,10 +14,10 @@ from .choose import Chooser
 from .schema import SchemaError, build_tree
 
 FORM = """<!doctype html>
-<meta charset="utf-8"><title>LegalEyes</title>
+<meta charset="utf-8"><title>Jove</title>
 <style>body{font:16px system-ui;max-width:40rem;margin:2rem auto;padding:0 1rem}
 textarea{width:100%;height:14rem;font:13px monospace}</style>
-<h1>LegalEyes</h1>
+<h1>Jove</h1>
 <form method="post" action="/jobs" enctype="multipart/form-data">
 <p><label>Scanned pages (PDF / images)<br><input type="file" name="files" multiple required></label></p>
 <p><label>Schema (JSON Schema)<br><textarea name="schema" required></textarea></label></p>
@@ -34,7 +34,7 @@ def create_app(
     separation: float | None = None,
 ) -> FastAPI:
     root = (data_dir or config.data_dir()) / "jobs"
-    app = FastAPI(title="LegalEyes")
+    app = FastAPI(title="Jove")
 
     def job_dir(job_id: str) -> Path:
         try:

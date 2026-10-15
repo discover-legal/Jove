@@ -22,6 +22,13 @@ class Ocr(Protocol):
     def read(self, page: Page) -> list[OcrLine]: ...
 
 
+def release(ocr) -> None:
+    """Free whatever an OCR stack holds (GPU models); a no-op for engines without ``release``."""
+    fn = getattr(ocr, "release", None)
+    if fn:
+        fn()
+
+
 class RapidOcr:
     """RapidOCR 3 with PaddleOCR's PP-OCRv6 small models, run locally on CPU.
 
@@ -106,6 +113,9 @@ class TextLayerFirst:
 
     def describe(self) -> dict:
         return {**self.inner.describe(), "text_layer": "used when present"}
+
+    def release(self) -> None:
+        release(self.inner)
 
     def read(self, page: Page) -> list[OcrLine]:
         layer = page.text_layer or []

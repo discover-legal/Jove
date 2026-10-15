@@ -23,32 +23,18 @@ class JevChooser:
             client = TypeSafeClient(model=model)
         self._client = client
         self.model = model
+        self.provider = "jev"
         self.requests = 0  # usage counters, for cost comparisons
         self.input_tokens = 0
 
     def describe(self) -> dict:
-        return {"provider": "jev", "model": self.model or "jev-latest"}
+        return {"provider": self.provider, "model": self.model or "jev-latest"}
 
     def choose(self, state: dict, questions: dict[str, Question]) -> dict[str, dict[str, float]]:
         from typesafe_sdk import Choice
 
         out: dict[str, dict[str, float]] = {}
-        pending = batches(state, questions)
-        while pending:
-            batch = pending.pop()
-            try:
-                response = self._client.system_one(
-                    state=state,
-                    questions={k: Choice(instructions=q.instructions, criteria=q.options) for k, q in batch.items()},
-                    model=self.model,
-                )
-                self._count(response)
-            except Exception as e:
-                if "max_tokens_exceeded" in str(e) and len(batch) > 1:
-                    items = list(batch.items())
-                    pending += [dict(items[: len(items) // 2]), dict(items[len(items) // 2:])]
-                    continue
-                raise
+        for batch, response in self._send(state, questions, Choice):
             for key, q in batch.items():
                 answer = response.answers.get(key)
                 if answer is not None and answer.type == "choice":
@@ -57,28 +43,41 @@ class JevChooser:
                         out[key] = probs
         return out
 
-
-    def _count(self, response) -> None:
-        self.requests += 1
-        usage = getattr(response, "usage", None)
-        self.input_tokens += (getattr(usage, "input_tokens", None) or 0)
-
     def yes_no(self, state: dict, questions: dict[str, YesNo]) -> dict[str, float]:
         from typesafe_sdk import Noul
 
         out: dict[str, float] = {}
-        for batch in batches(state, questions):
-            response = self._client.system_one(
-                state=state,
-                questions={k: Noul(instructions=q.instructions, criteria=q.options) for k, q in batch.items()},
-                model=self.model,
-            )
-            self._count(response)
+        for batch, response in self._send(state, questions, Noul):
             for key in batch:
                 answer = response.answers.get(key)
                 if answer is not None and answer.type == "noul" and 0.0 <= answer.noul <= 1.0:
                     out[key] = float(answer.noul)
         return out
+
+    def _send(self, state: dict, questions: dict, kind):
+        """Yield (batch, response); a batch the server finds too large is halved and retried."""
+        pending = batches(state, questions)
+        while pending:
+            batch = pending.pop()
+            try:
+                response = self._client.system_one(
+                    state=state,
+                    questions={k: kind(instructions=q.instructions, criteria=q.options) for k, q in batch.items()},
+                    model=self.model,
+                )
+            except Exception as e:
+                if _too_large(e) and len(batch) > 1:
+                    items = list(batch.items())
+                    pending += [dict(items[: len(items) // 2]), dict(items[len(items) // 2:])]
+                    continue
+                raise
+            self._count(response)
+            yield batch, response
+
+    def _count(self, response) -> None:
+        self.requests += 1
+        usage = getattr(response, "usage", None)
+        self.input_tokens += (getattr(usage, "input_tokens", None) or 0)
 
 
 def batches(state: dict, questions: dict) -> list[dict]:
@@ -100,6 +99,11 @@ def batches(state: dict, questions: dict) -> list[dict]:
     if current:
         out.append(current)
     return out
+
+
+def _too_large(e: Exception) -> bool:
+    # Jev's own limit, and llama-server's when a request exceeds its batch size (local Clef)
+    return "max_tokens_exceeded" in str(e) or "too large to process" in str(e)
 
 
 def _size(value) -> int:

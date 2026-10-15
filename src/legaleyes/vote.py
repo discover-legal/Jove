@@ -16,7 +16,6 @@ page-level OCR models were seen turning a blurred 1986 into "1996".
 Measured on eval/ocr (see its README).
 """
 
-import base64
 import difflib
 import logging
 import re
@@ -24,7 +23,8 @@ import re
 import httpx
 
 from .ingest import Page
-from .ocr import Ocr, OcrLine
+from .ocr import Ocr, OcrLine, release
+from .ollama import chat, unload
 from .reread import _CONFUSABLE, line_crop, similarity
 
 log = logging.getLogger(__name__)
@@ -163,20 +163,16 @@ class LineVote:
         step = h / (len(rows) + 1)
         return [OcrLine(r, (0.0, step * (i + 0.5), float(w), step * (i + 1.2)), None) for i, r in enumerate(rows)]
 
+    def release(self) -> None:
+        unload(self.base_url, [self.reader, self.tiebreaker, self.escalation])
+        release(self.inner)
+
     def _read(self, crop, model: str, prompt: str, length: int) -> str:
         return first_line(self._chat(crop, model, prompt, 20 + length))
 
     def _chat(self, img, model: str, prompt: str, max_tokens: int) -> str:
-        import cv2
+        return chat(self.base_url, img, model, prompt, max_tokens, self.timeout)
 
-        ok, png = cv2.imencode(".png", img)
-        resp = httpx.post(f"{self.base_url}/api/chat", timeout=self.timeout, json={
-            "model": model, "stream": False, "think": False,
-            "options": {"temperature": 0, "num_predict": max_tokens, "num_ctx": 8192},
-            "messages": [{"role": "user", "content": prompt, "images": [base64.b64encode(png.tobytes()).decode()]}],
-        })
-        resp.raise_for_status()
-        return resp.json().get("message", {}).get("content", "")
 
 
 _QUOTES = str.maketrans({"‘": "'", "’": "'", "“": '"', "”": '"', "–": "-", "—": "-"})

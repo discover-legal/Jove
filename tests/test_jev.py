@@ -70,6 +70,25 @@ def test_halves_batch_on_max_tokens_exceeded():
     assert len(out) == 5 and all(len(c) <= 2 for c in client.calls)
 
 
+def test_yes_no_halves_batch_when_llama_server_says_too_large():
+    from legaleyes.choose import YesNo
+
+    class LocalClef:
+        calls = []
+
+        def system_one(self, state, questions, model=None):
+            self.calls.append(questions)
+            if len(questions) > 2:
+                raise RuntimeError("500 input (28184 tokens) is too large to process. increase the physical batch size")
+            return SystemOneResponse.model_validate({"model": "clef-flash", "usage": {},
+                "answers": {k: {"type": "noul", "noul": 0.3} for k in questions}})
+
+    client = LocalClef()
+    gates = {f"g{i}": YesNo("split?", {"true": "y", "false": "n"}, "x") for i in range(5)}
+    out = JevChooser(client=client).yes_no({"page": "p"}, gates)
+    assert out == {k: 0.3 for k in gates}
+
+
 def test_yes_no_parses_noul():
     from legaleyes.choose import YesNo
 

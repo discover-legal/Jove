@@ -210,8 +210,8 @@ class FlatTagger:
             instructions=UNTRUSTED + f"Previous {unit}: {prev!r}. This {unit}: {cur!r}.{where}"
             + f" Does this {unit} continue the same single value as the previous {unit}?" + self._pov(),
             options={
-                "true": f"Yes: one value runs across both (the rest of a name, an address, a date, "
-                        f"a phone number, or the same sentence).",
+                "true": "Yes: one value runs across both (the rest of a name, an address, a date, "
+                        "a phone number, or the same sentence).",
                 "false": f"No: this {unit} starts a new value, a label, or unrelated text.",
             },
             subject=cur,

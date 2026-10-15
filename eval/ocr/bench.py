@@ -24,7 +24,6 @@ from rapidfuzz.distance import Levenshtein
 sys.path.insert(0, str(Path(__file__).parent))
 from engines import ENGINES  # noqa: E402
 
-from legaleyes.ingest import Page  # noqa: E402
 from legaleyes.layout import build  # noqa: E402
 
 ROOT = Path(__file__).parent

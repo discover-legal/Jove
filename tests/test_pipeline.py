@@ -178,3 +178,19 @@ def test_form_values_are_marked_in_questions(tmp_path):
     tree = build_tree(SCHEMA)
     q = Tagger(tree, None)._question(_Task(value, tree, None, {}), tree)
     assert "fillable form field" in q.instructions and "label" in q.options
+
+
+def test_ingest_turns_phone_photos_upright(tmp_path):
+    import io
+
+    from PIL import Image
+
+    from legaleyes.ingest import ingest
+
+    img = Image.new("RGB", (300, 200), "white")  # stored landscape...
+    exif = img.getexif()
+    exif[0x0112] = 6  # ...with "rotate 90° clockwise to display", as phones write it
+    buf = io.BytesIO()
+    img.save(buf, "JPEG", exif=exif)
+    _, pages = ingest([("photo.jpg", buf.getvalue())], tmp_path)
+    assert (pages[0].width, pages[0].height) == (200, 300)

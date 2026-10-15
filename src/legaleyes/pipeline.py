@@ -9,7 +9,7 @@ from pathlib import Path
 from . import layout
 from .choose import Chooser, is_value
 from .ingest import ingest, sha256
-from .ocr import Ocr
+from .ocr import Ocr, release
 from .schema import build_tree
 from .tagger import Decision, Tagger
 
@@ -32,6 +32,8 @@ def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict
                 blocks[p.page_id] = docling_layout.build(p.page_id, ocr.read(p), regs)
     else:
         blocks = {p.page_id: layout.build(p.page_id, ocr.read(p)) for p in pages}
+    # Every page is read: free the OCR models' GPU memory before the chooser needs it.
+    release(ocr)
 
     if tagger == "flat":
         from .flat import FlatTagger

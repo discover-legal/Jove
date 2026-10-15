@@ -1,4 +1,4 @@
-# LegalEyes — plan
+# Jove — plan
 
 ## What it is
 
@@ -77,6 +77,18 @@ ingest ──► ocr ──► layout ──► tag ──► emit (JSONL graph)
      - When detection finds almost nothing, glm's whole-page reading is used.
      - All three models run locally in Ollama. The older single-model re-read is
        still available with `LE_OCR_REREAD=vlm`.
+   - **Missed lines (`recover.py`):** glm-ocr reads the whole page. Rows with a
+     word no detected line has (and at most 12 words) are located by
+     qwen3-vl:4b-instruct. The stretch of the row no detected line covers is
+     cropped and read again, and the line is added only if that reading matches,
+     numbers included. `LE_OCR_RECOVER=off` disables it.
+   - **Straightening (`straighten.py`, opt-in with `LE_OCR_STRAIGHTEN=on`):**
+     flattens a photographed sheet, or levels a tilted page, reads it again, and
+     keeps the surer reading. Boxes are mapped back to the page as uploaded. It
+     is off because it cost word F1 on eval/ocr (round 4).
+   - Images are turned upright from their EXIF orientation at ingest.
+   - **GPU hand-off:** once every page is read, the OCR models are unloaded from
+     Ollama (`keep_alive: 0`), so the chooser gets the whole GPU.
 3. **layout**: page → **block** → **line** → **word**.
    - Page skew is estimated from the OCR box corners, and layout runs on
      de-rotated boxes. Fragments that overlap horizontally are never the same line.
@@ -236,6 +248,50 @@ Compare configurations over ≥3 runs. For production, consider caching Jev
 answers by question hash: the same document then tags the same way twice,
 and re-runs are free.
 
+**Local decision model (2026-10-15): Clef-Flash.** Flat tagger, same 11
+documents and cached OCR, Clef-Flash Q4_K_M on llama-server (RTX 5060 8 GB).
+One run.
+
+| chooser | recall | precision | F1 | groups | requests | tokens | time |
+|---|---|---|---|---|---|---|---|
+| Jev (3 runs) | 0.828 | 0.859 | 0.843 | 4/14 | ~364 | 13.7M | minutes |
+| Clef-Flash Q4_K_M | 0.630 | 0.661 | 0.645 | 2/14 | 856 | 9.2M | 103 min |
+
+- It does real work, unlike Laya (0/45): it is closest to Jev on the flyer
+  (11/13), the transit sign (16/21) and the Divisional Court endorsement
+  (12/16). It is weakest on the demand letter (8/18), the intake form (10/19)
+  and ONCA 100 (10/18), where it leaves values as `none`.
+- The fax copy scored the same as the clean ONCA 250 (15/27 each).
+- Speed is the cost: ~1,700 tokens/s. The 16k micro-batch splits most
+  requests (856 against Jev's ~364), and each repeats the page state.
+- Untested: Q8_0 (9.2 GB, would need CPU offload here), or the larger `Clef`.
+- **Against the old default (`llm`, qwen3.5:9b-16k in Ollama),** on the four
+  short documents (flyer, transit sign, demand letter, intake form; 71 values):
+
+  | chooser | recall | precision | F1 | time |
+  |---|---|---|---|---|
+  | Jev (3 runs) | 0.85 | 0.90 | ~0.87 | minutes |
+  | Clef-Flash | 0.63 | 0.71 | 0.67 | 16 min |
+  | qwen3.5:9b (`llm`) | 0.51 | 0.49 | 0.50 | 49 min |
+
+  The LLM writes a probability for every option as text, which is slow: its
+  full 11-document run had not finished the first document (ONCA 100) after
+  2.5 hours, against Clef's 8 minutes. **Clef is now the default.**
+- **Clef is deterministic:** re-running unchanged documents gave identical
+  scores, so single runs are enough to compare Clef configurations (unlike Jev).
+- **With today's OCR (fresh cache: missed-line recovery on).** The six OCR'd
+  documents were read again. Only two lines changed: the transit sign gained
+  "SAYit" (recall 16 → 17/21, precision 22 → 23/27), and the flyer gained a
+  garbled handle "@glasatlger_a". Everything else was identical. These
+  documents have few lines the detector misses; the pesticide-sign photo did.
+- **Prompt cache: no gain.** With `--cache-ram`, requests sharing 95% of their
+  prefix (the same page state) took the same 7.3 s, and so did an exact repeat:
+  llama.cpp's decision-model path recomputes the whole request.
+- **Sharing the GPU with OCR:** with `--sleep-idle-seconds 30` the server frees
+  its VRAM while idle (6.8 GB → 0.1 GB) and wakes in about 5 s. With the OCR
+  models unloaded after OCR, a one-page job ran OCR (glm-ocr + qwen3-vl, 7.3 GB)
+  and then Clef, each with the whole 8 GB GPU, in 61 s.
+
 **Grouping fixes (2026-10-01):**
 - Two parties on one line ("DAVID GOODIS, Senior Adjudicator, and JOHN DOE,
   Requester") are now two items: the second item anchors at its word when
@@ -276,6 +332,28 @@ Real errors still made (before round 3):
 - a party's role printed on a separate line doesn't attach to the party;
 - performers named inside prose are missed.
 
+#### OCR engines: how much of the schema is still fillable (2026-10-01)
+
+`eval/tagging/chunks.py --ocr ENGINE` needs no chooser. "read" counts gold
+values whose text comes back exactly (normalised case and punctuation)
+somewhere on the page. "whole" counts values that also sit inside a single unit,
+which is the most a tagger could fill. Every engine except `app` reads page
+images even when the PDF has a text layer. **Bias:** the gold was transcribed
+from the app's own OCR, so `app` scores 1.000 by construction.
+
+| OCR | read | whole | flyer | ONCA 250 fax | ONCA 100 | transit sign |
+|---|---|---|---|---|---|---|
+| app (text layer, else PP-OCRv6 + glm/granite/qwen vote) | 1.000 | 0.991 | 10/10 | 25/25 | 17/17 | 18/18 |
+| PP-OCRv6 small, plain, image only | 0.967 | 0.958 | 5/10 | 25/25 | 16/17 | 17/18 |
+| PP-OCRv4 mobile (older), image only | 0.921 | 0.916 | 4/10 | 20/25 | 14/17 | 16/18 |
+| Tesseract 5 | *pending: not installed* | | | | | |
+
+Clean scans and forms come through intact with every engine. The losses are on
+the photo (flyer), the fax and small print, and they are usually digits and
+names, which are the values that matter. Clean pages could not tell these
+engines apart. "alone", which measures layout rather than OCR, barely moves
+(0.67–0.69).
+
 ### Choosers (pluggable)
 
 The tagger needs one operation: given a question, return a probability for
@@ -284,8 +362,10 @@ are dropped, the rest are renormalised, and unanswered questions produce warning
 
 | Chooser | What it is |
 |---|---|
-| `llm` (default, local) | Any OpenAI-compatible endpoint; the default is Ollama `qwen3.5:9b-16k` with thinking off. The model *states* the probabilities, and on the flyer it was overconfident enough that nothing ever split. |
+| `llm` (local) | Any OpenAI-compatible endpoint; the default is Ollama `qwen3.5:9b-16k` with thinking off. The model *states* the probabilities, and on the flyer it was overconfident enough that nothing ever split. |
 | `jev` | TypeSafe Jev via `typesafe-sdk`. It returns real option probabilities. Requests are packed to Jev's limits (32k tokens for state + longest question, 64k for everything). The budget is in bytes: we measured ~2.5 bytes/token and budget at 2.0; a batch Jev still rejects is halved and retried. A reference-schema block is about 13k tokens (~$0.0005). A whole page tags in ~2 s. **Page text leaves the machine.** |
+| `clef` (default, local) | Cloudflare Clef-Flash (Qwen3.5-9B + a joint schema head, Apache-2.0) served by llama-server (b11655+, `ggml-org/Clef-Flash-GGUF` Q4_K_M, 6.2 GB). It speaks Jev's `/v1/systemone`, so `JevChooser` and the SDK are reused with `LE_CLEF_BASE_URL`. The head reads the whole request in one micro-batch: on 8 GB, `-ub 16384` is the most that fits (a 32k micro-batch wants an 8.7 GB compute buffer), and llama-server's "too large to process" halves the batch like Jev's `max_tokens_exceeded`. About 1,700 tokens/s on the RTX 5060, so ~8 min per dense page. Local; nothing leaves the machine. F1 0.645 against Jev's 0.843 (see Measured). |
+| `laya` | Laya (convaiinnovations/laya, 421M, Apache-2.0), a local decision model with Jev's choice/noul types. Reads ≤512 tokens, so each question gets its own small state (the quoted line and neighbours), and only the question sentence goes in the instructions; on caption lines, evidence in the instructions put the right field at 0.02–0.06. Runs at ~20 ms/question on the RTX 5060. **Not usable yet:** flat tagger on ONCA 100 + 250 scored recall 0/45 (Jev: 32/45). It answers `none`, or the wrong section, for lines like "DATE: 20220324" and "DOCKET: C69486". It might work as a gate (yes/no) or on a far smaller option set; untested. |
 | `fake` | Rule-driven, for tests. |
 
 ## Output: JSONL graph
@@ -334,10 +414,13 @@ Jobs run in the background, in-process, and store their state under `data/jobs/<
 | `LE_OCR` | `rapidocr` |
 | `LE_OCR_REREAD` | `vote` (or `vlm`; anything else turns re-reading off) |
 | `LE_OCR_READER` / `LE_OCR_TIEBREAKER` / `LE_OCR_ESCALATION` | `glm-ocr` / `granite3.2-vision` / `qwen3.5:9b-16k` |
-| `LE_CHOOSER` | `llm` |
+| `LE_OCR_RECOVER` / `LE_OCR_LOCATOR` | `on` / `qwen3-vl:4b-instruct` |
+| `LE_OCR_STRAIGHTEN` | `off` (`on` straightens photographed pages) |
+| `LE_CHOOSER` | `clef` (or `llm`, `jev`, `laya`) |
 | `LE_LLM_BASE_URL` / `LE_LLM_MODEL` / `LE_LLM_API_KEY` | `http://localhost:11434/v1` / `qwen3.5:9b-16k` / — |
 | `LE_LLM_REASONING` | `none` (turns off model thinking; empty omits the parameter) |
 | `LE_JEV_MODEL` | `jev-latest` |
+| `LE_CLEF_BASE_URL` / `LE_CLEF_MODEL` | `http://localhost:8080` / `clef-flash` |
 | `TYPESAFE_API_KEY` | *(required for `jev`)* |
 | `LE_SEPARATION` | `1.5` |
 | `LE_SPLIT_GATE` | `0.5` (split only if the yes/no gate's P(split) ≥ this) |

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pypdfium2
 import pypdfium2.raw as pdfium_c
-from PIL import Image, ImageSequence
+from PIL import Image, ImageOps, ImageSequence
 
 PDF_DPI = 200
 
@@ -74,7 +74,8 @@ def _images(filename: str, data: bytes):
     except Exception as e:
         raise ValueError(f"{filename}: not a PDF or readable image") from e
     for frame in ImageSequence.Iterator(image):
-        yield frame.copy(), None
+        # Phones store pixels sideways and say so in EXIF; pages must be upright for OCR.
+        yield ImageOps.exif_transpose(frame.copy()), None
 
 
 def _text_layer(page, pdf) -> list[tuple[str, tuple[float, float, float, float]]] | None:

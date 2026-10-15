@@ -77,3 +77,34 @@ Lessons:
 - The PDF text layer is used when present. The court endorsement went from f1
   0.933 / numbers 0.571 (plain OCR) to 0.992 / 1.000, at 0.1 s per page.
 - Real set: court PDF f1 0.992, flyer 0.942, transit sign 0.922.
+
+## Round 4 (2026-10-15): missed lines and straightening
+
+Same 33 pages, all four arms run the same day. A recovery-off re-run matched
+round 2 exactly (f1 0.974, numbers 0.923), so these runs repeat.
+
+| app OCR | ALL f1 | ALL num | shake f1 | shake num | s/page |
+|---|---|---|---|---|---|
+| vote (round 2 setup) | 0.974 | 0.923 | 0.884 | 0.636 | 23.2 |
+| **+ missed-line recovery (default)** | **0.976** | **0.929** | **0.898** | **0.669** | 32.8 |
+| + page straightening, surer reading wins | 0.968 | 0.917 | 0.850 | 0.603 | 27.1 |
+| + both | 0.972 | 0.932 | 0.876 | 0.688 | 34.1 |
+
+- **Missed-line recovery** (`recover.py`) adds lines the detector never boxed.
+  glm-ocr reads the whole page, qwen3-vl:4b-instruct locates rows with words no
+  detected line has, and each candidate is cropped and read again. It is kept only
+  if the crop matches (similarity ≥ 0.7, numbers backed). It gave pay_stub.shake
+  f1 0.66 → 0.74 and numbers 0.2 → 0.4. On a real pesticide sign photo it
+  found "WEED MAN" (slanted serif) and a logo's "Man®". The synthetic set barely
+  exercises it: its pages have few undetected lines. Rows over 12 words
+  (paragraphs) are skipped, because a misread word there is not a missed line.
+  The thinking qwen3-vl tag timed out on such rows.
+- **Page straightening** (`straighten.py`, `LE_OCR_STRAIGHTEN=on`) flattens a
+  detected sheet, or levels a page from its line angles, reads it again, and
+  keeps the reading the engine is surer of. It helped ltb_notice.shake (numbers
+  0.44 → 0.89) but hurt demand_letter.shake and the handwritten note: on double
+  exposures the engine is confidently wrong. Ungated, it was worse still (ALL
+  f1 0.961). It is **off by default**. The vote already straightens every line
+  crop, and layout de-rotates boxes, so a page-level warp adds little here.
+- Phone photos are turned upright from their EXIF orientation at ingest.
+

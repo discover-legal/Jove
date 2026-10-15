@@ -32,6 +32,8 @@ class LlmChooser:
         self.reasoning = reasoning
         self._headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         self._timeout = timeout
+        self.requests = 0  # usage counters, as on JevChooser
+        self.input_tokens = 0
 
     def describe(self) -> dict:
         return {"provider": "llm", "base_url": self.base_url, "model": self.model}
@@ -68,7 +70,10 @@ class LlmChooser:
             body["reasoning_effort"] = self.reasoning
         resp = httpx.post(f"{self.base_url}/chat/completions", headers=self._headers, timeout=self._timeout, json=body)
         resp.raise_for_status()
-        return parse_reply(resp.json()["choices"][0]["message"].get("content") or "")
+        reply = resp.json()
+        self.requests += 1
+        self.input_tokens += (reply.get("usage") or {}).get("prompt_tokens") or 0
+        return parse_reply(reply["choices"][0]["message"].get("content") or "")
 
 
 def parse_reply(content: str) -> dict:

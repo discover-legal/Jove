@@ -54,6 +54,11 @@ class VlmReread:
     def describe(self) -> dict:
         return {**self.inner.describe(), "reread": {"model": self.model, "threshold": self.threshold}}
 
+    def release(self) -> None:
+        from .ollama import unload
+
+        unload(self.base_url.removesuffix("/v1"), [self.model])
+
     def read(self, page: Page) -> list[OcrLine]:
         lines = self.inner.read(page)
         doubtful = [i for i, l in enumerate(lines) if l.quad and (l.confidence or 0) < self.threshold]
