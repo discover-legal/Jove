@@ -24,6 +24,9 @@ jev = [
 docling = [
     "docling>=2.132.0",
 ]
+laya = [
+    "laya>=0.3.23",
+]
 
 [dependency-groups]
 dev = [
