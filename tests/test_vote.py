@@ -1,4 +1,4 @@
-from legaleyes.vote import back_numbers, decide, first_line, medoid
+from jove.vote import back_numbers, decide, first_line, medoid
 
 
 def test_first_line_drops_model_junk():
@@ -44,8 +44,8 @@ def test_whole_page_fallback_when_detection_finds_nothing(tmp_path, monkeypatch)
     import cv2
     import numpy as np
 
-    from legaleyes.ingest import Page
-    from legaleyes.vote import LineVote
+    from jove.ingest import Page
+    from jove.vote import LineVote
 
     class NoLines:
         def describe(self):
@@ -63,7 +63,7 @@ def test_whole_page_fallback_when_detection_finds_nothing(tmp_path, monkeypatch)
 
 
 def test_tidy_and_partial_number_revert():
-    from legaleyes.vote import tidy
+    from jove.vote import tidy
     assert tidy("( gone ) and someday , both") == "(gone) and someday, both"
     # same-length groups: only the unbacked number reverts, the words keep their fixes
     assert back_numbers("474 Botsford Newmarket ON", ["4n4 Dotstond Newmnarkel ON"], "4n4 Dotstond Newmnarkel ON") \

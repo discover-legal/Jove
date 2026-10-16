@@ -48,9 +48,9 @@ and measurements in full.
 ## Choosers
 
 The chooser is the model that answers the tagging questions. Set it with
-`LE_CHOOSER`.
+`JOVE_CHOOSER`.
 
-| `LE_CHOOSER` | Runs | Notes |
+| `JOVE_CHOOSER` | Runs | Notes |
 |---|---|---|
 | `clef` (default) | local, llama.cpp | [Cloudflare Clef-Flash](https://huggingface.co/Cloudflare/clef-flash) (9B, Apache-2.0), an open decision model that speaks Jev's API and returns real option probabilities. |
 | `jev` | hosted | [TypeSafe Jev](https://typesafe.ai) via `typesafe-sdk`. The most accurate option, and about 2 s per page. **Page text leaves the machine.** |
@@ -79,7 +79,7 @@ ollama pull qwen3-vl:4b-instruct  # locates lines the OCR detector missed
 llama-server -hf ggml-org/Clef-Flash-GGUF:Q4_K_M --alias clef-flash \
     -c 16384 -b 16384 -ub 16384 -np 1 -fa on --sleep-idle-seconds 30 --port 8080
 
-uv run uvicorn legaleyes.web:app   # LE_CLEF_BASE_URL defaults to http://localhost:8080
+uv run uvicorn jove.web:app   # JOVE_CLEF_BASE_URL defaults to http://localhost:8080
 ```
 
 The first run downloads the PP-OCRv6 models (hash-checked by RapidOCR). Then
@@ -92,9 +92,6 @@ curl localhost:8000/jobs/<id>                 # status
 curl localhost:8000/jobs/<id>/result.jsonl    # the graph
 ```
 
-The Python package is still named `legaleyes` (the project's earlier name), and
-environment variables use the `LE_` prefix.
-
 **Clef's server flags.** The decision head reads the whole request in one
 batch, so `-b`/`-ub` cap the request size, and Jove halves any batch the server
 rejects as too large. On 8 GB of VRAM, 16k is the most that fits beside the
@@ -105,7 +102,7 @@ OCR models once every page is read.
 ### Hosted Jev
 
 ```sh
-LE_CHOOSER=jev TYPESAFE_API_KEY=... uv run uvicorn legaleyes.web:app
+JOVE_CHOOSER=jev TYPESAFE_API_KEY=... uv run uvicorn jove.web:app
 ```
 
 ## Results

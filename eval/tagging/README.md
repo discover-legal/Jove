@@ -5,7 +5,7 @@ export TYPESAFE_API_KEY=...
 uv run python eval/tagging/run.py tree        # or flat; OCR is cached per page
 uv run python eval/tagging/score.py eval/tagging/results/tree [-v]
 uv run python eval/tagging/run.py flat --chooser laya --out laya   # local Laya instead of Jev
-uv run python eval/tagging/run.py flat --chooser clef --out clef   # local Clef-Flash (LE_CLEF_BASE_URL)
+uv run python eval/tagging/run.py flat --chooser clef --out clef   # local Clef-Flash (JOVE_CLEF_BASE_URL)
 uv run python eval/tagging/run.py flat --chooser clef --ocr-cache fresh --out clef_fresh   # re-OCR into cache/fresh/
 uv run python eval/tagging/chunks.py rules --ocr ppocr4            # no chooser: OCR/layout ceiling
 ```

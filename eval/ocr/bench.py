@@ -24,7 +24,7 @@ from rapidfuzz.distance import Levenshtein
 sys.path.insert(0, str(Path(__file__).parent))
 from engines import ENGINES  # noqa: E402
 
-from legaleyes.layout import build  # noqa: E402
+from jove.layout import build  # noqa: E402
 
 ROOT = Path(__file__).parent
 
@@ -59,7 +59,7 @@ def _pages(path: Path) -> list[Path]:
     """Images as-is; PDFs rasterised (text layer ignored) into a cache next to results."""
     if path.suffix.lower() != ".pdf":
         return [path]
-    from legaleyes.ingest import ingest
+    from jove.ingest import ingest
 
     out = ROOT / "results" / "pages" / path.stem
     _, pages = ingest([(path.name, path.read_bytes())], out)

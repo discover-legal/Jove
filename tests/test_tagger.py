@@ -2,11 +2,11 @@ import math
 
 import pytest
 
-from legaleyes.choose import NONE, FakeChooser, normalize
-from legaleyes.layout import build
-from legaleyes.ocr import OcrLine
-from legaleyes.schema import build_tree
-from legaleyes.tagger import Tagger
+from jove.choose import NONE, FakeChooser, normalize
+from jove.layout import build
+from jove.ocr import OcrLine
+from jove.schema import build_tree
+from jove.tagger import Tagger
 
 SCHEMA = build_tree({
     "type": "object",

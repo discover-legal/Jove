@@ -23,8 +23,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from run import CachedOcr  # noqa: E402
 
-from legaleyes import layout  # noqa: E402
-from legaleyes.ingest import ingest  # noqa: E402
+from jove import layout  # noqa: E402
+from jove.ingest import ingest  # noqa: E402
 
 ROOT = Path(__file__).parent
 REPO = ROOT.parent.parent
@@ -39,7 +39,7 @@ def units_for(engine: str, src: Path, ocr) -> list[str]:
     with tempfile.TemporaryDirectory() as tmp:
         _, pages = ingest([(src.name, data)], Path(tmp))
         if engine == "docling":
-            from legaleyes import docling_layout
+            from jove import docling_layout
 
             regions = docling_layout.DoclingLayout().regions(src.name, data, [(p.width, p.height) for p in pages])
             blocks = [b for p, r in zip(pages, regions) for b in docling_layout.build(p.page_id, ocr.read(p), r)]

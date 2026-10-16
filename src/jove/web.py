@@ -97,7 +97,7 @@ def create_app(
 
 
 def __getattr__(name: str):
-    # `uvicorn legaleyes.web:app` builds the real app lazily so imports stay side-effect free.
+    # `uvicorn jove.web:app` builds the real app lazily so imports stay side-effect free.
     if name == "app":
         return create_app()
     raise AttributeError(name)

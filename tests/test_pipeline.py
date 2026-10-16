@@ -3,10 +3,10 @@ import time
 
 from fastapi.testclient import TestClient
 
-from legaleyes.choose import FakeChooser
-from legaleyes.ocr import FakeOcr
-from legaleyes.pipeline import run
-from legaleyes.web import create_app
+from jove.choose import FakeChooser
+from jove.ocr import FakeOcr
+from jove.pipeline import run
+from jove.web import create_app
 
 from .conftest import pdf, png
 from .test_tagger import RULES, rule
@@ -104,7 +104,7 @@ def test_web_bad_upload_fails_job(tmp_path):
 def test_numpy_boxes_serialize(tmp_path):
     import numpy as np
 
-    from legaleyes.ocr import OcrLine
+    from jove.ocr import OcrLine
 
     class NumpyOcr:
         def describe(self):
@@ -121,8 +121,8 @@ def test_numpy_boxes_serialize(tmp_path):
 def test_pdf_text_layer_is_used(tmp_path):
     from pathlib import Path
 
-    from legaleyes.ingest import ingest
-    from legaleyes.ocr import TextLayerFirst
+    from jove.ingest import ingest
+    from jove.ocr import TextLayerFirst
 
     class Never:
         def describe(self):
@@ -141,7 +141,7 @@ def test_pdf_text_layer_is_used(tmp_path):
 
 
 def test_images_have_no_text_layer(tmp_path):
-    from legaleyes.ingest import ingest
+    from jove.ingest import ingest
 
     _, pages = ingest([("b.png", png())], tmp_path)
     assert pages[0].text_layer is None
@@ -150,7 +150,7 @@ def test_images_have_no_text_layer(tmp_path):
 def test_filled_pdf_form_values_are_read(tmp_path):
     from pathlib import Path
 
-    from legaleyes.ingest import ingest
+    from jove.ingest import ingest
 
     pdf = (Path(__file__).parent.parent / "eval/tagging/docs/n4_filled.pdf").read_bytes()
     _, pages = ingest([("n4.pdf", pdf)], tmp_path)
@@ -163,11 +163,11 @@ def test_filled_pdf_form_values_are_read(tmp_path):
 def test_form_values_are_marked_in_questions(tmp_path):
     from pathlib import Path
 
-    from legaleyes.ingest import ingest
-    from legaleyes.layout import build
-    from legaleyes.ocr import TextLayerFirst
-    from legaleyes.tagger import Tagger, _Task
-    from legaleyes.schema import build_tree
+    from jove.ingest import ingest
+    from jove.layout import build
+    from jove.ocr import TextLayerFirst
+    from jove.tagger import Tagger, _Task
+    from jove.schema import build_tree
 
     pdf = (Path(__file__).parent.parent / "eval/tagging/docs/n4_filled.pdf").read_bytes()
     _, pages = ingest([("n4.pdf", pdf)], tmp_path)
@@ -185,7 +185,7 @@ def test_ingest_turns_phone_photos_upright(tmp_path):
 
     from PIL import Image
 
-    from legaleyes.ingest import ingest
+    from jove.ingest import ingest
 
     img = Image.new("RGB", (300, 200), "white")  # stored landscape...
     exif = img.getexif()

@@ -1,6 +1,6 @@
-from legaleyes.choose import Question, YesNo
-from legaleyes.laya import LayaChooser, render, split_question
-from legaleyes.tagger import UNTRUSTED
+from jove.choose import Question, YesNo
+from jove.laya import LayaChooser, render, split_question
+from jove.tagger import UNTRUSTED
 
 
 class FakeRouter:

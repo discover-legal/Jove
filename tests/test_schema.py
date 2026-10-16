@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from legaleyes.schema import SchemaError, build_tree, flatten
+from jove.schema import SchemaError, build_tree, flatten
 
 
 def test_flatten_paths(schema):

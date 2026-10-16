@@ -6,12 +6,12 @@ import pytest
 pytest.importorskip("typesafe_sdk")
 from typesafe_sdk import SystemOneResponse
 
-from legaleyes.choose import NONE, Question
-from legaleyes.jev import MAX_REQUEST_BYTES, MAX_STATE_QUESTION_BYTES, JevChooser, batches
-from legaleyes.layout import build
-from legaleyes.ocr import OcrLine
-from legaleyes.schema import build_tree
-from legaleyes.tagger import Tagger
+from jove.choose import NONE, Question
+from jove.jev import MAX_REQUEST_BYTES, MAX_STATE_QUESTION_BYTES, JevChooser, batches
+from jove.layout import build
+from jove.ocr import OcrLine
+from jove.schema import build_tree
+from jove.tagger import Tagger
 
 
 class FakeClient:
@@ -71,7 +71,7 @@ def test_halves_batch_on_max_tokens_exceeded():
 
 
 def test_yes_no_halves_batch_when_llama_server_says_too_large():
-    from legaleyes.choose import YesNo
+    from jove.choose import YesNo
 
     class LocalClef:
         calls = []
@@ -90,7 +90,7 @@ def test_yes_no_halves_batch_when_llama_server_says_too_large():
 
 
 def test_yes_no_parses_noul():
-    from legaleyes.choose import YesNo
+    from jove.choose import YesNo
 
     class NoulClient:
         def system_one(self, state, questions, model=None):

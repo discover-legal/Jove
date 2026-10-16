@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://legaleyes.local/schemas/legal_intake.schema.json",
+  "$id": "https://jove.local/schemas/legal_intake.schema.json",
   "x-jurisdiction": "Ontario, Canada",
   "title": "Legal intake",
   "description": "Everything an Ontario law firm captures when opening a matter, taken from scanned client documents: intake forms, letters, contracts, court and tribunal forms, IDs, pay stubs, invoices, ROEs and notices. Keywords: description says what a field holds, examples show typical text, x-not-for says what belongs elsewhere so that sibling fields can be told apart.",

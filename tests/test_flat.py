@@ -1,8 +1,8 @@
 import json
 
-from legaleyes.choose import FakeChooser
-from legaleyes.ocr import FakeOcr
-from legaleyes.pipeline import run
+from jove.choose import FakeChooser
+from jove.ocr import FakeOcr
+from jove.pipeline import run
 
 from .conftest import png
 from .test_pipeline import SCHEMA

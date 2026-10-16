@@ -2,9 +2,9 @@ import math
 
 import pytest
 
-from legaleyes.ingest import Page
-from legaleyes.ocr import OcrLine
-from legaleyes.straighten import Straighten, rotation, text_angle, unwarp
+from jove.ingest import Page
+from jove.ocr import OcrLine
+from jove.straighten import Straighten, rotation, text_angle, unwarp
 
 cv2 = pytest.importorskip("cv2")
 np = pytest.importorskip("numpy")

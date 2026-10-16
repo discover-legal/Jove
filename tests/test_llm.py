@@ -1,4 +1,4 @@
-from legaleyes.llm import parse_reply
+from jove.llm import parse_reply
 
 
 def test_parse_reply_shapes():

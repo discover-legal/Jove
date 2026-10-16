@@ -1,6 +1,6 @@
-from legaleyes.choose import FakeChooser
-from legaleyes.owners import Owners, _lists
-from legaleyes.schema import build_tree
+from jove.choose import FakeChooser
+from jove.owners import Owners, _lists
+from jove.schema import build_tree
 
 SCHEMA = {
     "type": "object",

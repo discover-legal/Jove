@@ -2,9 +2,9 @@ import cv2
 import httpx
 import numpy as np
 
-from legaleyes.ingest import Page
-from legaleyes.ocr import OcrLine, respace
-from legaleyes.reread import VlmReread, constrain, line_crop
+from jove.ingest import Page
+from jove.ocr import OcrLine, respace
+from jove.reread import VlmReread, constrain, line_crop
 
 
 def test_constrain_digits():

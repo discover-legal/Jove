@@ -1,5 +1,5 @@
-from legaleyes.layout import build
-from legaleyes.ocr import OcrLine
+from jove.layout import build
+from jove.ocr import OcrLine
 
 
 def test_merges_fragments_and_splits_blocks():

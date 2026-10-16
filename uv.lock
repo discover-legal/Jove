@@ -868,6 +868,68 @@ wheels = [
 ]
 
 [[package]]
+name = "jove"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "pillow" },
+    { name = "pypdfium2" },
+    { name = "python-multipart" },
+    { name = "uvicorn" },
+]
+
+[package.optional-dependencies]
+docling = [
+    { name = "docling" },
+]
+jev = [
+    { name = "typesafe-sdk" },
+]
+laya = [
+    { name = "laya" },
+]
+ocr = [
+    { name = "onnxruntime" },
+    { name = "opencv-python-headless" },
+    { name = "rapidocr" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "cryptography" },
+    { name = "pypdf" },
+    { name = "pytest" },
+    { name = "rapidfuzz" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "docling", marker = "extra == 'docling'", specifier = ">=2.132.0" },
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "laya", marker = "extra == 'laya'", specifier = ">=0.3.23" },
+    { name = "onnxruntime", marker = "extra == 'ocr'", specifier = ">=1.30.0" },
+    { name = "opencv-python-headless", marker = "extra == 'ocr'", specifier = ">=5.0.0.93" },
+    { name = "pillow", specifier = ">=10" },
+    { name = "pypdfium2", specifier = ">=4.30" },
+    { name = "python-multipart", specifier = ">=0.0.9" },
+    { name = "rapidocr", marker = "extra == 'ocr'", specifier = ">=3.9" },
+    { name = "typesafe-sdk", marker = "extra == 'jev'", specifier = ">=0.7.2" },
+    { name = "uvicorn", specifier = ">=0.30" },
+]
+provides-extras = ["ocr", "jev", "docling", "laya"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "cryptography", specifier = ">=50.0.1" },
+    { name = "pypdf", specifier = ">=6.19.0" },
+    { name = "pytest", specifier = ">=8" },
+    { name = "rapidfuzz", specifier = ">=3.14.6" },
+]
+
+[[package]]
 name = "jsonref"
 version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -935,68 +997,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/4b/dd/98800fe77cb6c3bf548928d4168749f1e73912554c76cd6f118dca2e67e7/laya-0.3.23.tar.gz", hash = "sha256:5812dfd7bc27032a0b969b7ee2de655460e4d925ad2d55f97a869cf15ad0deba", size = 790620, upload-time = "2026-10-01T17:30:57.989Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cc/94/6ccecbf491c2d17c408a455dc3fc379f5e87a769474a30618096c984f85d/laya-0.3.23-py3-none-any.whl", hash = "sha256:30247fd93dec16b131d8483b1621db198600e90c777ad7d9992e48fc118db677", size = 286096, upload-time = "2026-10-01T17:30:56.027Z" },
-]
-
-[[package]]
-name = "legaleyes"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "fastapi" },
-    { name = "httpx" },
-    { name = "pillow" },
-    { name = "pypdfium2" },
-    { name = "python-multipart" },
-    { name = "uvicorn" },
-]
-
-[package.optional-dependencies]
-docling = [
-    { name = "docling" },
-]
-jev = [
-    { name = "typesafe-sdk" },
-]
-laya = [
-    { name = "laya" },
-]
-ocr = [
-    { name = "onnxruntime" },
-    { name = "opencv-python-headless" },
-    { name = "rapidocr" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "cryptography" },
-    { name = "pypdf" },
-    { name = "pytest" },
-    { name = "rapidfuzz" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "docling", marker = "extra == 'docling'", specifier = ">=2.132.0" },
-    { name = "fastapi", specifier = ">=0.115" },
-    { name = "httpx", specifier = ">=0.27" },
-    { name = "laya", marker = "extra == 'laya'", specifier = ">=0.3.23" },
-    { name = "onnxruntime", marker = "extra == 'ocr'", specifier = ">=1.30.0" },
-    { name = "opencv-python-headless", marker = "extra == 'ocr'", specifier = ">=5.0.0.93" },
-    { name = "pillow", specifier = ">=10" },
-    { name = "pypdfium2", specifier = ">=4.30" },
-    { name = "python-multipart", specifier = ">=0.0.9" },
-    { name = "rapidocr", marker = "extra == 'ocr'", specifier = ">=3.9" },
-    { name = "typesafe-sdk", marker = "extra == 'jev'", specifier = ">=0.7.2" },
-    { name = "uvicorn", specifier = ">=0.30" },
-]
-provides-extras = ["ocr", "jev", "docling", "laya"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "cryptography", specifier = ">=50.0.1" },
-    { name = "pypdf", specifier = ">=6.19.0" },
-    { name = "pytest", specifier = ">=8" },
-    { name = "rapidfuzz", specifier = ">=3.14.6" },
 ]
 
 [[package]]

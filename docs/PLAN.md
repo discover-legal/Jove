@@ -76,13 +76,13 @@ ingest ──► ocr ──► layout ──► tag ──► emit (JSONL graph)
        reading.
      - When detection finds almost nothing, glm's whole-page reading is used.
      - All three models run locally in Ollama. The older single-model re-read is
-       still available with `LE_OCR_REREAD=vlm`.
+       still available with `JOVE_OCR_REREAD=vlm`.
    - **Missed lines (`recover.py`):** glm-ocr reads the whole page. Rows with a
      word no detected line has (and at most 12 words) are located by
      qwen3-vl:4b-instruct. The stretch of the row no detected line covers is
      cropped and read again, and the line is added only if that reading matches,
-     numbers included. `LE_OCR_RECOVER=off` disables it.
-   - **Straightening (`straighten.py`, opt-in with `LE_OCR_STRAIGHTEN=on`):**
+     numbers included. `JOVE_OCR_RECOVER=off` disables it.
+   - **Straightening (`straighten.py`, opt-in with `JOVE_OCR_STRAIGHTEN=on`):**
      flattens a photographed sheet, or levels a tilted page, reads it again, and
      keeps the surer reading. Boxes are mapped back to the page as uploaded. It
      is off because it cost word F1 on eval/ocr (round 4).
@@ -118,7 +118,7 @@ names. A path's score is the geometric mean of its edge probabilities.
 - **Fan-out.** Every block is asked every internal node's Choice in one go:
   26 questions for the reference schema. Because every edge gets a probability,
   every path can be scored exactly, and no beam pruning is needed.
-- **Clear answer** (separation ≥ 1.5, set by `LE_SEPARATION`): the chunk is
+- **Clear answer** (separation ≥ 1.5, set by `JOVE_SEPARATION`): the chunk is
   tagged with its top 3 paths. `none` is a real answer (`#none` for the root,
   `client#none` inside `client`).
 - **Ambiguous answer**: the chunk probably holds several things. It is split
@@ -139,7 +139,7 @@ names. A path's score is the geometric mean of its edge probabilities.
   looks the same. So before any split, the chooser is asked one yes/no question
   (a Jev `Noul`, one batched request per page per round) with the chunk's text
   and its best labels so far: "should this be split and labelled piece by
-  piece?" Below 0.5 (`LE_SPLIT_GATE`), the chunk keeps its tags whole, and the
+  piece?" Below 0.5 (`JOVE_SPLIT_GATE`), the chunk keeps its tags whole, and the
   `split_gate` value is recorded on its edge.
   - On the court endorsement this cut word fragments from 46 to 2, and the
     reasoning paragraphs stay whole (P(split) 0.09–0.30).
@@ -149,7 +149,7 @@ names. A path's score is the geometric mean of its edge probabilities.
   ("the text names a field rather than giving its value"), so a form caption
   becomes `<node>#label` instead of being forced into a field. Text typed into
   a filled PDF form field is marked in its question as certainly a value.
-- **Ownership pass (`owners.py`, `LE_OWNERS=on`).** Schemas may declare
+- **Ownership pass (`owners.py`, `JOVE_OWNERS=on`).** Schemas may declare
   `x-owners`: per owner (client, other party, document issuer…) its name
   fields and contact prefix. Every value tagged with an owner's name or
   contact field gets one more Choice: *whose is it?* If the answer names
@@ -167,7 +167,7 @@ names. A path's score is the geometric mean of its edge probabilities.
 - **Words**: runs of consecutive words with the same tag and anchor are merged
   into **spans**. "Jane" and "Doe" become the span "Jane Doe".
 
-### Flat boundary tagger (`LE_TAGGER=flat`)
+### Flat boundary tagger (`JOVE_TAGGER=flat`)
 
 This is the alternative to the tree. OCR lines are the atoms; layout supplies
 only reading order. Grouping is Jev's decision, not a set of geometry
@@ -206,7 +206,7 @@ public sources:
 
 Flat wins most on degraded scans: on the faxed decision it found 21/27 values
 against tree's 17/27. It is also about 20% cheaper. It is the default;
-`LE_TAGGER=tree` restores the tree.
+`JOVE_TAGGER=tree` restores the tree.
 
 **Round 3 (2026-09-30):** label option, a `document_issuer` branch in the
 legal schema, and the ownership pass. Flat tagger, 11 documents, 230 gold
@@ -364,7 +364,7 @@ are dropped, the rest are renormalised, and unanswered questions produce warning
 |---|---|
 | `llm` (local) | Any OpenAI-compatible endpoint; the default is Ollama `qwen3.5:9b-16k` with thinking off. The model *states* the probabilities, and on the flyer it was overconfident enough that nothing ever split. |
 | `jev` | TypeSafe Jev via `typesafe-sdk`. It returns real option probabilities. Requests are packed to Jev's limits (32k tokens for state + longest question, 64k for everything). The budget is in bytes: we measured ~2.5 bytes/token and budget at 2.0; a batch Jev still rejects is halved and retried. A reference-schema block is about 13k tokens (~$0.0005). A whole page tags in ~2 s. **Page text leaves the machine.** |
-| `clef` (default, local) | Cloudflare Clef-Flash (Qwen3.5-9B + a joint schema head, Apache-2.0) served by llama-server (b11655+, `ggml-org/Clef-Flash-GGUF` Q4_K_M, 6.2 GB). It speaks Jev's `/v1/systemone`, so `JevChooser` and the SDK are reused with `LE_CLEF_BASE_URL`. The head reads the whole request in one micro-batch: on 8 GB, `-ub 16384` is the most that fits (a 32k micro-batch wants an 8.7 GB compute buffer), and llama-server's "too large to process" halves the batch like Jev's `max_tokens_exceeded`. About 1,700 tokens/s on the RTX 5060, so ~8 min per dense page. Local; nothing leaves the machine. F1 0.645 against Jev's 0.843 (see Measured). |
+| `clef` (default, local) | Cloudflare Clef-Flash (Qwen3.5-9B + a joint schema head, Apache-2.0) served by llama-server (b11655+, `ggml-org/Clef-Flash-GGUF` Q4_K_M, 6.2 GB). It speaks Jev's `/v1/systemone`, so `JevChooser` and the SDK are reused with `JOVE_CLEF_BASE_URL`. The head reads the whole request in one micro-batch: on 8 GB, `-ub 16384` is the most that fits (a 32k micro-batch wants an 8.7 GB compute buffer), and llama-server's "too large to process" halves the batch like Jev's `max_tokens_exceeded`. About 1,700 tokens/s on the RTX 5060, so ~8 min per dense page. Local; nothing leaves the machine. F1 0.645 against Jev's 0.843 (see Measured). |
 | `laya` | Laya (convaiinnovations/laya, 421M, Apache-2.0), a local decision model with Jev's choice/noul types. Reads ≤512 tokens, so each question gets its own small state (the quoted line and neighbours), and only the question sentence goes in the instructions; on caption lines, evidence in the instructions put the right field at 0.02–0.06. Runs at ~20 ms/question on the RTX 5060. **Not usable yet:** flat tagger on ONCA 100 + 250 scored recall 0/45 (Jev: 32/45). It answers `none`, or the wrong section, for lines like "DATE: 20220324" and "DOCKET: C69486". It might work as a gate (yes/no) or on a far smaller option set; untested. |
 | `fake` | Rule-driven, for tests. |
 
@@ -411,22 +411,22 @@ Jobs run in the background, in-process, and store their state under `data/jobs/<
 
 | var | default |
 |---|---|
-| `LE_OCR` | `rapidocr` |
-| `LE_OCR_REREAD` | `vote` (or `vlm`; anything else turns re-reading off) |
-| `LE_OCR_READER` / `LE_OCR_TIEBREAKER` / `LE_OCR_ESCALATION` | `glm-ocr` / `granite3.2-vision` / `qwen3.5:9b-16k` |
-| `LE_OCR_RECOVER` / `LE_OCR_LOCATOR` | `on` / `qwen3-vl:4b-instruct` |
-| `LE_OCR_STRAIGHTEN` | `off` (`on` straightens photographed pages) |
-| `LE_CHOOSER` | `clef` (or `llm`, `jev`, `laya`) |
-| `LE_LLM_BASE_URL` / `LE_LLM_MODEL` / `LE_LLM_API_KEY` | `http://localhost:11434/v1` / `qwen3.5:9b-16k` / — |
-| `LE_LLM_REASONING` | `none` (turns off model thinking; empty omits the parameter) |
-| `LE_JEV_MODEL` | `jev-latest` |
-| `LE_CLEF_BASE_URL` / `LE_CLEF_MODEL` | `http://localhost:8080` / `clef-flash` |
+| `JOVE_OCR` | `rapidocr` |
+| `JOVE_OCR_REREAD` | `vote` (or `vlm`; anything else turns re-reading off) |
+| `JOVE_OCR_READER` / `JOVE_OCR_TIEBREAKER` / `JOVE_OCR_ESCALATION` | `glm-ocr` / `granite3.2-vision` / `qwen3.5:9b-16k` |
+| `JOVE_OCR_RECOVER` / `JOVE_OCR_LOCATOR` | `on` / `qwen3-vl:4b-instruct` |
+| `JOVE_OCR_STRAIGHTEN` | `off` (`on` straightens photographed pages) |
+| `JOVE_CHOOSER` | `clef` (or `llm`, `jev`, `laya`) |
+| `JOVE_LLM_BASE_URL` / `JOVE_LLM_MODEL` / `JOVE_LLM_API_KEY` | `http://localhost:11434/v1` / `qwen3.5:9b-16k` / — |
+| `JOVE_LLM_REASONING` | `none` (turns off model thinking; empty omits the parameter) |
+| `JOVE_JEV_MODEL` | `jev-latest` |
+| `JOVE_CLEF_BASE_URL` / `JOVE_CLEF_MODEL` | `http://localhost:8080` / `clef-flash` |
 | `TYPESAFE_API_KEY` | *(required for `jev`)* |
-| `LE_SEPARATION` | `1.5` |
-| `LE_SPLIT_GATE` | `0.5` (split only if the yes/no gate's P(split) ≥ this) |
-| `LE_TAGGER` | `flat` (or `tree`) |
-| `LE_OWNERS` | `on` (`off` skips the ownership pass) |
-| `LE_DATA_DIR` | `./data` |
+| `JOVE_SEPARATION` | `1.5` |
+| `JOVE_SPLIT_GATE` | `0.5` (split only if the yes/no gate's P(split) ≥ this) |
+| `JOVE_TAGGER` | `flat` (or `tree`) |
+| `JOVE_OWNERS` | `on` (`off` skips the ownership pass) |
+| `JOVE_DATA_DIR` | `./data` |
 
 ## Status and next steps
 
@@ -445,7 +445,7 @@ Jobs run in the background, in-process, and store their state under `data/jobs/<
 - **Next: run it for real.** Put real Ontario scans through Jev (needs a key)
   and through Ollama. Build a small labelled evaluation set and a scorer
   (per-field precision and recall on spans, and whether list items group
-  correctly). Tune `LE_SEPARATION` and the block gap on that set.
+  correctly). Tune `JOVE_SEPARATION` and the block gap on that set.
 - **Cost:** block fan-out asks all 26 nodes every time. Asking level by level
   would cut tokens but add round trips. Only worth it if cost matters.
 - **Layout:** tables and multi-column pages; word boxes from OCR character

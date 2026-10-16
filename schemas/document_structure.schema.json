@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://legaleyes.local/schemas/document_structure.schema.json",
+  "$id": "https://jove.local/schemas/document_structure.schema.json",
   "title": "Document structure",
   "description": "The anatomy of a legal or business document: which part of the page a piece of text is (letterhead, caption, title, parties, addressee, body, form labels and values, signature, footer), independent of what the text means legally.",
   "x-instructions": "Tag the role the text plays in the document's layout, not its legal meaning. A letterhead belongs to whoever issued or sent the document (a court, tribunal, law firm or ministry), never to the person it is about or addressed to. On forms, printed captions that name a field ('Tenant's name:', 'Street Number:') are form labels; what was written or typed into the field is a form value.",

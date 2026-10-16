@@ -99,7 +99,7 @@ round 2 exactly (f1 0.974, numbers 0.923), so these runs repeat.
   exercises it: its pages have few undetected lines. Rows over 12 words
   (paragraphs) are skipped, because a misread word there is not a missed line.
   The thinking qwen3-vl tag timed out on such rows.
-- **Page straightening** (`straighten.py`, `LE_OCR_STRAIGHTEN=on`) flattens a
+- **Page straightening** (`straighten.py`, `JOVE_OCR_STRAIGHTEN=on`) flattens a
   detected sheet, or levels a page from its line angles, reads it again, and
   keeps the reading the engine is surer of. It helped ltb_notice.shake (numbers
   0.44 → 0.89) but hurt demand_letter.shake and the handwritten note: on double

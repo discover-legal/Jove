@@ -8,7 +8,7 @@ import io
 import subprocess
 from collections import defaultdict
 
-from legaleyes.ocr import OcrLine
+from jove.ocr import OcrLine
 
 
 def tesseract():

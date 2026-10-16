@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://legaleyes.local/schemas/flyer.schema.json",
+  "$id": "https://jove.local/schemas/flyer.schema.json",
   "title": "Ads, flyers and public notices",
   "description": "What an advertisement, event flyer, poster, handout or posted public notice says: who is behind it, what it promotes or asks, when and where, how to get in touch, and any rules or legal references.",
   "x-instructions": "The page is an advertisement, flyer, poster or public notice. The publisher is whoever puts it out (often named as 'X presents' or shown as a logo); partners are other organizations named alongside. Logo text still names an organization. Decorative slogans are headlines, not descriptions.",

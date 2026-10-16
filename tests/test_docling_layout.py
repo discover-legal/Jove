@@ -1,5 +1,5 @@
-from legaleyes.docling_layout import Region, build
-from legaleyes.ocr import OcrLine
+from jove.docling_layout import Region, build
+from jove.ocr import OcrLine
 
 
 def line(text, x0, y0, x1, y1, form=False):

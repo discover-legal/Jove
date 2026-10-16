@@ -14,9 +14,9 @@ import tempfile
 import time
 from pathlib import Path
 
-from legaleyes.config import make_chooser, make_ocr
-from legaleyes.ocr import OcrLine, release
-from legaleyes.pipeline import run
+from jove.config import make_chooser, make_ocr
+from jove.ocr import OcrLine, release
+from jove.pipeline import run
 
 ROOT = Path(__file__).parent
 REPO = ROOT.parent.parent
@@ -35,7 +35,7 @@ class CachedOcr:
     def describe(self):
         if self.engine != "app":
             return {"provider": "cached", "of": f"eval/tagging/ocr_engines.py:{self.engine}"}
-        return {"provider": "cached", "of": "legaleyes.config.make_ocr()"}
+        return {"provider": "cached", "of": "jove.config.make_ocr()"}
 
     def release(self):
         release(self._inner)  # free the OCR models' GPU memory before the chooser runs

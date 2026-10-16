@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from legaleyes.ocr import OcrLine
-from legaleyes.ingest import Page
+from jove.ocr import OcrLine
+from jove.ingest import Page
 
 
 def _page(path) -> Page:
@@ -12,7 +12,7 @@ def _page(path) -> Page:
 
 def rapidocr_baseline():
     """What the app ships today: RapidOCR 1.4 det + English PP-OCRv3 rec."""
-    from legaleyes.config import make_ocr
+    from jove.config import make_ocr
     ocr = make_ocr()
     return lambda path: ocr.read(_page(path))
 
@@ -230,8 +230,8 @@ ENGINES |= {"v6s_vlm98_raw": vlm_reread("v6_small", threshold=0.98, guard_digits
 
 
 def app_ocr():
-    """Whatever src/legaleyes/ocr.py ships (config.make_ocr)."""
-    from legaleyes.config import make_ocr
+    """Whatever src/jove/ocr.py ships (config.make_ocr)."""
+    from jove.config import make_ocr
 
     ocr = make_ocr()
     return lambda path: ocr.read(_page(path))
@@ -273,7 +273,7 @@ ENGINES |= {
 
 
 def plain_v6():
-    from legaleyes.ocr import RapidOcr
+    from jove.ocr import RapidOcr
 
     ocr = RapidOcr()
     return lambda path: ocr.read(_page(path))
@@ -286,8 +286,8 @@ ENGINES |= {
 
 def voted(**kw):
     def factory():
-        from legaleyes.ocr import RapidOcr
-        from legaleyes.vote import LineVote
+        from jove.ocr import RapidOcr
+        from jove.vote import LineVote
 
         ocr = LineVote(RapidOcr(), **kw)
         return lambda path: ocr.read(_page(path))

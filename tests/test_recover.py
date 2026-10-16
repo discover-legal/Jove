@@ -1,7 +1,7 @@
-from legaleyes import recover
-from legaleyes.ingest import Page
-from legaleyes.ocr import FakeOcr, OcrLine
-from legaleyes.recover import MissedLines, gap, missing, page_rows, parse_boxes
+from jove import recover
+from jove.ingest import Page
+from jove.ocr import FakeOcr, OcrLine
+from jove.recover import MissedLines, gap, missing, page_rows, parse_boxes
 
 
 def line(text, y=0):
@@ -74,9 +74,9 @@ def test_nothing_missing_means_no_locator_call(tmp_path, monkeypatch):
 
 
 def test_release_unloads_every_model_once(monkeypatch):
-    from legaleyes import vote
-    from legaleyes.ocr import TextLayerFirst
-    from legaleyes.vote import LineVote
+    from jove import vote
+    from jove.ocr import TextLayerFirst
+    from jove.vote import LineVote
 
     unloaded = []
     monkeypatch.setattr(vote, "unload", lambda base_url, models: unloaded.append(list(models)))

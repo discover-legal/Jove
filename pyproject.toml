@@ -1,5 +1,5 @@
 [project]
-name = "legaleyes"
+name = "jove"
 version = "0.1.0"
 description = "Place chunks of scanned pages into a data schema; emit JSONL."
 requires-python = ">=3.12"
