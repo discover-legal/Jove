@@ -83,13 +83,15 @@ uv run uvicorn jove.web:app   # JOVE_CLEF_BASE_URL defaults to http://localhost:
 ```
 
 The first run downloads the PP-OCRv6 models (hash-checked by RapidOCR). Then
-open http://localhost:8000, or:
+open http://localhost:8000: the form takes you to a results page showing each
+page with its tagged text boxed, and the values found listed by field. Or:
 
 ```sh
 curl -F files=@scan.pdf -F "schema=<schemas/legal_intake.schema.json" \
      -F "context=Our firm: Harper & Leung LLP. Our client: Jane Doe." localhost:8000/jobs
 curl localhost:8000/jobs/<id>                 # status
 curl localhost:8000/jobs/<id>/result.jsonl    # the graph
+# results page: http://localhost:8000/jobs/<id>/view
 ```
 
 **Clef's server flags.** The decision head reads the whole request in one

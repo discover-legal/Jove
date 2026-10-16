@@ -401,9 +401,13 @@ One JSON object per line. The order is `job`, `page`, `node`, `edge`, `warning`.
 
 - `GET /`: a bare upload form (files + schema)
 - `POST /jobs`: multipart `files` + `schema` (JSON text); the schema is checked on
-  upload. Returns `{job_id}`.
+  upload. Returns `{job_id}`, or redirects a browser (the form) to the view.
 - `GET /jobs/{id}`: `{status: queued|running|done|failed, error}`
 - `GET /jobs/{id}/result.jsonl`: the output
+- `GET /jobs/{id}/view`: the result for a person to check: page images with the
+  rank-1 value tags boxed (a colour per top-level field), and the values listed
+  by field with scores. It refreshes until the job is done.
+- `GET /jobs/{id}/pages/{page_id}.png`: a page image, as rasterised at ingest
 
 Jobs run in the background, in-process, and store their state under `data/jobs/<id>/`.
 

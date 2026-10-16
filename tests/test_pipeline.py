@@ -80,6 +80,19 @@ def test_web_roundtrip(tmp_path):
     body = client.get(f"/jobs/{job_id}/result.jsonl").text
     assert json.loads(body.splitlines()[0])["job_id"] == job_id
 
+    page = client.get(f"/jobs/{job_id}/view").text
+    assert "client.name" in page and "Jane Doe" in page and "pages/p0001.png" in page
+    assert client.get(f"/jobs/{job_id}/pages/p0001.png").headers["content-type"] == "image/png"
+    assert client.get(f"/jobs/{job_id}/pages/..%2Fstatus.json").status_code == 404
+
+
+def test_web_form_redirects_to_view(tmp_path):
+    client = TestClient(create_app(tmp_path, make_ocr=lambda: OCR, make_chooser=chooser))
+    resp = client.post("/jobs", files=[("files", ("b.png", png()))], data={"schema": json.dumps(SCHEMA)},
+                       headers={"accept": "text/html"}, follow_redirects=False)
+    assert resp.status_code == 303 and resp.headers["location"].endswith("/view")
+    assert "b.png" in client.get(resp.headers["location"]).text
+
 
 def test_web_rejects_bad_schema(tmp_path):
     client = TestClient(create_app(tmp_path, make_ocr=lambda: OCR, make_chooser=chooser))

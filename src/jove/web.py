@@ -1,14 +1,15 @@
-"""Minimal web surface: upload pages + schema, poll, download JSONL."""
+"""Minimal web surface: upload pages + schema, poll, view the result, download JSONL."""
 
 import json
+import re
 import uuid
 from collections.abc import Callable
 from pathlib import Path
 
-from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 
-from . import config, pipeline
+from . import config, pipeline, view
 from .ocr import Ocr
 from .choose import Chooser
 from .schema import SchemaError, build_tree
@@ -66,7 +67,7 @@ def create_app(
         return FORM
 
     @app.post("/jobs")
-    async def submit(background: BackgroundTasks, files: list[UploadFile], schema: str = Form(...),
+    async def submit(request: Request, background: BackgroundTasks, files: list[UploadFile], schema: str = Form(...),
                      context: str | None = Form(None)):
         try:
             parsed = json.loads(schema)
@@ -80,6 +81,8 @@ def create_app(
         (d / "schema.json").write_text(json.dumps(parsed, indent=2))
         set_status(d, "queued")
         background.add_task(work, job_id, d, uploads, parsed, (context or "").strip() or None)
+        if "text/html" in request.headers.get("accept", ""):  # the form: go and watch the result
+            return RedirectResponse(f"/jobs/{job_id}/view", status_code=303)
         return {"job_id": job_id}
 
     @app.get("/jobs/{job_id}")
@@ -92,6 +95,21 @@ def create_app(
         if not path.exists():
             raise HTTPException(409, "job not finished")
         return FileResponse(path, media_type="application/x-ndjson", filename=f"{job_id}.jsonl")
+
+    @app.get("/jobs/{job_id}/view", response_class=HTMLResponse)
+    def result_view(job_id: str) -> str:
+        d = job_dir(job_id)
+        status = json.loads((d / "status.json").read_text())
+        path = d / "result.jsonl"
+        records = [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
+        return view.render(job_id, status, records)
+
+    @app.get("/jobs/{job_id}/pages/{page_id}.png")
+    def page_image(job_id: str, page_id: str):
+        path = job_dir(job_id) / "pages" / f"{page_id}.png"
+        if not re.fullmatch(r"p\d{4}", page_id) or not path.exists():
+            raise HTTPException(404, "no such page")
+        return FileResponse(path, media_type="image/png")
 
     return app
 
