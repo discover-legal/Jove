@@ -11,6 +11,11 @@ def data_dir() -> Path:
     return Path(os.environ.get("JOVE_DATA_DIR", "./data"))
 
 
+def schemas_dir() -> Path:
+    """The schemas offered on the upload form (the repo's schemas/ by default)."""
+    return Path(os.environ.get("JOVE_SCHEMAS_DIR", Path(__file__).resolve().parents[2] / "schemas"))
+
+
 def separation() -> float:
     return float(os.environ.get("JOVE_SEPARATION", "1.5"))
 

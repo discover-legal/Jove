@@ -85,11 +85,13 @@ uv run uvicorn jove.web:app   # JOVE_CLEF_BASE_URL defaults to http://localhost:
 ```
 
 The first run downloads the PP-OCRv6 models (hash-checked by RapidOCR). Then
-open http://localhost:8000: the form takes you to a results page showing each
-page with its tagged text boxed, and the values found listed by field. Or:
+open http://localhost:8000. Drop in files, pick a schema, and Jove takes you to a
+results page: each page with its tagged text boxed, the values listed by field,
+filters by field and score, and a "Download page" button that saves the result
+as one self-contained HTML file. Or from the command line:
 
 ```sh
-curl -F files=@scan.pdf -F "schema=<schemas/legal_intake.schema.json" \
+curl -F files=@scan.pdf -F schema_name=legal_intake \
      -F "context=Our firm: Harper & Leung LLP. Our client: Jane Doe." localhost:8000/jobs
 curl localhost:8000/jobs/<id>                 # status
 curl localhost:8000/jobs/<id>/result.jsonl    # the graph

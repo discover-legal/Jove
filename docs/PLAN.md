@@ -414,14 +414,23 @@ One JSON object per line. The order is `job`, `page`, `node`, `edge`, `warning`.
 
 ## Web surface
 
-- `GET /`: a bare upload form (files + schema)
-- `POST /jobs`: multipart `files` + `schema` (JSON text); the schema is checked on
+A light, dependency-free UI (`view.py`: inline CSS and a little vanilla JS; no
+fonts, scripts or styles fetched, so it works offline and exports cleanly).
+
+- `GET /`: the upload form: drop files, pick one of the schemas in `schemas/`
+  (`JOVE_SCHEMAS_DIR`) or paste your own, optional context; and recent jobs.
+- `POST /jobs`: multipart `files` + `schema` (JSON text) or `schema_name` (a file
+  in the schemas folder, without `.schema.json`); the schema is checked on
   upload. Returns `{job_id}`, or redirects a browser (the form) to the view.
-- `GET /jobs/{id}`: `{status: queued|running|done|failed, error}`
+- `GET /jobs/{id}`: `{status: queued|running|done|failed, error, updated}`
 - `GET /jobs/{id}/result.jsonl`: the output
 - `GET /jobs/{id}/view`: the result for a person to check: page images with the
-  rank-1 value tags boxed (a colour per top-level field), and the values listed
-  by field with scores. It refreshes until the job is done.
+  rank-1 value tags boxed (a colour per top-level field, dashed for values found
+  inside prose), and the values listed by field group with scores. Field-group
+  filters and a minimum-score slider; hovering or clicking links a box to its
+  row. It refreshes until the job is done.
+- `GET /jobs/{id}/view.html`: the same page as one self-contained file (pages
+  inlined as JPEG), to save, share or embed elsewhere.
 - `GET /jobs/{id}/pages/{page_id}.png`: a page image, as rasterised at ingest
 
 Jobs run in the background, in-process, and store their state under `data/jobs/<id>/`.

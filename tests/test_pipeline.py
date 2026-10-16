@@ -76,7 +76,7 @@ def test_web_roundtrip(tmp_path):
         if status["status"] in ("done", "failed"):
             break
         time.sleep(0.05)
-    assert status == {"status": "done", "error": None}
+    assert status["status"] == "done" and status["error"] is None and status["updated"]
     body = client.get(f"/jobs/{job_id}/result.jsonl").text
     assert json.loads(body.splitlines()[0])["job_id"] == job_id
 
@@ -84,6 +84,23 @@ def test_web_roundtrip(tmp_path):
     assert "client.name" in page and "Jane Doe" in page and "pages/p0001.png" in page
     assert client.get(f"/jobs/{job_id}/pages/p0001.png").headers["content-type"] == "image/png"
     assert client.get(f"/jobs/{job_id}/pages/..%2Fstatus.json").status_code == 404
+
+
+def test_web_schema_by_name_index_and_standalone_page(tmp_path):
+    schemas = tmp_path / "schemas"
+    schemas.mkdir()
+    (schemas / "intake.schema.json").write_text(json.dumps({**SCHEMA, "title": "Intake", "description": "People."}))
+    (schemas / "broken.schema.json").write_text("{")
+    client = TestClient(create_app(tmp_path, make_ocr=lambda: OCR, make_chooser=chooser, schemas_dir=schemas))
+    home = client.get("/").text
+    assert "Intake" in home and "broken" not in home
+    job_id = client.post("/jobs", files=[("files", ("a.pdf", pdf(2)))], data={"schema_name": "intake"}).json()["job_id"]
+    assert client.get(f"/jobs/{job_id}").json()["status"] == "done"
+    assert "a.pdf" in client.get("/").text  # listed under recent jobs
+    page = client.get(f"/jobs/{job_id}/view.html")
+    assert page.headers["content-disposition"].startswith("attachment")
+    assert "data:image/jpeg;base64," in page.text and "pages/p0001.png" not in page.text
+    assert client.post("/jobs", files=[("files", ("a.pdf", pdf(1)))], data={"schema_name": "nope"}).status_code == 400
 
 
 def test_web_form_redirects_to_view(tmp_path):
