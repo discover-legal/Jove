@@ -283,8 +283,9 @@ class FlatTagger:
             same_tag = prev is not None and prev.top[0].target == u.top[0].target and prev.word == u.word
             # Adjacent words of one line with the same tag are one value ("Senior Adjudicator");
             # across lines, only the "continues" answer joins them.
+            # Clauses are whole phrases already ("$2,450" stays apart from "rent of").
             same_line_words = same_tag and u.word and prev.line_index == u.line_index \
-                and (u.pos is None or u.pos == prev.pos + 1)
+                and u.doc.kind != "clause" and (u.pos is None or u.pos == prev.pos + 1)
             if same_tag and (same_line_words or (not u.word and u.link >= self.threshold)):
                 prev.members = (prev.members or [prev.doc]) + [u.doc]
                 prev.pos = u.pos

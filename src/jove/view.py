@@ -283,7 +283,7 @@ def render(job_id: str, status: dict, records: list[dict], meta: dict | None = N
     files = ", ".join(i["filename"] for i in job["inputs"])
     chooser = job["chooser"].get("model") or job["chooser"].get("provider", "")
     took = _took(meta.get("created"), status.get("updated"))
-    stats = [f"<b>{len(tags)}</b>values", f"<b>{len(by_group)}</b>field groups", f"<b>{len(pages)}</b>pages"]
+    stats = [_count(len(tags), "value"), _count(len(by_group), "field group"), _count(len(pages), "page")]
     if meta.get("schema"):
         stats.append(f"<b>{escape(meta['schema'])}</b>schema")
     stats.append(f"<b>{escape(chooser)}</b>chooser")
@@ -338,6 +338,10 @@ def _field(path: str) -> str:
 
 def _reading(node_id: str) -> tuple:
     return tuple(node_id.split("/"))
+
+
+def _count(n: int, noun: str) -> str:
+    return f"<b>{n}</b>{noun}{'' if n == 1 else 's'}"
 
 
 def _clip(text: str, n: int = 280) -> str:
