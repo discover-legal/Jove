@@ -97,3 +97,106 @@ def test_mentions_inside_prose(tmp_path):
     found = {t: (p, i["performers[]"]) for t, p, i, m in tags if m}
     assert found["Craig Riley"][0] == "performers[].name" and found["(percussion)"][0] == "performers[].role"
     assert found["Craig Riley"][1] == found["(percussion)"][1] != found["Mike Oresco"][1] == found["(bass)."][1]
+
+
+AFFIDAVIT = [
+    "1. I am a manager with the city, one of the defendants in this action, and I have",
+    "personal knowledge of the matters in this affidavit, except where I say other-",
+    "wise.",
+    "2. I have conducted a diligent search of the records of the city and made enquiries",
+    "of others in order to make this affidavit.",
+]
+
+
+def test_prose_lines_join_into_paragraphs():
+    from jove import layout
+    from jove.flat import paragraphs
+    from jove.ocr import OcrLine
+
+    lines = [OcrLine(t, (0, i * 20, 820, i * 20 + 18) if len(t) > 50 else (0, i * 20, 10 * len(t), i * 20 + 18))
+             for i, t in enumerate(AFFIDAVIT)]
+    [block] = layout.build("p0001", lines)
+    units = paragraphs(block)
+    assert [u.kind for u in units] == ["paragraph", "paragraph"]  # a short line ends one, "2." starts the next
+    assert units[0].text.endswith("except where I say otherwise.")  # hyphenation undone
+    assert [l.text for l in units[1].children] == AFFIDAVIT[3:]
+
+
+def test_form_rows_and_captions_stay_lines():
+    from jove import layout
+    from jove.flat import paragraphs
+    from jove.ocr import OcrLine
+
+    form = ["Tenant's name: Jane Doe Unit: 4 Street: King Street West", "Landlord's name: Acme Inc. Phone: 416-555-0100"]
+    caption = ["JANE DOE and JOHN DOE", "Plaintiffs"]
+    for rows in (form, caption):
+        [block] = layout.build("p0001", [OcrLine(t, (0, i * 20, 600, i * 20 + 18)) for i, t in enumerate(rows)])
+        assert [u.kind for u in paragraphs(block)] == ["line"] * len(rows)
+
+
+def test_a_paragraph_is_tagged_once_and_mentions_inside_it_are_found(tmp_path):
+    ocr = FakeOcr({"p0001": ["joined on stage tonight by our good friends for one evening only, by",
+                             "Craig Riley, on percussion, and Mike Oresco, on bass, for the whole show."]})
+    asked = []
+
+    def choice(q):  # mentions come back as clauses, not scattered words
+        asked.append(q.subject)
+        if q.node == "" and q.subject.startswith("joined on stage"):
+            return "description[]"
+        if q.node == "performers[]":
+            return {"by Craig Riley,": "performers[].name", "and Mike Oresco,": "performers[].name",
+                    "on percussion,": "performers[].role", "on bass,": "performers[].role"}.get(q.subject)
+        return None
+
+    def gate(q):
+        return 0.9 if "mention a performers" in q.instructions else 0.1
+
+    out = run("j", tmp_path, [("b.png", png())], FLYER, ocr, FakeChooser(choice, gate=gate), tagger="flat")
+    recs = [json.loads(l) for l in out.read_text().splitlines()]
+    nodes = {r["id"]: r for r in recs if r["type"] == "node"}
+    [para] = [n for n in nodes.values() if n["kind"] == "paragraph"]
+    tags = [(nodes[e["from"]]["text"], e["to"], e.get("mention")) for e in recs
+            if e["type"] == "edge" and e["rel"] == "tagged" and e["rank"] == 1]
+    assert (para["text"], "description[]", None) in tags
+    assert not any(s in asked for s in (ocr._lines["p0001"]))  # the lines themselves were never asked
+    found = {t: p for t, p, m in tags if m}
+    assert found == {"by Craig Riley,": "performers[].name", "on percussion,": "performers[].role",
+                     "and Mike Oresco,": "performers[].name", "on bass,": "performers[].role"}
+
+
+def test_a_short_line_mid_sentence_runs_on():
+    from jove import layout
+    from jove.flat import paragraphs
+    from jove.ocr import OcrLine
+
+    jurat = ["SWORN before me at the City of Toronto, in the", "Province of Ontario, on",  # a filled-in blank
+             "December 8, 2020.", "Commissioner for Taking Affidavits."]
+    [block] = layout.build("p0001", [OcrLine(t, (0, i * 20, 10 * len(t), i * 20 + 18)) for i, t in enumerate(jurat)])
+    units = paragraphs(block)
+    assert [u.kind for u in units] == ["paragraph", "line"]
+    assert units[0].text == " ".join(jurat[:3])
+
+
+def test_a_paragraph_tagged_inside_a_mentions_field_is_still_searched(tmp_path):
+    ocr = FakeOcr({"p0001": ["tonight on stage for one evening only, a special show with our friends:",
+                             "Craig Riley, on percussion, and the whole band for the whole show."]})
+
+    def choice(q):
+        paragraph = q.subject.startswith("tonight on stage") and q.subject.endswith("show.")
+        if q.node == "" and paragraph:
+            return "performers[]"  # the whole paragraph is about performers...
+        if q.node == "performers[]":
+            if paragraph:
+                return "performers[].role"
+            return "performers[].name" if q.subject.startswith("Craig Riley") else None
+        return None
+
+    def gate(q):
+        return 0.9 if "mention a performers" in q.instructions else 0.1
+
+    out = run("j", tmp_path, [("b.png", png())], FLYER, ocr, FakeChooser(choice, gate=gate), tagger="flat")
+    recs = [json.loads(l) for l in out.read_text().splitlines()]
+    nodes = {r["id"]: r for r in recs if r["type"] == "node"}
+    found = {nodes[e["from"]]["text"]: e["to"] for e in recs
+             if e["type"] == "edge" and e["rel"] == "tagged" and e.get("mention")}
+    assert found == {"Craig Riley,": "performers[].name"}  # ...and still yields the names inside it

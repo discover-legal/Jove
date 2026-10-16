@@ -16,7 +16,8 @@ from .tagger import Decision, Tagger
 
 def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict,
         ocr: Ocr, chooser: Chooser, separation: float = 1.5, context: str | None = None,
-        gate: float = 0.5, tagger: str = "tree", owners: bool = True, layout_engine: str = "rules") -> Path:
+        gate: float = 0.5, tagger: str = "tree", owners: bool = True, layout_engine: str = "rules",
+        paragraphs: bool = True) -> Path:
     tree = build_tree(schema)
     inputs, pages = ingest(files, job_dir / "pages")
     if layout_engine == "docling":
@@ -38,7 +39,7 @@ def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict
     if tagger == "flat":
         from .flat import FlatTagger
 
-        engine = FlatTagger(tree, chooser, context=context, threshold=gate)
+        engine = FlatTagger(tree, chooser, context=context, threshold=gate, paragraphs=paragraphs)
         nodes, edges = engine.tag(blocks)
     else:
         engine = Tagger(tree, chooser, separation=separation, context=context, gate=gate)
@@ -64,6 +65,7 @@ def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict
         "layout": layout_engine,
         "separation_threshold": separation,
         "split_gate_threshold": gate,
+        "paragraphs": paragraphs if tagger == "flat" else None,
         "context": context,
     }]
 

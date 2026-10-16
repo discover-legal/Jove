@@ -8,7 +8,8 @@ page and bytes it came from.
 
 It was built for Ontario law-firm intake (court endorsements, tribunal forms,
 demand letters, client intake forms), but the schema is yours: the repo also
-ships a schema for flyers and posted notices, and one for document structure.
+ships schemas for court filings (with e-signing and production-stamp data),
+flyers and posted notices, and document structure.
 
 - **Fully automatic.** There is no review UI. Jove tags and does not choose: if
   three lines all look like the client's name, all three are tagged with
@@ -35,8 +36,9 @@ ingest ──► OCR ──► layout ──► tag ──► emit (JSONL graph)
    logo text) and adds them only if a second, cropped reading confirms them.
 3. **Layout:** group lines into blocks (rules by default, or Docling).
 4. **Tag:** for every line, ask a decision model which schema field the line
-   gives a value for (or `none`, or `label` for a printed form caption). Lines
-   holding several values are split into words and asked again. A final pass
+   gives a value for (or `none`, or `label` for a printed form caption). Running
+   prose is asked about a paragraph at a time. Lines holding several values are
+   split into words and asked again. A final pass
    checks who each value belongs to (our client, the opposing party, the
    issuer).
 5. **Emit:** a JSONL graph of pages, blocks, lines and spans, with ranked

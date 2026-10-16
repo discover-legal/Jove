@@ -39,6 +39,12 @@ Schemas:
   letterhead's address and phones under `letterhead` (the legal schema had
   given them to the client). On the N4 it separated printed labels from
   filled values.
+- `schemas/court_document.schema.json`: an Ontario court filing (court, file
+  numbers, parties, title and form, deponent, body paragraphs, schedules, jurat
+  with remote commissioning, lawyer's certificate, signatures, back-sheet
+  counsel), plus the copy's metadata: e-signing data (platform, envelope ID,
+  signer stamps, timestamps, certificate of completion), production page stamps
+  and law-firm document numbers. Deponent and jurat are `x-mentions`. 46 fields.
 - `schemas/legal_intake.schema.json` is the reference schema: Ontario law-firm
 intake with 15 top-level branches, 121 leaf fields and 26 internal nodes, at
 most 15 children per node and 4 levels deep. Its examples use Ontario courts,
@@ -171,7 +177,16 @@ names. A path's score is the geometric mean of its edge probabilities.
 
 This is the alternative to the tree. OCR lines are the atoms; layout supplies
 only reading order. Grouping is Jev's decision, not a set of geometry
-thresholds:
+thresholds, except for running prose:
+- **Paragraphs (`JOVE_PARAGRAPHS`, on):** a block's lines that read as prose
+  are one atom, asked about once and never split. A paragraph ends after a
+  short line that finishes a sentence (the next line's first word would have
+  fitted on it), or before a numbered or bulleted line. A short line that stops
+  mid-sentence runs on (a pre-printed jurat with the date filled in). Only runs
+  of at least 2 lines and 12 words, at least 30% lowercase words and no row of
+  several `Label:` captions count as prose. Values named inside a paragraph are
+  found by the mentions pass. On the affidavit of documents this made 111 lines
+  into 53 lines and 19 paragraphs.
 - **Round 1, one parallel batch per page:** every line's schema Choice fan-out
   (with its neighbouring lines), "does it continue the previous line's value?",
   and "is it about the same item as the line one back / two back?".
@@ -380,7 +395,7 @@ One JSON object per line. The order is `job`, `page`, `node`, `edge`, `warning`.
 {"type":"page","page_id":"p0001","source":"a.pdf","source_page":1,"sha256":"…",
  "width":1700,"height":2200,"tags":["client.person.full_name"],"placed":true}
 {"type":"node","id":"p0001/b02/l01/s02","kind":"span","page_id":"p0001",
- "bbox":[82,147,241,175],"text":"Jane Doe"}          // kind: block | line | span
+ "bbox":[82,147,241,175],"text":"Jane Doe"}          // kind: block | paragraph | line | segment | span
 {"type":"edge","rel":"contains","from":"p0001/b02/l01","to":"p0001/b02/l01/s02"}
 {"type":"edge","rel":"within","from":"p0001/b02","to":"client.person",
  "score":0.94,"separation":1.04,"asked_from":""}     // split: parts were re-asked from here
@@ -429,6 +444,7 @@ Jobs run in the background, in-process, and store their state under `data/jobs/<
 | `JOVE_SEPARATION` | `1.5` |
 | `JOVE_SPLIT_GATE` | `0.5` (split only if the yes/no gate's P(split) ≥ this) |
 | `JOVE_TAGGER` | `flat` (or `tree`) |
+| `JOVE_PARAGRAPHS` | `on`: flat tagger asks about prose paragraph by paragraph (`off`: line by line) |
 | `JOVE_OWNERS` | `on` (`off` skips the ownership pass) |
 | `JOVE_DATA_DIR` | `./data` |
 

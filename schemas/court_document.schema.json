@@ -1,0 +1,502 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jove.local/schemas/court_document.schema.json",
+  "title": "Court document",
+  "description": "What an Ontario court filing says: the court and file, the parties, the document and its form, sworn evidence (deponent, jurat, commissioner), schedules, counsel on the back sheet, and the electronic-signing and page-stamp data added when it was signed and produced. For affidavits, pleadings, motions, factums, orders and endorsements.",
+  "x-instructions": "Tag what the text says about the filing. The back sheet (the last page, with the short title of proceeding and the lawyers' block) repeats the court, file number and parties: tag them the same way as on the first page. Text added by an e-signing service (DocuSign, Adobe Sign) or stamped on every page for production is metadata about the copy, not part of the document's own content.",
+  "type": "object",
+  "properties": {
+    "court": {
+      "type": "object",
+      "description": "The court the proceeding is in.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Court name, with its jurisdiction.",
+          "examples": [
+            "ONTARIO SUPERIOR COURT OF JUSTICE",
+            "COURT OF APPEAL FOR ONTARIO",
+            "ONTARIO COURT OF JUSTICE",
+            "(DIVISIONAL COURT)"
+          ]
+        },
+        "location": {
+          "type": "string",
+          "description": "Where the proceeding was commenced or is heard.",
+          "examples": [
+            "PROCEEDING COMMENCED AT TORONTO",
+            "Ottawa"
+          ]
+        },
+        "list": {
+          "type": "string",
+          "description": "A specialised list or branch.",
+          "examples": [
+            "COMMERCIAL LIST",
+            "ESTATES LIST",
+            "Small Claims Court"
+          ]
+        }
+      }
+    },
+    "file_numbers": {
+      "type": "array",
+      "description": "Numbers the court gave the proceeding.",
+      "items": {
+        "type": "string",
+        "description": "One court file, docket or appeal number.",
+        "examples": [
+          "Court File No. CV-21-00654321-0000",
+          "Court File No. 17-12345",
+          "DOCKET: C69486"
+        ]
+      },
+      "x-not-for": "Page stamps on a produced copy (production_numbers[]) and a law firm's own file or document numbers (document_ids[])."
+    },
+    "parties": {
+      "type": "array",
+      "description": "The parties in the title of proceeding, one party or group of co-parties per item.",
+      "items": {
+        "type": "object",
+        "description": "One party, or several parties in the same role.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Party name or names.",
+            "examples": [
+              "JANE DOE and JOHN DOE",
+              "ACME PROPERTY MANAGEMENT INC.",
+              "JANE DOE et al."
+            ]
+          },
+          "role": {
+            "type": "string",
+            "description": "Procedural role.",
+            "examples": [
+              "Plaintiffs",
+              "Defendant",
+              "Applicant (Respondent in Appeal)"
+            ]
+          }
+        }
+      },
+      "x-not-for": "The words joining the parties ('BETWEEN:', 'and')."
+    },
+    "document": {
+      "type": "object",
+      "description": "What this document is.",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "The document's title or type.",
+          "examples": [
+            "AFFIDAVIT OF DOCUMENTS",
+            "STATEMENT OF CLAIM",
+            "NOTICE OF MOTION",
+            "FACTUM OF THE RESPONDENT"
+          ],
+          "x-not-for": "Section and schedule headings (headings[])."
+        },
+        "filed_by": {
+          "type": "string",
+          "description": "Whose document it is, when the title says so.",
+          "examples": [
+            "OF THE DEFENDANT, ACME INC.",
+            "(Plaintiff)"
+          ]
+        },
+        "form": {
+          "type": "string",
+          "description": "The prescribed form, its number or the rule it is under.",
+          "examples": [
+            "FORM 30A",
+            "Form 4C",
+            "Rules of Civil Procedure, R.R.O. 1990, Reg. 194"
+          ]
+        }
+      }
+    },
+    "deponent": {
+      "type": "object",
+      "description": "The person swearing or affirming the affidavit.",
+      "x-mentions": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Deponent's name.",
+          "examples": [
+            "Jane Doe",
+            "I, JOHN SMITH,"
+          ]
+        },
+        "residence": {
+          "type": "string",
+          "description": "Where the deponent lives or works, as the affidavit states it.",
+          "examples": [
+            "of the City of Ottawa, in the Province of Ontario"
+          ]
+        },
+        "position": {
+          "type": "string",
+          "description": "Job title or capacity, and for whom.",
+          "examples": [
+            "Director of Finance of the plaintiff",
+            "a law clerk with Smith LLP"
+          ]
+        }
+      },
+      "x-not-for": "The commissioner who took the oath (jurat.commissioner)."
+    },
+    "body": {
+      "type": "array",
+      "description": "The document's own paragraphs: evidence, pleading, argument.",
+      "items": {
+        "type": "string",
+        "description": "One paragraph.",
+        "examples": [
+          "1. I am the plaintiff in this action and have personal knowledge of the matters below.",
+          "The defendant breached the lease by failing to pay rent from March 2024."
+        ]
+      },
+      "x-not-for": "The jurat and the lawyer's certificate (jurat, lawyers_certificate)."
+    },
+    "headings": {
+      "type": "array",
+      "description": "Section or schedule headings.",
+      "items": {
+        "type": "string",
+        "description": "One heading.",
+        "examples": [
+          "SCHEDULE \"A\"",
+          "PART I - OVERVIEW",
+          "RELIEF SOUGHT"
+        ]
+      }
+    },
+    "schedules": {
+      "type": "array",
+      "description": "Schedules or exhibits and what each holds.",
+      "items": {
+        "type": "object",
+        "description": "One schedule or exhibit.",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Its letter or name.",
+            "examples": [
+              "Schedule \"B\"",
+              "Exhibit \"C\""
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "What it lists or contains.",
+            "examples": [
+              "Documents that it objects to producing on the grounds of privilege.",
+              "See Excel spreadsheet attached."
+            ]
+          }
+        }
+      }
+    },
+    "jurat": {
+      "type": "object",
+      "description": "The jurat: where, when and before whom the affidavit was sworn or affirmed.",
+      "x-mentions": true,
+      "properties": {
+        "statement": {
+          "type": "string",
+          "description": "The jurat as written.",
+          "examples": [
+            "SWORN before me at the City of Toronto, in the Province of Ontario, on May 3, 2024."
+          ]
+        },
+        "date": {
+          "type": "string",
+          "description": "The date it was sworn.",
+          "examples": [
+            "May 3, 2024",
+            "this 3rd day of May, 2024"
+          ]
+        },
+        "deponent_location": {
+          "type": "string",
+          "description": "Where the deponent was.",
+          "examples": [
+            "at the City of Ottawa, in the Province of Ontario"
+          ]
+        },
+        "commissioner_location": {
+          "type": "string",
+          "description": "Where the commissioner was, if said separately.",
+          "examples": [
+            "before me at the City of Toronto"
+          ]
+        },
+        "remote": {
+          "type": "string",
+          "description": "How and under what authority it was sworn remotely.",
+          "examples": [
+            "SWORN remotely",
+            "by video conference",
+            "in accordance with O. Reg. 431/20, Administering Oath or Declaration Remotely"
+          ]
+        },
+        "commissioner": {
+          "type": "string",
+          "description": "The commissioner's name.",
+          "examples": [
+            "Jane Smith",
+            "J. Smith, LSO #12345A"
+          ]
+        },
+        "commissioner_title": {
+          "type": "string",
+          "description": "The commissioner's capacity.",
+          "examples": [
+            "Commissioner for Taking Affidavits (or as may be)",
+            "A Notary Public"
+          ]
+        }
+      }
+    },
+    "lawyers_certificate": {
+      "type": "object",
+      "description": "A lawyer's certificate on the document (for example on an affidavit of documents).",
+      "properties": {
+        "statement": {
+          "type": "string",
+          "description": "What the lawyer certifies.",
+          "examples": [
+            "I CERTIFY that I have explained to the deponent the necessity of making full disclosure"
+          ]
+        },
+        "lawyer": {
+          "type": "string",
+          "description": "The certifying lawyer.",
+          "examples": [
+            "Jane Smith"
+          ]
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the certificate.",
+          "examples": [
+            "May 3, 2024"
+          ]
+        }
+      }
+    },
+    "signatures": {
+      "type": "array",
+      "description": "Signature lines of the document's own signers (not the commissioner or certifying lawyer).",
+      "items": {
+        "type": "object",
+        "description": "One signature.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Signer's name or signature.",
+            "examples": [
+              "JANE DOE",
+              "\"J. Smith\""
+            ]
+          },
+          "capacity": {
+            "type": "string",
+            "description": "Whom or what they sign for.",
+            "examples": [
+              "Lawyer for the Plaintiff",
+              "Registrar"
+            ]
+          },
+          "date": {
+            "type": "string",
+            "description": "Date beside the signature.",
+            "examples": [
+              "Date: June 1, 2024"
+            ]
+          }
+        }
+      }
+    },
+    "counsel": {
+      "type": "array",
+      "description": "Lawyers named in the document or its back sheet, one lawyer or firm per item.",
+      "items": {
+        "type": "object",
+        "description": "One lawyer or law firm.",
+        "properties": {
+          "firm": {
+            "type": "string",
+            "description": "Law firm and descriptor.",
+            "examples": [
+              "SMITH & JONES LLP",
+              "Barristers and Solicitors"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "Lawyer's name, with any LSO number.",
+            "examples": [
+              "Jane Smith (LSO #12345A)",
+              "John Lee (#67890B)"
+            ]
+          },
+          "address": {
+            "type": "string",
+            "description": "The firm's address, any part of it.",
+            "examples": [
+              "100 Queen Street West, Suite 2000",
+              "Toronto ON M5H 2N2"
+            ]
+          },
+          "phone": {
+            "type": "string",
+            "description": "Phone or fax number with its label.",
+            "examples": [
+              "Tel: 416-555-0100",
+              "Fax: 416-555-0199"
+            ]
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address.",
+            "examples": [
+              "jsmith@example.com"
+            ]
+          },
+          "acts_for": {
+            "type": "string",
+            "description": "Whom they act for.",
+            "examples": [
+              "Lawyers for the Plaintiff",
+              "Lawyers for the defendant, Acme Inc."
+            ]
+          }
+        }
+      }
+    },
+    "dates": {
+      "type": "array",
+      "description": "Other dates in the document, with what they mark.",
+      "items": {
+        "type": "object",
+        "description": "One date.",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "The date as printed.",
+            "examples": [
+              "June 1, 2024",
+              "Date of issue: 2024-06-01"
+            ]
+          },
+          "meaning": {
+            "type": "string",
+            "description": "What it dates.",
+            "examples": [
+              "issued",
+              "hearing date"
+            ]
+          }
+        }
+      },
+      "x-not-for": "The jurat's date (jurat.date) and e-signing timestamps (e_signature.signed_at)."
+    },
+    "e_signature": {
+      "type": "object",
+      "description": "Data an electronic-signing service added to the document.",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "description": "The signing service.",
+          "examples": [
+            "DocuSign",
+            "Adobe Acrobat Sign",
+            "Dropbox Sign"
+          ]
+        },
+        "envelope_id": {
+          "type": "string",
+          "description": "The envelope, agreement or transaction ID printed on each page.",
+          "examples": [
+            "DocuSign Envelope ID: 1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D",
+            "Transaction ID: CBJCHBCAABAA..."
+          ]
+        },
+        "signed_by": {
+          "type": "string",
+          "description": "A signer named by the service's stamp.",
+          "examples": [
+            "DocuSigned by: Jane Smith",
+            "Jane Smith (Jun 1, 2024 10:15 EDT)"
+          ]
+        },
+        "signature_id": {
+          "type": "string",
+          "description": "An ID under a signature stamp.",
+          "examples": [
+            "8F3A1C2B9D4E4F7A..."
+          ]
+        },
+        "signed_at": {
+          "type": "string",
+          "description": "When it was signed, per the service.",
+          "examples": [
+            "6/1/2024 | 10:15 AM EDT",
+            "Signed: 2024-06-01 14:15:02 UTC"
+          ]
+        },
+        "certificate": {
+          "type": "string",
+          "description": "A certificate of completion or audit trail line: status, sender, signer events, IP address.",
+          "examples": [
+            "Certificate Of Completion",
+            "Envelope Status: Completed",
+            "Using IP Address: 203.0.113.7"
+          ]
+        }
+      }
+    },
+    "production_numbers": {
+      "type": "array",
+      "description": "Page stamps put on a copy produced in the litigation (Bates numbers, document IDs on every page).",
+      "items": {
+        "type": "string",
+        "description": "One stamp.",
+        "examples": [
+          "ABC0001234_0001",
+          "PLF-000123",
+          "DEF 0045"
+        ]
+      },
+      "x-not-for": "Court file numbers (file_numbers[])."
+    },
+    "document_ids": {
+      "type": "array",
+      "description": "A law firm's own document-management or file numbers printed on the document.",
+      "items": {
+        "type": "string",
+        "description": "One number.",
+        "examples": [
+          "TOR01: 1234567: v2",
+          "Our File No. 2024-0117",
+          "ACTIVE_CA\\ 12345678\\1"
+        ]
+      }
+    },
+    "page_numbers": {
+      "type": "array",
+      "description": "Page numbering.",
+      "items": {
+        "type": "string",
+        "description": "One page number.",
+        "examples": [
+          "- 2 -",
+          "Page 2 of 6"
+        ]
+      }
+    }
+  }
+}
