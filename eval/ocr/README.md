@@ -6,10 +6,11 @@ uv run python eval/ocr/bench.py app           # score what the app ships
 uv run python eval/ocr/bench.py v6_small      # or any engine in engines.py
 ```
 
-- `real/`: real captures. A bar flyer photographed under low light (blurred,
-  italic, angled), a torn transit-stop notice at night (reflective, multi-panel),
-  both hand-transcribed; and a born-digital Divisional Court endorsement PDF,
-  whose truth is its own text layer.
+- `real/`: real captures. A torn transit-stop notice at night (reflective,
+  multi-panel), hand-transcribed; and a born-digital Divisional Court endorsement PDF,
+  whose truth is its own text layer. A low-light photo of a bar flyer was also
+  here until 2026-10-16, when it was removed because it named private people;
+  the results below that mention "flyer" predate that.
 - `synthetic/`: six Ontario legal pages (intake form, demand letter, court
   endorsement, pay stub, N4 notice, italic notes). Each is rendered as `scan`,
   `photo` (perspective, tilt, blur, uneven light, JPEG), `fax`, `hard`

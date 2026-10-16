@@ -26,7 +26,9 @@ Results are in docs/PLAN.md ("Measured").
 
 - `gold/` covers 11 documents, 222 values.
 - Synthetic: the intake form and demand letter (eval/ocr/synthetic).
-- Real photos: the gig flyer and the transit notice (eval/ocr/real).
+- Real photo: the transit notice (eval/ocr/real). A photographed gig flyer was in the set until
+  2026-10-16 and was removed because it named private people; results dated before then include
+  it (11 documents, 230 values; now 10 documents, 217 values).
 - Public Ontario documents, in `docs/`:
   - Divisional Court endorsement (eval/ocr/real);
   - Court of Appeal for Ontario 2022 ONCA 250 (costs endorsement), plus a
