@@ -388,11 +388,12 @@ _MARKER = re.compile(r"^(\(?[1-9]\d{0,2}[.)]|\(?[a-z]{1,4}\)|[-•*–])\s")
 def paragraphs(block: DocNode) -> list[DocNode]:
     """The block's lines, with each run of running prose joined into one paragraph node.
 
-    A paragraph ends after a short line that finishes a sentence (the next line's
-    first word would have fitted in the room left before the block's right edge, so
-    ragged-right text still joins), or before a numbered or bulleted line. A short
-    line that stops mid-sentence runs on: a pre-printed form with a blank filled in
-    ("... on" / "December 8, 2020, ..."). Only runs that read as prose
+    A paragraph ends after a short line (the next line's first word would have fitted
+    in the room left before the block's right edge, so ragged-right text still
+    joins), unless that line visibly stops mid-sentence with a comma or a lowercase
+    last word: a pre-printed form with a blank filled in ("... on" / "May 3, 2024,").
+    A logo word or heading ("YORK") ends it. It also ends before a numbered or
+    bulleted line. Only runs that read as prose
     become paragraphs: two or more lines, at least 12 words, mostly lowercase words,
     and no line with several "Label:" captions (a form's label/value rows stay lines).
     """
@@ -405,7 +406,7 @@ def paragraphs(block: DocNode) -> list[DocNode]:
         char = (prev.bbox[2] - prev.bbox[0]) / max(len(prev.text), 1)
         first = len(line.text.split()[0]) if line.text.split() else 0
         short = right - prev.bbox[2] >= (first + 1) * char
-        if not (short and prev.text.rstrip()[-1:] in ".:;?!") and not _MARKER.match(line.text):
+        if (not short or _open(prev.text)) and not _MARKER.match(line.text):
             runs[-1].append(line)
         else:
             runs.append([line])
@@ -419,6 +420,13 @@ def paragraphs(block: DocNode) -> list[DocNode]:
                max(l.bbox[2] for l in run), max(l.bbox[3] for l in run))
         out.append(DocNode(f"{block.id}/p{n:02d}", "paragraph", block.page_id, box, _join(run), list(run)))
     return out
+
+
+def _open(text: str) -> bool:
+    """Does the line stop mid-sentence: a trailing comma, or a lowercase last word ("... on")?"""
+    words = text.split()
+    last = words[-1] if words else ""
+    return last.endswith(",") or (last[:1].islower() and last[-1:].isalpha())
 
 
 def _prose(run: list[DocNode]) -> bool:
@@ -447,25 +455,60 @@ def _pieces(unit: DocNode) -> list[DocNode]:
     """What a mention can be made of: a line's words, or a paragraph's clauses.
 
     Asked word by word, a sentence comes back as scattered single words ("in", "of",
-    "December"); its clauses ("of the City of Ottawa,", "on May 3, 2024,") are
-    the phrases a value is written in. A clause ends at , ; : or a sentence's full
-    stop (not an abbreviation's: "O. Reg.", "A.").
+    "December"); its clauses ("of the City of Ottawa,", "on May 3, 2024,") are the
+    phrases a value is written in. Money and dates are pieces of their own first
+    ("$4,900.00", "September 30, 2024"): no clause cut splits one, and no long clause
+    hides one. A clause ends at , ; : or a sentence's full stop (not an
+    abbreviation's: "O. Reg.", "A.").
     """
     if unit.kind != "paragraph":
         return unit.children
-    out, run = [], []
     words = _words(unit)
-    for n, w in enumerate(words):
-        run.append(w)
-        t = w.text
-        ends = t[-1:] in ",;:" or (t.endswith(".") and len(t.rstrip(".")) > 3)
-        if (ends and any(c.isalnum() for c in t)) or n == len(words) - 1:
-            box = (min(x.bbox[0] for x in run), min(x.bbox[1] for x in run),
-                   max(x.bbox[2] for x in run), max(x.bbox[3] for x in run))
+    ends, pos = [], -1
+    for w in words:  # each word's end offset in the joined text
+        pos += len(w.text) + 1
+        ends.append(pos)
+    text = " ".join(w.text for w in words)
+    value_at = {}  # first word of a value -> one past its last word
+    for m in _VALUE.finditer(text):
+        first = next(i for i, e in enumerate(ends) if e > m.start())
+        last = next(i for i, e in enumerate(ends) if e >= m.end())
+        value_at[first] = last + 1
+
+    out: list[DocNode] = []
+
+    def emit(piece: list[DocNode]) -> None:
+        if piece:
+            box = (min(x.bbox[0] for x in piece), min(x.bbox[1] for x in piece),
+                   max(x.bbox[2] for x in piece), max(x.bbox[3] for x in piece))
             out.append(DocNode(f"{unit.id}/c{len(out) + 1:02d}", "clause", unit.page_id, box,
-                               " ".join(x.text for x in run)))
+                               " ".join(x.text for x in piece)))
+
+    run: list[DocNode] = []
+    n = 0
+    while n < len(words):
+        if n in value_at:
+            emit(run)
+            emit(words[n: value_at[n]])
+            run, n = [], value_at[n]
+            continue
+        t = words[n].text
+        run.append(words[n])
+        if any(c.isalnum() for c in t) and (t[-1:] in ",;:" or (t.endswith(".") and len(t.rstrip(".")) > 3)):
+            emit(run)
             run = []
+        n += 1
+    emit(run)
     return out
+
+
+_MONTH = r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\.?"
+# Values worth asking about on their own: money, and dates in their common written forms.
+_VALUE = re.compile(
+    r"\$\s?\d[\d,]*(?:\.\d{2})?"
+    rf"|\b{_MONTH}\s+\d{{1,2}}(?:st|nd|rd|th)?[^\w\s]{{0,3}}(?:\s+[^\w\s]{{1,3}})?,?\s+\d{{4}}\b"
+    rf"|\b\d{{1,2}}(?:st|nd|rd|th)?\s+(?:day\s+of\s+)?{_MONTH},?\s+\d{{4}}\b"
+    r"|\b\d{1,4}[/-]\d{1,2}[/-]\d{2,4}\b")
 
 
 def _state(page_id: str, lines: list[DocNode], context: dict) -> dict:

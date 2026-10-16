@@ -200,3 +200,16 @@ def test_a_paragraph_tagged_inside_a_mentions_field_is_still_searched(tmp_path):
     found = {nodes[e["from"]]["text"]: e["to"] for e in recs
              if e["type"] == "edge" and e["rel"] == "tagged" and e.get("mention")}
     assert found == {"Dana Okafor,": "performers[].name"}  # ...and still yields the names inside it
+
+
+def test_paragraph_pieces_keep_money_and_dates_whole():
+    from jove.flat import _pieces
+    from jove.layout import DocNode
+
+    text = ("Rent of $2,450 for each of July and August remains unpaid, for a total of $4,900.00. "
+            "Unless paid by September 30, 2024, our client will apply.")
+    words = [DocNode(f"w{i}", "word", "p", (0, 0, 1, 1), t) for i, t in enumerate(text.split())]
+    para = DocNode("p", "paragraph", "p", (0, 0, 1, 1), text, [DocNode("l", "line", "p", (0, 0, 1, 1), text, words)])
+    assert [c.text for c in _pieces(para)] == [
+        "Rent of", "$2,450", "for each of July and August remains unpaid,", "for a total of", "$4,900.00.",
+        "Unless paid by", "September 30, 2024,", "our client will apply."]

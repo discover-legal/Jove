@@ -185,8 +185,17 @@ thresholds, except for running prose:
   mid-sentence runs on (a pre-printed jurat with the date filled in). Only runs
   of at least 2 lines and 12 words, at least 30% lowercase words and no row of
   several `Label:` captions count as prose. Values named inside a paragraph are
-  found by the mentions pass. On the affidavit of documents this made 111 lines
-  into 53 lines and 19 paragraphs.
+  found by the mentions pass, asked clause by clause; money and dates are
+  pieces of their own first (pattern-matched), so no clause cut splits
+  "September 30, 2024" and no long clause hides "$4,900.00". On the affidavit of
+  documents this made 111 lines into 53 lines and 19 paragraphs.
+  Measured (Clef, 10 documents without the removed flyer, first version: clauses
+  only, short lines without punctuation always running on): F1 0.630 against
+  0.640 line by line (recall 128 vs 134/217, precision 0.677 vs 0.664), 670
+  requests instead of 856, 23% faster. The losses were values inside sentences
+  (a date or amount inside a long clause) and a sign whose logo words joined a
+  paragraph; the value pieces and the stricter run-on rule (a comma or a
+  lowercase last word) address both.
 - **Round 1, one parallel batch per page:** every line's schema Choice fan-out
   (with its neighbouring lines), "does it continue the previous line's value?",
   and "is it about the same item as the line one back / two back?".
