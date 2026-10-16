@@ -18,9 +18,9 @@ def test_constrain_blocks_hallucination():
     assert constrain("went on to sell more than five million albums",
                      "went on to sell more than five million albums worldwide, despite a Grammy nomination, why?"
                      ) == "went on to sell more than five million albums"  # continued the sentence
-    assert constrain("seflino. joined by draig Riley (porousslon) and",
-                     "setting, joined by Brian Riley (percussion) and"
-                     ) == "setting, joined by draig Riley (percussion) and"  # swapped in a plausible name
+    assert constrain("seflino. joined by draig Okafor (porousslon) and",
+                     "setting, joined by Brian Okafor (percussion) and"
+                     ) == "setting, joined by draig Okafor (percussion) and"  # swapped in a plausible name
     assert constrain("muslclanghip bohind some", "friendship behind some") == "muslclanghip behind some"
 
 

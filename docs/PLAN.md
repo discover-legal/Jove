@@ -333,8 +333,8 @@ One run.
 
 The overall difference is within noise. Per feature:
 - **Mentions** fixed the flyer: recall 10/13 → 13/13, with both performers
-  paired with their instruments ("Craig Riley" + "(percussion)", "Mike
-  Oresco" + "(bass)").
+  paired with their instruments (a name + "(percussion)", another
+  name + "(bass)").
 - **Sides** mostly didn't take: Jev keeps tagging caption names as
   `parties[].name`, and used `sides` once. The likely fix, untested, is an
   `x-not-for` on `parties[].name` sending caption party blocks to `sides`.

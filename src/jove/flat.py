@@ -447,7 +447,7 @@ def _pieces(unit: DocNode) -> list[DocNode]:
     """What a mention can be made of: a line's words, or a paragraph's clauses.
 
     Asked word by word, a sentence comes back as scattered single words ("in", "of",
-    "December"); its clauses ("of the City of Hamilton,", "on December 8, 2020,") are
+    "December"); its clauses ("of the City of Ottawa,", "on May 3, 2024,") are
     the phrases a value is written in. A clause ends at , ; : or a sentence's full
     stop (not an abbreviation's: "O. Reg.", "A.").
     """

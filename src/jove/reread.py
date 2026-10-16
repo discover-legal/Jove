@@ -4,7 +4,7 @@ Lines the OCR engine is less than ``threshold`` sure of are cut out of the page
 (perspective-corrected from their quad), enlarged, and transcribed by a vision
 model with the OCR reading as a hint. The model is treated as a constrained spell-checker, not a rewriter, because
 vision LLMs complete sentences from memory, read neighbouring lines, and swap in
-plausible names ("Craiy Riley" -> "Brian Riley"). ``constrain`` keeps the OCR's
+plausible names ("Craiy Okafor" -> "Brian Okafor"). ``constrain`` keeps the OCR's
 token structure and accepts a model token only when:
 
 - it replaces exactly one OCR token and is spelled like it (similarity >= 0.5),

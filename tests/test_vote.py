@@ -66,5 +66,5 @@ def test_tidy_and_partial_number_revert():
     from jove.vote import tidy
     assert tidy("( gone ) and someday , both") == "(gone) and someday, both"
     # same-length groups: only the unbacked number reverts, the words keep their fixes
-    assert back_numbers("474 Botsford Newmarket ON", ["4n4 Dotstond Newmnarkel ON"], "4n4 Dotstond Newmnarkel ON") \
-        == "4n4 Botsford Newmarket ON"
+    assert back_numbers("474 Lakeview Newmarket ON", ["4n4 Lakoview Newmnarkel ON"], "4n4 Lakoview Newmnarkel ON") \
+        == "4n4 Lakeview Newmarket ON"

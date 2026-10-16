@@ -14,7 +14,7 @@
           "type": "string",
           "description": "Organization name, including one shown as logo text.",
           "examples": [
-            "Flamingo Noir Record Bar",
+            "Blue Heron Listening Room",
             "Crime Stoppers of York Region",
             "York Region Transit"
           ]
@@ -70,7 +70,7 @@
       "type": "string",
       "description": "Secondary title under the headline.",
       "examples": [
-        "ft. Al Connelly",
+        "ft. Rob Kessler",
         "Every Friday in September"
       ]
     },
@@ -97,8 +97,8 @@
                 "type": "string",
                 "description": "Performer's name.",
                 "examples": [
-                  "Al Connelly",
-                  "Craig Riley"
+                  "Rob Kessler",
+                  "Dana Okafor"
                 ]
               },
               "role": {
@@ -135,7 +135,7 @@
           "type": "string",
           "description": "Where it happens.",
           "examples": [
-            "Flamingo Noir Record Bar"
+            "Blue Heron Listening Room"
           ]
         },
         "venue_address": {
@@ -146,7 +146,7 @@
               "type": "string",
               "description": "Number and street, unit.",
               "examples": [
-                "474 Botsford St",
+                "88 Lakeview Ave",
                 "1200 Bay St, Suite 300"
               ]
             },
@@ -223,7 +223,7 @@
         "type": "string",
         "description": "A piece of body text.",
         "examples": [
-          "A founding member of Newmarket's own Glass Tiger..."
+          "A founding member of the band Northern Static..."
         ]
       },
       "x-not-for": "Headlines, rules, offers, contact details."
@@ -355,7 +355,7 @@
               "type": "string",
               "description": "Number and street, unit.",
               "examples": [
-                "474 Botsford St",
+                "88 Lakeview Ave",
                 "1200 Bay St, Suite 300"
               ]
             },

@@ -119,7 +119,7 @@
           "type": "string",
           "description": "Judges or adjudicators hearing it.",
           "examples": [
-            "Rouleau, van Rensburg and Roberts JJ.A."
+            "Alvarez, Okafor and Brennan JJ.A."
           ]
         },
         "parties": {
@@ -133,7 +133,7 @@
                 "type": "string",
                 "description": "Party name(s).",
                 "examples": [
-                  "Crosslinx Transit Solutions General Partnership",
+                  "Northline Transit Partners General Partnership",
                   "PUBLIC GUARDIAN AND TRUSTEE"
                 ]
               },
@@ -209,8 +209,8 @@
         "type": "string",
         "description": "One appearance line.",
         "examples": [
-          "Sharon Vogel, Peter Wardle, for the appellants",
-          "Jamie Macdonald, for the respondents Export Development Canada"
+          "Hannah Lowe, Peter Quinlan, for the appellants",
+          "Sam Reyes, for the respondent Northline Finance Corp."
         ]
       }
     },
@@ -339,7 +339,7 @@
           "description": "Signer's name or signature.",
           "examples": [
             "per: Wei Chen",
-            "\"Carnwath J.\"",
+            "\"Ashworth J.\"",
             "D. Whitcombe"
           ]
         },

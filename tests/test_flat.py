@@ -74,9 +74,9 @@ FLYER = {
 
 
 def test_mentions_inside_prose(tmp_path):
-    line = "joined by Craig Riley (percussion) and Mike Oresco (bass)."
+    line = "joined by Dana Okafor (percussion) and Theo Marchetti (bass)."
     ocr = FakeOcr({"p0001": [line]})
-    names, roles = {"Craig", "Riley", "Mike", "Oresco"}, {"(percussion)", "(bass)."}
+    names, roles = {"Dana", "Okafor", "Theo", "Marchetti"}, {"(percussion)", "(bass)."}
 
     def choice(q):
         if q.node == "" and q.subject == line:
@@ -95,8 +95,8 @@ def test_mentions_inside_prose(tmp_path):
             if e["type"] == "edge" and e["rel"] == "tagged" and e["rank"] == 1]
     assert (line, "description[]", {}, None) in [(t, p, i, m) for t, p, i, m in tags]  # the line keeps its tag
     found = {t: (p, i["performers[]"]) for t, p, i, m in tags if m}
-    assert found["Craig Riley"][0] == "performers[].name" and found["(percussion)"][0] == "performers[].role"
-    assert found["Craig Riley"][1] == found["(percussion)"][1] != found["Mike Oresco"][1] == found["(bass)."][1]
+    assert found["Dana Okafor"][0] == "performers[].name" and found["(percussion)"][0] == "performers[].role"
+    assert found["Dana Okafor"][1] == found["(percussion)"][1] != found["Theo Marchetti"][1] == found["(bass)."][1]
 
 
 AFFIDAVIT = [
@@ -136,7 +136,7 @@ def test_form_rows_and_captions_stay_lines():
 
 def test_a_paragraph_is_tagged_once_and_mentions_inside_it_are_found(tmp_path):
     ocr = FakeOcr({"p0001": ["joined on stage tonight by our good friends for one evening only, by",
-                             "Craig Riley, on percussion, and Mike Oresco, on bass, for the whole show."]})
+                             "Dana Okafor, on percussion, and Theo Marchetti, on bass, for the whole show."]})
     asked = []
 
     def choice(q):  # mentions come back as clauses, not scattered words
@@ -144,7 +144,7 @@ def test_a_paragraph_is_tagged_once_and_mentions_inside_it_are_found(tmp_path):
         if q.node == "" and q.subject.startswith("joined on stage"):
             return "description[]"
         if q.node == "performers[]":
-            return {"by Craig Riley,": "performers[].name", "and Mike Oresco,": "performers[].name",
+            return {"by Dana Okafor,": "performers[].name", "and Theo Marchetti,": "performers[].name",
                     "on percussion,": "performers[].role", "on bass,": "performers[].role"}.get(q.subject)
         return None
 
@@ -160,8 +160,8 @@ def test_a_paragraph_is_tagged_once_and_mentions_inside_it_are_found(tmp_path):
     assert (para["text"], "description[]", None) in tags
     assert not any(s in asked for s in (ocr._lines["p0001"]))  # the lines themselves were never asked
     found = {t: p for t, p, m in tags if m}
-    assert found == {"by Craig Riley,": "performers[].name", "on percussion,": "performers[].role",
-                     "and Mike Oresco,": "performers[].name", "on bass,": "performers[].role"}
+    assert found == {"by Dana Okafor,": "performers[].name", "on percussion,": "performers[].role",
+                     "and Theo Marchetti,": "performers[].name", "on bass,": "performers[].role"}
 
 
 def test_a_short_line_mid_sentence_runs_on():
@@ -179,7 +179,7 @@ def test_a_short_line_mid_sentence_runs_on():
 
 def test_a_paragraph_tagged_inside_a_mentions_field_is_still_searched(tmp_path):
     ocr = FakeOcr({"p0001": ["tonight on stage for one evening only, a special show with our friends:",
-                             "Craig Riley, on percussion, and the whole band for the whole show."]})
+                             "Dana Okafor, on percussion, and the whole band for the whole show."]})
 
     def choice(q):
         paragraph = q.subject.startswith("tonight on stage") and q.subject.endswith("show.")
@@ -188,7 +188,7 @@ def test_a_paragraph_tagged_inside_a_mentions_field_is_still_searched(tmp_path):
         if q.node == "performers[]":
             if paragraph:
                 return "performers[].role"
-            return "performers[].name" if q.subject.startswith("Craig Riley") else None
+            return "performers[].name" if q.subject.startswith("Dana Okafor") else None
         return None
 
     def gate(q):
@@ -199,4 +199,4 @@ def test_a_paragraph_tagged_inside_a_mentions_field_is_still_searched(tmp_path):
     nodes = {r["id"]: r for r in recs if r["type"] == "node"}
     found = {nodes[e["from"]]["text"]: e["to"] for e in recs
              if e["type"] == "edge" and e["rel"] == "tagged" and e.get("mention")}
-    assert found == {"Craig Riley,": "performers[].name"}  # ...and still yields the names inside it
+    assert found == {"Dana Okafor,": "performers[].name"}  # ...and still yields the names inside it
