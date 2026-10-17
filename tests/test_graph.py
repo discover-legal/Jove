@@ -1,4 +1,4 @@
-from jove.graph import build, cypher, obsidian, tree, typeql
+from jove.graph import build, cypher, dot, obsidian, tree, typeql
 
 RESULT = [
     {"type": "job", "job_id": "j1", "tagger": "flat", "chooser": {"provider": "fake"}},
@@ -36,11 +36,13 @@ def test_tree():
 def test_renderings(tmp_path):
     g = build([RESULT])
     lines = cypher(g)
-    assert 'CREATE (:Span {id: "j1/p0001/v001", text: "Jane Doe", bbox: [5, 0, 9, 9]})' in lines
+    assert 'CREATE (:Span {id: "j1/p0001/v001", name: "Jane Doe", text: "Jane Doe", bbox: [5, 0, 9, 9]})' in lines
     assert any("CREATE (a)-[:TAGGED {rank: 1, score: 0.9}]->(b)" in s for s in lines)
     schema, queries = typeql(g)
     assert "relation tag" in schema
     assert any("tag (value: " in q and "item: " in q and "owner: " in q and "has rank 1" in q for q in queries)
+    drawn = dot(g)
+    assert drawn.startswith("digraph") and 'tag0 -> "field:parties[].name"' in drawn and 'tag0 -> "j1/owner:client"' in drawn
     obsidian(g, tmp_path)
     note = (tmp_path / "Span" / "Jane Doe – j1 p0001 v001.md").read_text()
     assert "- tagged [[parties-list.name]] (rank 1, score 0.9)" in note and "- owned_by [[j1 client]] (p 1.0)" in note

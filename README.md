@@ -121,11 +121,14 @@ Schema fields are shared, so documents meet at the fields they fill.
 
 ```sh
 uv run python -m jove.graph data/jobs/*/result.jsonl --to tree               # indented text
+uv run python -m jove.graph data/jobs/*/result.jsonl --to dot | dot -Tsvg > graph.svg
 uv run python -m jove.graph data/jobs/*/result.jsonl --to obsidian --out vault/
 uv run python -m jove.graph data/jobs/*/result.jsonl --to cypher --out graph.cypher
 uv run python -m jove.graph data/jobs/*/result.jsonl --to typeql --out typedb/
 ```
 
+- **Graphviz:** `--to dot | dot -Tsvg > graph.svg` draws the tree with each tag
+  as a small diamond joining text, field, list item and owner. No server needed.
 - **Obsidian:** open `vault/` as a vault. There is one note per node, edges
   are wikilinks, and the graph view comes coloured by kind.
 - **FalkorDB** (or Neo4j or Memgraph via the `.cypher` file) holds a plain

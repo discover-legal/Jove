@@ -2,6 +2,7 @@
 
     uv run python -m jove.graph RESULT.jsonl [...] --to tree
     uv run python -m jove.graph RESULT.jsonl [...] --to obsidian --out vault/
+    uv run python -m jove.graph RESULT.jsonl [...] --to dot | dot -Tsvg > graph.svg
     uv run python -m jove.graph RESULT.jsonl [...] --to cypher --out graph.cypher
     uv run python -m jove.graph RESULT.jsonl [...] --to typeql --out typedb/
     uv run python -m jove.graph RESULT.jsonl [...] --load falkor://localhost:6379/jove
@@ -9,7 +10,7 @@
 
 One model, rendered three ways:
 
-- tree / obsidian / cypher: a plain graph. Document → page → block → line → span
+- tree / obsidian / cypher / dot: a plain graph. Document → page → block → line → span
   (contains); text → schema field (tagged, every rank); text → list item (in);
   item → its list field (item_of); field → parent field (part_of); text → owner.
 - typeql: a hypergraph. A tag is one n-ary relation that links the text, the
@@ -184,17 +185,69 @@ def _note_name(nid: str, n: dict) -> str:
     return re.sub(r'[\\/:*?"<>|#^\[\]\n]+', " ", name).strip()
 
 
+# ----------------------------------------------------------------------- dot
+
+def dot(g: Graph) -> str:
+    """Graphviz: the document tree left to right, each rank-1 tag drawn as a hyperedge
+    (a small diamond) joining the text to its field, list item and owner."""
+    out = ['digraph jove {', '  rankdir=LR; ranksep=0.35; nodesep=0.08;',
+           '  node [fontname="Helvetica", fontsize=10, style="filled,rounded", shape=box, penwidth=0];',
+           '  edge [color="#9CA3AF", arrowsize=0.5];']
+    for nid, n in g.nodes.items():
+        fill = f"#{COLOURS[n['label']]:06X}"
+        shape = {"Field": "ellipse", "Item": "ellipse", "Owner": "ellipse"}.get(n["label"], "box")
+        out.append(f'  {_lit(nid)} [label={_lit(_dot_label(nid, n))}, shape={shape}, fillcolor="{fill}33", '
+                   f'color="{fill}", penwidth=1.2];')
+    for a, rel, b, _ in g.edges:
+        if rel in ("contains", "part_of", "item_of"):
+            out.append(f'  {_lit(a)} -> {_lit(b)}' + (' [style=dotted]' if rel != "contains" else "") + ";")
+    for i, t in enumerate(t for t in g.tags if t["rank"] == 1):
+        hub = f"tag{i}"
+        out.append(f'  {hub} [shape=diamond, label="{t["score"]:.2f}", fontsize=7, width=0.3, height=0.3, '
+                   f'fixedsize=true, fillcolor="#D6452F", fontcolor=white];')
+        out.append(f'  {_lit(t["text"])} -> {hub} [arrowhead=none, color="#D6452F"];')
+        out.append(f'  {hub} -> {_lit(t["field"])} [color="#D6452F"];')
+        for item in t["items"][-1:]:
+            out.append(f'  {hub} -> {_lit(item)} [color="#E08A00", style=dashed];')
+        if t["owner"]:
+            out.append(f'  {hub} -> {_lit(t["owner"])} [color="#9B4FD0", label="{t["owner_p"]:.2f}", fontsize=7];')
+    return "\n".join(out + ["}"]) + "\n"
+
+
+def _dot_label(nid: str, n: dict) -> str:
+    if n["label"] in ("Document", "Owner"):
+        return n.get("name") or nid
+    if n["label"] == "Page":
+        return f"{n['source']} p{n['page']}"
+    if n["label"] == "Field":
+        return n["path"]
+    if n["label"] == "Item":
+        return f"{n['list']}\n@ {n['anchor']}"
+    return f"{n['label'].lower()}: {_clip(n.get('text', ''), 45)}"
+
+
 # -------------------------------------------------------------------- cypher
 
 def cypher(g: Graph) -> list[str]:
     """OpenCypher statements (FalkorDB, Neo4j, Memgraph): one per line, nodes then edges."""
     out = [f"CREATE INDEX FOR (n:{label}) ON (n.id)" for label in sorted({n["label"] for n in g.nodes.values()})]
-    out += [f"CREATE (:{n['label']} {_props({'id': nid, **n})})" for nid, n in g.nodes.items()]
+    # name: the caption graph browsers show by default.
+    out += [f"CREATE (:{n['label']} {_props({'id': nid, 'name': _caption(nid, n), **n})})" for nid, n in g.nodes.items()]
     for a, rel, b, props in g.edges:
         la, lb = g.nodes[a]["label"], g.nodes[b]["label"]
         out.append(f"MATCH (a:{la} {{id: {_lit(a)}}}), (b:{lb} {{id: {_lit(b)}}}) "
                    f"CREATE (a)-[:{rel.upper()} {_props(props)}]->(b)")
     return out
+
+
+def _caption(nid: str, n: dict) -> str:
+    if n["label"] == "Field":
+        return n["path"]
+    if n["label"] == "Item":
+        return f"{n['list']} @ {n['anchor']}"
+    if n["label"] == "Page":
+        return f"{n['source']} p{n['page']}"
+    return _clip(n.get("text") or nid, 40)
 
 
 def _props(props: dict) -> str:
@@ -350,15 +403,15 @@ def _clip(text: str, n: int) -> str:
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(prog="python -m jove.graph", description=__doc__.split("\n\n")[0])
     ap.add_argument("results", nargs="+", type=Path, help="result.jsonl files (one per document)")
-    ap.add_argument("--to", choices=["tree", "obsidian", "cypher", "typeql"])
-    ap.add_argument("--out", type=Path, help="output file or folder (tree and cypher default to stdout)")
+    ap.add_argument("--to", choices=["tree", "dot", "obsidian", "cypher", "typeql"])
+    ap.add_argument("--out", type=Path, help="output file or folder (tree, dot and cypher default to stdout)")
     ap.add_argument("--load", help="falkor://host:port/graph or typedb://[user:pass@]host:port/database")
     args = ap.parse_args(argv)
     if not args.to and not args.load:
         ap.error("give --to and/or --load")
     g = build([[json.loads(l) for l in p.read_text().splitlines() if l.strip()] for p in args.results])
-    if args.to in ("tree", "cypher"):
-        text = tree(g) if args.to == "tree" else "\n".join(cypher(g)) + "\n"
+    if args.to in ("tree", "dot", "cypher"):
+        text = {"tree": tree, "dot": dot}.get(args.to, lambda g: "\n".join(cypher(g)) + "\n")(g)
         args.out.write_text(text) if args.out else sys.stdout.write(text)
     elif args.to:
         if not args.out:
