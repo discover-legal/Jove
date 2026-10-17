@@ -9,48 +9,48 @@
     },
     {
       "text": "Jane Alexandra Doe",
-      "path": "client.person.full_name"
+      "path": "parties[].name"
     },
     {
       "text": "1980-04-03",
-      "path": "client.person.date_of_birth"
+      "path": "parties[].date_of_birth"
     },
     {
       "text": "22 King St W, Unit 4",
-      "path": "client.contact.address.street",
+      "path": "contact.addresses[].street",
       "alt": [
-        "client.contact.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
       "text": "Toronto",
-      "path": "client.contact.address.city",
+      "path": "contact.addresses[].city",
       "alt": [
-        "client.contact.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
       "text": "M5H 1A1",
-      "path": "client.contact.address.postal_code",
+      "path": "contact.addresses[].postal_code",
       "alt": [
-        "client.contact.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
       "text": "(416) 555-0199",
-      "path": "client.contact.phones[]"
+      "path": "contact.phones[]"
     },
     {
       "text": "jane.doe@example.com",
-      "path": "client.contact.emails[]"
+      "path": "contact.emails[]"
     },
     {
       "text": "D6101-40706-60905",
-      "path": "client.identification[].number"
+      "path": "identification[].number"
     },
     {
       "text": "2027-04-03",
-      "path": "client.identification[].expiry_date"
+      "path": "identification[].expiry_date"
     },
     {
       "text": "Landlord and tenant - return of deposit",
@@ -78,21 +78,21 @@
     },
     {
       "text": "Law Society Referral Service",
-      "path": "referral.source"
+      "path": "specifics.referral_source"
     },
     {
       "text": "Ontario",
-      "path": "client.identification[].issuing_authority"
+      "path": "identification[].issuing_authority"
     },
     {
       "text": "driver's licence",
-      "path": "client.identification[].document_type"
+      "path": "identification[].document_type"
     },
     {
       "text": "ON",
-      "path": "client.contact.address.province",
+      "path": "contact.addresses[].province",
       "alt": [
-        "client.contact.address.full"
+        "contact.addresses[].full"
       ]
     }
   ],

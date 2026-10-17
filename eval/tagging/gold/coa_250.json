@@ -7,7 +7,7 @@
       "text": "COURT OF APPEAL FOR ONTARIO",
       "path": "proceedings[].forum",
       "alt": [
-        "document_issuer.name"
+        "parties[].name"
       ]
     },
     {
@@ -28,12 +28,12 @@
       "text": "20220324",
       "path": "events[].date",
       "alt": [
-        "referenced_documents[].date"
+        "documents[].date"
       ]
     },
     {
       "text": "Rouleau, van Rensburg and Roberts JJ.A.",
-      "path": "proceedings[].judge"
+      "path": "parties[].name"
     },
     {
       "text": "Crosslinx Transit Solutions General Partnership",
@@ -95,12 +95,12 @@
       "text": "January 6, 2022",
       "path": "events[].date",
       "alt": [
-        "proceedings[].next_hearing_date"
+        "deadlines[].date"
       ]
     },
     {
       "text": "Justice Markus Koehnen",
-      "path": "proceedings[].judge"
+      "path": "parties[].name"
     },
     {
       "text": "Superior Court of Justice",
@@ -110,15 +110,14 @@
       "text": "May 17, 2021",
       "path": "events[].date",
       "alt": [
-        "proceedings[].filing_date",
-        "referenced_documents[].date"
+        "documents[].date"
       ]
     },
     {
       "text": "2021 ONSC 3567",
       "path": "proceedings[].case_number",
       "alt": [
-        "referenced_documents[].reference"
+        "documents[].reference"
       ]
     },
     {
@@ -130,7 +129,7 @@
     },
     {
       "text": "Paul Rouleau J.A.",
-      "path": "proceedings[].judge"
+      "path": "parties[].name"
     },
     {
       "text": "(Appellants)",
@@ -148,18 +147,17 @@
     },
     {
       "text": "K. van Rensburg J.A.",
-      "path": "proceedings[].judge"
+      "path": "parties[].name"
     },
     {
       "text": "L.B. Roberts J.A.",
-      "path": "proceedings[].judge"
+      "path": "parties[].name"
     },
     {
       "text": "DATE: 20220324",
       "path": "events[].date",
       "alt": [
-        "referenced_documents[].date",
-        "proceedings[].filing_date"
+        "documents[].date"
       ]
     },
     {

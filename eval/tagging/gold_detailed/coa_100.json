@@ -1,13 +1,13 @@
 {
   "file": "eval/tagging/docs/coa_2022_onca_100_p1.pdf",
-  "schema": "schemas/legal_intake_coarse.schema.json",
+  "schema": "schemas/legal_intake_detailed.schema.json",
   "context": null,
   "tags": [
     {
       "text": "COURT OF APPEAL FOR ONTARIO",
       "path": "proceedings[].forum",
       "alt": [
-        "parties[].name"
+        "document_issuer.name"
       ]
     },
     {
@@ -28,12 +28,12 @@
       "text": "20220203",
       "path": "events[].date",
       "alt": [
-        "documents[].date"
+        "referenced_documents[].date"
       ]
     },
     {
       "text": "Doherty, Benotto and Huscroft JJ.A.",
-      "path": "parties[].name"
+      "path": "proceedings[].judge"
     },
     {
       "text": "UD Trading Group Holding Pte. Limited",
@@ -95,25 +95,26 @@
       "text": "December 3, 2021",
       "path": "events[].date",
       "alt": [
-        "deadlines[].date"
+        "proceedings[].next_hearing_date"
       ]
     },
     {
       "text": "Justice C. Gilmore",
-      "path": "parties[].name"
+      "path": "proceedings[].judge"
     },
     {
       "text": "March 17, 2021",
       "path": "events[].date",
       "alt": [
-        "documents[].date"
+        "referenced_documents[].date",
+        "proceedings[].filing_date"
       ]
     },
     {
       "text": "2021 ONSC 1957",
       "path": "proceedings[].case_number",
       "alt": [
-        "documents[].reference"
+        "referenced_documents[].reference"
       ]
     },
     {

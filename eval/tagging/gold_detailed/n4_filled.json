@@ -1,6 +1,6 @@
 {
   "file": "eval/tagging/docs/n4_filled.pdf",
-  "schema": "schemas/legal_intake_coarse.schema.json",
+  "schema": "schemas/legal_intake_detailed.schema.json",
   "context": "Our firm: Harper & Leung LLP. Our client: Marcus Oyelaran, the tenant.",
   "tags": [
     {
@@ -9,20 +9,24 @@
     },
     {
       "text": "15/04/2025",
-      "path": "deadlines[].date",
+      "path": "matter.key_deadlines[].date",
       "alt": [
         "events[].date"
       ]
     },
     {
       "text": "Marcus Oyelaran",
-      "path": "parties[].name"
+      "path": "client.person.full_name",
+      "alt": [
+        "parties[].name"
+      ]
     },
     {
       "text": "Priya Oyelaran",
       "path": "parties[].name",
       "alt": [
-        "parties[].other_names[]"
+        "client.person.full_name",
+        "client.person.other_names[]"
       ]
     },
     {
@@ -31,35 +35,46 @@
     },
     {
       "text": "Elmwood Avenue",
-      "path": "contact.addresses[].street",
+      "path": "property.address.street",
       "alt": [
-        "contact.addresses[].full"
+        "client.contact.address.street",
+        "property.address.full",
+        "client.contact.address.full"
       ]
     },
     {
       "text": "1204",
-      "path": "contact.addresses[].street",
+      "path": "property.address.street",
       "alt": [
-        "contact.addresses[].full"
+        "client.contact.address.street",
+        "property.address.full",
+        "client.contact.address.full"
       ]
     },
     {
       "text": "Mississauga",
-      "path": "contact.addresses[].city",
+      "path": "property.address.city",
       "alt": [
-        "contact.addresses[].full"
+        "client.contact.address.city",
+        "property.address.full",
+        "client.contact.address.full"
       ]
     },
     {
       "text": "L5B 3X9",
-      "path": "contact.addresses[].postal_code",
+      "path": "property.address.postal_code",
       "alt": [
-        "contact.addresses[].full"
+        "client.contact.address.postal_code",
+        "property.address.full",
+        "client.contact.address.full"
       ]
     },
     {
       "text": "1,890.00",
-      "path": "amounts[].amount"
+      "path": "amounts[].amount",
+      "alt": [
+        "property.price"
+      ]
     },
     {
       "text": "Whitcombe Legal Services Professional Corporation",
@@ -78,58 +93,62 @@
     },
     {
       "text": "University Avenue",
-      "path": "contact.addresses[].street",
+      "path": "parties[].contact.address.street",
       "alt": [
-        "contact.addresses[].full"
+        "parties[].contact.address.full"
       ]
     },
     {
       "text": "M5G 1S5",
-      "path": "contact.addresses[].postal_code",
+      "path": "parties[].contact.address.postal_code",
       "alt": [
-        "contact.addresses[].full"
+        "parties[].contact.address.full"
       ]
     },
     {
       "text": "dwhitcombe@whitcombelegal.ca",
-      "path": "contact.emails[]"
+      "path": "parties[].contact.emails[]"
     },
     {
       "text": "(416) 555-0142",
-      "path": "contact.phones[]"
+      "path": "parties[].contact.phones[]"
     },
     {
       "text": "31/03/2025",
-      "path": "documents[].date",
+      "path": "referenced_documents[].date",
       "alt": [
         "events[].date"
       ]
     },
     {
       "text": "Notice to End your Tenancy Early",
-      "path": "documents[].title"
+      "path": "referenced_documents[].title"
     },
     {
       "text": "N4",
-      "path": "documents[].title"
+      "path": "referenced_documents[].title"
     },
     {
       "text": "For Non-payment of Rent",
       "path": "matter.type",
       "alt": [
         "matter.summary",
-        "documents[].title"
+        "referenced_documents[].title"
       ]
     },
     {
       "text": "ON",
-      "path": "contact.addresses[].province"
+      "path": "property.address.province",
+      "alt": [
+        "client.contact.address.province",
+        "parties[].contact.address.province"
+      ]
     },
     {
       "text": "Toronto",
-      "path": "contact.addresses[].city",
+      "path": "parties[].contact.address.city",
       "alt": [
-        "contact.addresses[].full"
+        "parties[].contact.address.full"
       ]
     },
     {
@@ -158,7 +177,7 @@
       "path": "amounts[].date",
       "alt": [
         "events[].date",
-        "documents[].date"
+        "referenced_documents[].date"
       ]
     },
     {

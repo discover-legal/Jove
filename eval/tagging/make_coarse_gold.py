@@ -1,6 +1,6 @@
-"""Map the legal_intake gold onto schemas/legal_intake_coarse.schema.json.
+"""Map the detailed intake gold (gold_detailed/) onto the coarse legal_intake schema (gold/).
 
-    uv run python eval/tagging/make_coarse_gold.py   # writes eval/tagging/gold_coarse/
+    uv run python eval/tagging/make_coarse_gold.py   # rewrites eval/tagging/gold/
 
 Each fine path has one coarse home: names and contact details lose their owner
 (the owners pass records it instead), money moves to amounts[], dates to
@@ -13,7 +13,8 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).parent
-COARSE = "schemas/legal_intake_coarse.schema.json"
+COARSE = "schemas/legal_intake.schema.json"
+DETAILED = "schemas/legal_intake_detailed.schema.json"
 
 # (pattern, replacement), first match wins; patterns are anchored regexes over fine paths.
 RULES = [
@@ -45,11 +46,11 @@ def coarse(path: str) -> str:
 
 
 def main() -> None:
-    out = ROOT / "gold_coarse"
+    out = ROOT / "gold"
     out.mkdir(exist_ok=True)
-    for path in sorted((ROOT / "gold").glob("*.json")):
+    for path in sorted((ROOT / "gold_detailed").glob("*.json")):
         gold = json.loads(path.read_text())
-        if gold["schema"].endswith("legal_intake.schema.json"):
+        if gold["schema"] == DETAILED:
             gold["schema"] = COARSE
             for tag in gold["tags"]:
                 tag["path"] = coarse(tag["path"])

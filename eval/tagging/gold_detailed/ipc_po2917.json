@@ -1,6 +1,6 @@
 {
   "file": "eval/tagging/docs/ipc_po2917_p1-2.pdf",
-  "schema": "schemas/legal_intake_coarse.schema.json",
+  "schema": "schemas/legal_intake_detailed.schema.json",
   "context": null,
   "tags": [
     {
@@ -25,7 +25,7 @@
       "text": "October 7, 2010",
       "path": "events[].date",
       "alt": [
-        "documents[].date"
+        "referenced_documents[].date"
       ]
     },
     {
@@ -39,8 +39,8 @@
       "text": "Tribunal Services Department",
       "path": "proceedings[].forum",
       "alt": [
-        "parties[].organization",
-        "parties[].name"
+        "document_issuer.department",
+        "document_issuer.name"
       ]
     },
     {
@@ -65,44 +65,44 @@
     },
     {
       "text": "2 Bloor Street East",
-      "path": "contact.addresses[].street",
+      "path": "document_issuer.contact.address.street",
       "alt": [
-        "contact.addresses[].full"
+        "document_issuer.contact.address.full"
       ]
     },
     {
       "text": "Suite 1400",
-      "path": "contact.addresses[].street",
+      "path": "document_issuer.contact.address.street",
       "alt": [
-        "contact.addresses[].full"
+        "document_issuer.contact.address.full"
       ]
     },
     {
       "text": "M4W 1A8",
-      "path": "contact.addresses[].postal_code",
+      "path": "document_issuer.contact.address.postal_code",
       "alt": [
-        "contact.addresses[].full"
+        "document_issuer.contact.address.full"
       ]
     },
     {
       "text": "416-326-3333",
-      "path": "contact.phones[]"
+      "path": "document_issuer.contact.phones[]"
     },
     {
       "text": "1-800-387-0073",
-      "path": "contact.phones[]"
+      "path": "document_issuer.contact.phones[]"
     },
     {
       "text": "416-325-9188",
-      "path": "contact.phones[]"
+      "path": "document_issuer.contact.phones[]"
     },
     {
       "text": "416-325-7539",
-      "path": "contact.phones[]"
+      "path": "document_issuer.contact.phones[]"
     },
     {
       "text": "http://www.ipc.on.ca",
-      "path": "contact.websites[]"
+      "path": "document_issuer.contact.website"
     }
   ],
   "groups": []

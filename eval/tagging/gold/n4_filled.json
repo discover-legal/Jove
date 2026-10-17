@@ -9,24 +9,20 @@
     },
     {
       "text": "15/04/2025",
-      "path": "matter.key_deadlines[].date",
+      "path": "deadlines[].date",
       "alt": [
         "events[].date"
       ]
     },
     {
       "text": "Marcus Oyelaran",
-      "path": "client.person.full_name",
-      "alt": [
-        "parties[].name"
-      ]
+      "path": "parties[].name"
     },
     {
       "text": "Priya Oyelaran",
       "path": "parties[].name",
       "alt": [
-        "client.person.full_name",
-        "client.person.other_names[]"
+        "parties[].other_names[]"
       ]
     },
     {
@@ -35,46 +31,35 @@
     },
     {
       "text": "Elmwood Avenue",
-      "path": "property.address.street",
+      "path": "contact.addresses[].street",
       "alt": [
-        "client.contact.address.street",
-        "property.address.full",
-        "client.contact.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
       "text": "1204",
-      "path": "property.address.street",
+      "path": "contact.addresses[].street",
       "alt": [
-        "client.contact.address.street",
-        "property.address.full",
-        "client.contact.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
       "text": "Mississauga",
-      "path": "property.address.city",
+      "path": "contact.addresses[].city",
       "alt": [
-        "client.contact.address.city",
-        "property.address.full",
-        "client.contact.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
       "text": "L5B 3X9",
-      "path": "property.address.postal_code",
+      "path": "contact.addresses[].postal_code",
       "alt": [
-        "client.contact.address.postal_code",
-        "property.address.full",
-        "client.contact.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
       "text": "1,890.00",
-      "path": "amounts[].amount",
-      "alt": [
-        "property.price"
-      ]
+      "path": "amounts[].amount"
     },
     {
       "text": "Whitcombe Legal Services Professional Corporation",
@@ -93,62 +78,58 @@
     },
     {
       "text": "University Avenue",
-      "path": "parties[].contact.address.street",
+      "path": "contact.addresses[].street",
       "alt": [
-        "parties[].contact.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
       "text": "M5G 1S5",
-      "path": "parties[].contact.address.postal_code",
+      "path": "contact.addresses[].postal_code",
       "alt": [
-        "parties[].contact.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
       "text": "dwhitcombe@whitcombelegal.ca",
-      "path": "parties[].contact.emails[]"
+      "path": "contact.emails[]"
     },
     {
       "text": "(416) 555-0142",
-      "path": "parties[].contact.phones[]"
+      "path": "contact.phones[]"
     },
     {
       "text": "31/03/2025",
-      "path": "referenced_documents[].date",
+      "path": "documents[].date",
       "alt": [
         "events[].date"
       ]
     },
     {
       "text": "Notice to End your Tenancy Early",
-      "path": "referenced_documents[].title"
+      "path": "documents[].title"
     },
     {
       "text": "N4",
-      "path": "referenced_documents[].title"
+      "path": "documents[].title"
     },
     {
       "text": "For Non-payment of Rent",
       "path": "matter.type",
       "alt": [
         "matter.summary",
-        "referenced_documents[].title"
+        "documents[].title"
       ]
     },
     {
       "text": "ON",
-      "path": "property.address.province",
-      "alt": [
-        "client.contact.address.province",
-        "parties[].contact.address.province"
-      ]
+      "path": "contact.addresses[].province"
     },
     {
       "text": "Toronto",
-      "path": "parties[].contact.address.city",
+      "path": "contact.addresses[].city",
       "alt": [
-        "parties[].contact.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
@@ -177,7 +158,7 @@
       "path": "amounts[].date",
       "alt": [
         "events[].date",
-        "referenced_documents[].date"
+        "documents[].date"
       ]
     },
     {

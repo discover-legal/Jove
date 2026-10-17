@@ -45,11 +45,13 @@ def test_array_description_describes_items():
     assert (xs.path, xs.description, xs.not_for, xs.leaf) == ("xs[]", "The xs", "ys", True)
 
 
-def test_bundled_legal_intake_schema():
-    path = Path(__file__).parent.parent / "schemas" / "legal_intake.schema.json"
-    fields = flatten(json.loads(path.read_text()))
-    assert len(fields) > 100
-    assert fields["parties[].contact.address.postal_code"].type == "string"
-    dob = fields["client.person.date_of_birth"]
+def test_bundled_legal_intake_schemas():
+    folder = Path(__file__).parent.parent / "schemas"
+    detailed = flatten(json.loads((folder / "legal_intake_detailed.schema.json").read_text()))
+    assert len(detailed) > 100
+    assert detailed["parties[].contact.address.postal_code"].type == "string"
+    dob = detailed["client.person.date_of_birth"]
     assert dob.examples and dob.not_for
-    assert all(f.description for f in fields.values())
+    coarse = flatten(json.loads((folder / "legal_intake.schema.json").read_text()))
+    assert len(coarse) < 70 and "contact.addresses[].postal_code" in coarse  # one home per kind of value
+    assert all(f.description for f in (detailed | coarse).values())

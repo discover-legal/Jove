@@ -17,7 +17,7 @@ from .questions import standing
 
 def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict,
         ocr: Ocr, chooser: Chooser, context: str | None = None, gate: float = 0.5,
-        owners: bool = True, paragraphs: bool = True, tagger: str = "flat") -> Path:
+        owners: bool = True, tagger: str = "flat") -> Path:
     tree = build_tree(schema)
     inputs, pages = ingest(files, job_dir / "pages")
     blocks = {p.page_id: layout.build(p.page_id, ocr.read(p)) for p in pages}
@@ -27,7 +27,7 @@ def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict
     if tagger == "halve":
         engine = HalvingTagger(tree, chooser, context=context, threshold=gate)
     else:
-        engine = FlatTagger(tree, chooser, context=context, threshold=gate, paragraphs=paragraphs)
+        engine = FlatTagger(tree, chooser, context=context, threshold=gate)
     nodes, edges = engine.tag(blocks)
     warnings = list(engine.warnings)
     if owners and schema.get("x-owners"):
@@ -47,7 +47,6 @@ def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict
         "chooser": chooser.describe(),
         "tagger": tagger,
         "split_gate_threshold": gate,
-        "paragraphs": paragraphs,
         "context": context,
     }]
 

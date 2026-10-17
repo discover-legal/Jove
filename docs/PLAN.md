@@ -46,8 +46,10 @@ Schemas:
   signer stamps, timestamps, certificate of completion), production page stamps
   and law-firm document numbers. Deponent and jurat are `x-mentions`. 46 fields.
 - `schemas/legal_intake.schema.json` is the reference schema: Ontario law-firm
-intake with 15 top-level branches, 121 leaf fields and 26 internal nodes, at
-most 15 children per node and 4 levels deep. Its examples use Ontario courts,
+intake with one home per kind of value (62 fields, 14 sections; see "Coarse
+schema" below). `schemas/legal_intake_detailed.schema.json` is the earlier
+version that files names and contact details under their owner (134 fields,
+30 sections). Their examples use Ontario courts,
 tribunals, IDs and file-number formats. SIN and OHIP numbers are deliberately
 absent.
 
@@ -148,33 +150,25 @@ names. A path's score is the geometric mean of its edge probabilities.
 
 OCR lines are the atoms; layout supplies
 only reading order. Grouping is Jev's decision, not a set of geometry
-thresholds, except for running prose:
-- **Paragraphs (`JOVE_PARAGRAPHS`, on):** a block's lines that read as prose
-  are one atom, asked about once and never split. A paragraph ends after a
-  short line that finishes a sentence (the next line's first word would have
-  fitted on it), or before a numbered or bulleted line. A short line that stops
-  mid-sentence runs on (a pre-printed jurat with the date filled in). Only runs
-  of at least 2 lines and 12 words, at least 30% lowercase words and no row of
-  several `Label:` captions count as prose. Values named inside a paragraph are
-  found by the mentions pass, word by word: Jev labels each word and says
-  whether it continues the previous word's value, and a value runs until a word
-  doesn't continue it or gives a field of its own. No patterns decide where a
-  value ends. On the affidavit of documents this made 111 lines into 53 lines
-  and 19 paragraphs.
-  Measured with Jev on 10 documents (2026-10-17; one run each, noise ±0.007):
+thresholds. Values named inside prose are found by the mentions pass: Jev labels
+the words of a line that mentions an x-mentions field and says whether each
+word continues the previous one's value.
+- **Paragraphs (tried 2026-10-16/17, removed).** Prose lines were grouped into
+  paragraph units by rule (a short line ends one, a marker starts one), asked
+  about once. Measured with Jev on 10 documents (one run each, noise ±0.007):
 
-  | setup | recall | precision | F1 |
-  |---|---|---|---|
-  | earlier line-by-line runs (3) | 0.82–0.85 | 0.86 | 0.840–0.855 |
-  | line by line, today | 0.816 | 0.838 | 0.827 |
-  | paragraphs, mentions by clause + money/date/phone/web patterns | 0.788–0.806 | 0.835–0.850 | 0.818–0.820 |
-  | **paragraphs, mentions word by word (current)** | 0.788 | 0.807–0.822 | 0.798–0.805 |
+  | setup | F1 |
+  |---|---|
+  | earlier line-by-line runs (3) | 0.840–0.855 |
+  | line by line, 2026-10-17 | 0.827 |
+  | paragraphs + clause pieces + money/date/phone/web patterns | 0.818–0.820 |
+  | paragraphs, mentions word by word | 0.798–0.805 |
+  | paragraphs, coarse schema | 0.789 |
+  | **line by line, coarse schema (default)** | **0.820–0.825** |
 
-  The patterns were removed for a smaller design at a cost of about 0.02 F1.
-  Its main losses: a sign whose panels OCR reads as one paragraph (the phone
-  number and web address inside are never asked about on their own), and
-  amounts and dates inside a letter's sentences.
-- **Halving (`JOVE_TAGGER=halve`, `halve.py`, experimental).** Start from the
+  Paragraphs hid values inside prose (a sign's panels read as one paragraph
+  hid its phone number and web address) and never beat line by line.
+- **Halving (`JOVE_TAGGER=halve`, `halve.py`, an option).** Start from the
   whole document and ask, given the schema (in the shared state), "does this
   hold more than one value, so it should be cut in two?"; halve where yes
   (at the line boundary nearest the middle, or the word gap nearest it inside
@@ -199,13 +193,13 @@ thresholds, except for running prose:
   halving tagger emits none, so "whose is it?" was asked blind. With the page's
   chunks instead: F1 0.732 → 0.784, recall 182/217 (the highest of any setup).
 
-**Coarse schema (2026-10-17).** `legal_intake_coarse` gives each kind of value
+**Coarse schema (2026-10-17, now `legal_intake`; the old one is `legal_intake_detailed`).** It gives each kind of value
 one home: every person or organization is a party (role says client, judge,
 tribunal...), every contact detail sits under `contact` (the owners pass says
 whose), all money is `amounts[]`, dated things are `events[]` or
 `deadlines[]`. 62 fields under 14 sections, against 134 under 30. The gold is
-mapped by `eval/tagging/make_coarse_gold.py` into `gold_coarse/` (run.py and
-score.py take `--gold gold_coarse`). Jev, 10 documents, one run each:
+mapped by `eval/tagging/make_coarse_gold.py` from `gold_detailed/` into `gold/`
+(run.py and score.py take `--gold gold_detailed` for the detailed schema). Jev, 10 documents, one run each:
 
 | tagger | fine schema | coarse schema |
 |---|---|---|
@@ -425,7 +419,7 @@ One JSON object per line. The order is `job`, `page`, `node`, `edge`, `warning`.
 {"type":"page","page_id":"p0001","source":"a.pdf","source_page":1,"sha256":"…",
  "width":1700,"height":2200,"tags":["client.person.full_name"],"placed":true}
 {"type":"node","id":"p0001/b02/l01/s02","kind":"span","page_id":"p0001",
- "bbox":[82,147,241,175],"text":"Jane Doe"}          // kind: block | paragraph | line | segment | span
+ "bbox":[82,147,241,175],"text":"Jane Doe"}          // kind: block | line | segment | span | chunk (halving)
 {"type":"edge","rel":"contains","from":"p0001/b02/l01","to":"p0001/b02/l01/s02"}
 {"type":"edge","rel":"within","from":"p0001/b02","to":"client.person",
  "score":0.94,"separation":1.04,"asked_from":""}     // split: parts were re-asked from here
@@ -480,7 +474,7 @@ Jobs run in the background, in-process, and store their state under `data/jobs/<
 | `JOVE_CLEF_BASE_URL` / `JOVE_CLEF_MODEL` | `http://localhost:8080` / `clef-flash` |
 | `TYPESAFE_API_KEY` | *(required for `jev`)* |
 | `JOVE_SPLIT_GATE` | `0.5` (split only if the yes/no gate's P(split) ≥ this) |
-| `JOVE_PARAGRAPHS` | `on`: the tagger asks about prose paragraph by paragraph (`off`: line by line) |
+| `JOVE_TAGGER` | `flat` (or `halve`) |
 | `JOVE_OWNERS` | `on` (`off` skips the ownership pass) |
 | `JOVE_DATA_DIR` | `./data` |
 

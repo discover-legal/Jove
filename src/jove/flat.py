@@ -1,18 +1,16 @@
 """Flat boundary tagger: Jev decides grouping as well as labels.
 
-OCR lines are the atoms (layout is used only for reading order and
-paragraphs); the chooser is asked everything about each line in one parallel
-round per page:
+OCR lines are the atoms (layout is used only for reading order); the chooser
+is asked everything about each line in one parallel round per page:
 
 - the schema Choice fan-out (which field is this line?), with its neighbours as context;
 - continues: does it continue the same single value as the previous line?
 - same item: is it about the same person/organization/item as the line one
   back, and two back?
 
-Running prose is not cut into lines: a block's lines that read as one
-paragraph (``paragraphs``) are asked about as one unit, so a sentence keeps its
-meaning and gets one tag. Values named inside it are still found by the
-mentions pass (x-mentions).
+Values named inside prose are found by the mentions pass (x-mentions): the
+words of a line that mentions such a field are labelled, and Jev says where
+each value ends.
 
 Round 2 asks, for every multi-word line, whether it should be split, showing
 the labels round 1 found (a blind version of this question missed splits the
@@ -26,14 +24,13 @@ the result is assembled with no tuned thresholds on geometry:
 """
 
 import math
-import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
 from .choose import Chooser, YesNo, is_value
 from .layout import DocNode
 from .schema import SchemaNode
-from .questions import LABEL_PAIR, POV, UNTRUSTED, Path, choice, label, paths, standing
+from .questions import POV, UNTRUSTED, Path, choice, label, paths, standing
 
 THRESHOLD = 0.5
 
@@ -51,13 +48,12 @@ class Unit:
 
 class FlatTagger:
     def __init__(self, schema: SchemaNode, chooser: Chooser, context: str | None = None,
-                 threshold: float = THRESHOLD, keep: int = 3, workers: int = 8, paragraphs: bool = True):
+                 threshold: float = THRESHOLD, keep: int = 3, workers: int = 8):
         self.schema = schema
         self.chooser = chooser
         self.threshold = threshold
         self.keep = keep
         self.workers = workers
-        self.paragraphs = paragraphs
         self.context = standing(schema, context)  # goes in the chooser's shared state
         self.warnings: list[dict] = []
         # Objects/list items whose values may be mentioned inside prose (x-mentions).
@@ -78,8 +74,7 @@ class FlatTagger:
     # ------------------------------------------------------------------ one page
 
     def _page(self, page_id: str, blocks: list[DocNode]) -> tuple[list[dict], list[dict]]:
-        # The units asked about: lines, and paragraphs of prose (kind "paragraph", lines as children).
-        lines = [u for b in blocks for u in (paragraphs(b) if self.paragraphs else b.children)]
+        lines = [line for b in blocks for line in b.children]
         if not lines:
             return [], []
         state = _state(page_id, lines, self.context)
@@ -103,14 +98,13 @@ class FlatTagger:
         # (a confident single label can hide a second value), but only now, so the
         # question can show the labels found: "city (0.41), postal code (0.35)".
         split_qs = {f"split{i}": self._split_q(l, _neighbours(lines, i), line_tops[i])
-                    for i, l in enumerate(lines) if l.kind == "line" and len(l.children) > 1 and line_tops[i]}
+                    for i, l in enumerate(lines) if len(l.children) > 1 and line_tops[i]}
         # Same request: does a prose line mention a value of an x-mentions field? A line
-        # tagged inside that field already is its value; a paragraph tagged there (a
-        # jurat) still holds the field's other values (its date, its place).
+        # tagged inside that field already is its value.
         for i, l in enumerate(lines):
-            if len(_words(l)) >= 3 and line_tops[i]:
+            if len(l.children) >= 3 and line_tops[i]:
                 for k, m in enumerate(self.mention_nodes):
-                    if l.kind == "paragraph" or not line_tops[i][0].target.startswith(m.path):
+                    if not line_tops[i][0].target.startswith(m.path):
                         split_qs[f"men{i}_{k}"] = self._mention_q(l, m)
         yes_no = getattr(self.chooser, "yes_no", None)
         split_yes = yes_no(state, split_qs) if split_qs and yes_no else {}
@@ -133,13 +127,13 @@ class FlatTagger:
         mention_keys = {}
         for i, k in mentions:
             m = self.mention_nodes[k]
-            words = _words(lines[i])
-            mention_keys[(i, k)] = [self._choices(word_qs, f"m{i}_{k}w{j}", w, _window(words, j),
-                                                  "It appears in", start=m)
+            words = lines[i].children
+            mention_keys[(i, k)] = [self._choices(word_qs, f"m{i}_{k}w{j}", w, lines[i].text,
+                                                  "It appears inside", start=m)
                                     for j, w in enumerate(words)]
             for j in range(1, len(words)):
                 word_yn[f"mc{i}_{k}_{j}"] = self._continues_q(words[j - 1].text, words[j].text, "word",
-                                                              within=_window(words, j))
+                                                              within=lines[i].text)
         word_choices, word_yes = self._ask(state, word_qs, word_yn) if word_qs else ({}, {})
 
         # Units in reading order: unsplit lines, and the words of split lines.
@@ -167,7 +161,7 @@ class FlatTagger:
         for (i, k), keys in mention_keys.items():
             m = self.mention_nodes[k]
             current = None
-            for j, w in enumerate(_words(lines[i])):
+            for j, w in enumerate(lines[i].children):
                 top = self._top(word_choices, word_qs, keys[j], w, start=m)
                 own = top[0].target if top and is_value(top[0].target) else None
                 continues = self._p(word_yes, f"mc{i}_{k}_{j}", w.id, default=0.0) >= self.threshold if j else False
@@ -340,10 +334,6 @@ class FlatTagger:
         for line in lines:
             nodes.append(_node(line))
             edges.append({"type": "edge", "rel": "contains", "from": page_id, "to": line.id})
-            if line.kind == "paragraph":
-                for child in line.children:
-                    nodes.append(_node(child))
-                    edges.append({"type": "edge", "rel": "contains", "from": line.id, "to": child.id})
         for n, (v, inst) in enumerate(zip(values, instances), start=1):
             members = v.members or [v.doc]
             if len(members) == 1 and not v.word:
@@ -380,84 +370,9 @@ def _anchor(v: Unit) -> str:
 
 
 def _neighbours(lines: list[DocNode], i: int, n: int = 300) -> str:
-    prev = lines[i - 1].text[-n:] if i else ""  # a neighbouring paragraph: the part next to this unit
+    prev = lines[i - 1].text[-n:] if i else ""
     nxt = lines[i + 1].text[:n] if i + 1 < len(lines) else ""
     return f"before: {prev} | after: {nxt}"
-
-
-# A line opening a new paragraph or list item: "1.", "(a)", "iv)", a bullet.
-_MARKER = re.compile(r"^(\(?[1-9]\d{0,2}[.)]|\(?[a-z]{1,4}\)|[-•*–])\s")
-
-
-def paragraphs(block: DocNode) -> list[DocNode]:
-    """The block's lines, with each run of running prose joined into one paragraph node.
-
-    A paragraph ends after a short line (the next line's first word would have fitted
-    in the room left before the block's right edge, so ragged-right text still
-    joins), unless that line visibly stops mid-sentence with a comma or a lowercase
-    last word: a pre-printed form with a blank filled in ("... on" / "May 3, 2024,").
-    A logo word or heading ("YORK") ends it. It also ends before a numbered or
-    bulleted line. Only runs that read as prose
-    become paragraphs: two or more lines, at least 12 words, mostly lowercase words,
-    and no line with several "Label:" captions (a form's label/value rows stay lines).
-    """
-    lines = block.children
-    if len(lines) < 2:
-        return list(lines)
-    right = max(l.bbox[2] for l in lines)
-    runs: list[list[DocNode]] = [[lines[0]]]
-    for prev, line in zip(lines, lines[1:]):
-        char = (prev.bbox[2] - prev.bbox[0]) / max(len(prev.text), 1)
-        first = len(line.text.split()[0]) if line.text.split() else 0
-        short = right - prev.bbox[2] >= (first + 1) * char
-        if (not short or _open(prev.text)) and not _MARKER.match(line.text):
-            runs[-1].append(line)
-        else:
-            runs.append([line])
-    out: list[DocNode] = []
-    for run in runs:
-        if not _prose(run):
-            out += run
-            continue
-        n = sum(u.kind == "paragraph" for u in out) + 1
-        box = (min(l.bbox[0] for l in run), min(l.bbox[1] for l in run),
-               max(l.bbox[2] for l in run), max(l.bbox[3] for l in run))
-        out.append(DocNode(f"{block.id}/p{n:02d}", "paragraph", block.page_id, box, _join(run), list(run)))
-    return out
-
-
-def _open(text: str) -> bool:
-    """Does the line stop mid-sentence: a trailing comma, or a lowercase last word ("... on")?"""
-    words = text.split()
-    last = words[-1] if words else ""
-    return last.endswith(",") or (last[:1].islower() and last[-1:].isalpha())
-
-
-def _prose(run: list[DocNode]) -> bool:
-    words = [w for l in run for w in l.text.split()]
-    lower = sum(w[0].islower() for w in words if w[0].isalpha())
-    return (len(run) >= 2 and len(words) >= 12 and lower >= 0.3 * len(words)
-            and not any(len(LABEL_PAIR.findall(l.text)) >= 2 for l in run))
-
-
-def _join(run: list[DocNode]) -> str:
-    """The run's text as one paragraph, undoing end-of-line hyphenation ("posses-" + "sion")."""
-    text = run[0].text
-    for line in run[1:]:
-        if text.endswith("-") and line.text[:1].islower():
-            text = text[:-1] + line.text
-        else:
-            text += " " + line.text
-    return text
-
-
-def _words(unit: DocNode) -> list[DocNode]:
-    return [w for l in unit.children for w in l.children] if unit.kind == "paragraph" else unit.children
-
-
-def _window(words: list[DocNode], j: int, n: int = 12) -> str:
-    """The words around word j: what a word inside a long paragraph is read with."""
-    return " ".join(w.text for w in words[max(0, j - n): j + n + 1])
 
 
 def _state(page_id: str, lines: list[DocNode], context: dict) -> dict:

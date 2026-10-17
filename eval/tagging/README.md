@@ -13,6 +13,10 @@ uv run python eval/tagging/chunks.py rules --ocr ppocr4            # no chooser:
 (eval/tagging/ocr_engines.py); those engines read the page image even when
 there is a text layer, and are cached under `cache/<engine>/`.
 
+`gold/` is scored against the default (coarse) `legal_intake` schema; `gold_detailed/` holds the same values
+for `legal_intake_detailed` (`--gold gold_detailed` on run.py and score.py), and `make_coarse_gold.py`
+regenerates `gold/` from it.
+
 `gold/*.json` gives each document's expected values: text, field (`path`), any
 accepted alternatives (`alt`), and `region` for spans where any piece tagged
 with that field counts (e.g. a biography). `groups` lists snippets that must

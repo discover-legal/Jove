@@ -1,6 +1,6 @@
 """Score a tagger's JSONL against eval/tagging/gold.
 
-    uv run python eval/tagging/score.py eval/tagging/results/<run> [-v] [--gold gold_coarse]
+    uv run python eval/tagging/score.py eval/tagging/results/<run> [-v] [--gold gold_detailed]
 
 Predictions are rank-1 `tagged` edges that aren't `#none` or `#label`, with their node's text.
   recall     gold values found with an accepted field. Strict on text: the

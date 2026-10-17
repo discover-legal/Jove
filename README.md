@@ -38,9 +38,8 @@ ingest ──► OCR ──► layout ──► tag ──► emit (JSONL graph)
    logo text) and adds them only if a second, cropped reading confirms them.
 3. **Layout:** group lines into blocks.
 4. **Tag:** for every line, ask a decision model which schema field the line
-   gives a value for (or `none`, or `label` for a printed form caption). Running
-   prose is asked about a paragraph at a time. Lines holding several values are
-   split into words and asked again. A final pass
+   gives a value for (or `none`, or `label` for a printed form caption). Lines
+   holding several values are split into words and asked again. A final pass
    checks who each value belongs to (our client, the opposing party, the
    issuer).
 5. **Emit:** a JSONL graph of pages, blocks, lines and spans, with ranked
@@ -118,9 +117,10 @@ Measured on [eval/tagging](eval/tagging/README.md): 11 documents and 230
 hand-labelled values. The set covers public Ontario court and tribunal
 decisions, a fax-degraded copy, an LTB Form N4 filled with invented values
 (both digital and as a phone photo), synthetic intake documents, and two
-real-world photos. All runs use identical cached OCR. (The event-flyer photo has since been
-removed; on the remaining 10 documents Clef scores 0.640 line by line and 0.62–0.63
-reading prose by paragraph, the default.)
+real-world photos. All runs use identical cached OCR and the detailed intake
+schema. (The event-flyer photo has since been removed. On the remaining 10
+documents, Jev scores F1 0.82 with the default coarse schema at under half the
+cost; see docs/PLAN.md.)
 
 | chooser | recall | precision | F1 | time (11 docs) |
 |---|---|---|---|---|

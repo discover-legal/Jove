@@ -25,7 +25,7 @@
       "text": "October 7, 2010",
       "path": "events[].date",
       "alt": [
-        "referenced_documents[].date"
+        "documents[].date"
       ]
     },
     {
@@ -39,8 +39,8 @@
       "text": "Tribunal Services Department",
       "path": "proceedings[].forum",
       "alt": [
-        "document_issuer.department",
-        "document_issuer.name"
+        "parties[].organization",
+        "parties[].name"
       ]
     },
     {
@@ -65,44 +65,44 @@
     },
     {
       "text": "2 Bloor Street East",
-      "path": "document_issuer.contact.address.street",
+      "path": "contact.addresses[].street",
       "alt": [
-        "document_issuer.contact.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
       "text": "Suite 1400",
-      "path": "document_issuer.contact.address.street",
+      "path": "contact.addresses[].street",
       "alt": [
-        "document_issuer.contact.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
       "text": "M4W 1A8",
-      "path": "document_issuer.contact.address.postal_code",
+      "path": "contact.addresses[].postal_code",
       "alt": [
-        "document_issuer.contact.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
       "text": "416-326-3333",
-      "path": "document_issuer.contact.phones[]"
+      "path": "contact.phones[]"
     },
     {
       "text": "1-800-387-0073",
-      "path": "document_issuer.contact.phones[]"
+      "path": "contact.phones[]"
     },
     {
       "text": "416-325-9188",
-      "path": "document_issuer.contact.phones[]"
+      "path": "contact.phones[]"
     },
     {
       "text": "416-325-7539",
-      "path": "document_issuer.contact.phones[]"
+      "path": "contact.phones[]"
     },
     {
       "text": "http://www.ipc.on.ca",
-      "path": "document_issuer.contact.website"
+      "path": "contact.websites[]"
     }
   ],
   "groups": []

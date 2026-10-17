@@ -27,10 +27,6 @@ def tagger() -> str:
     return name
 
 
-def paragraphs() -> bool:
-    return os.environ.get("JOVE_PARAGRAPHS", "on") != "off"
-
-
 def split_gate() -> float:
     return float(os.environ.get("JOVE_SPLIT_GATE", "0.5"))
 

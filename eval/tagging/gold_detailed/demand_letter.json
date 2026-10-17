@@ -1,6 +1,6 @@
 {
   "file": "eval/ocr/synthetic/demand_letter.photo.jpg",
-  "schema": "schemas/legal_intake_coarse.schema.json",
+  "schema": "schemas/legal_intake_detailed.schema.json",
   "context": "Our firm: Harper & Leung LLP. Our client: Jane Doe.",
   "tags": [
     {
@@ -9,46 +9,53 @@
       "alt": [
         "parties[].represented_by",
         "parties[].organization",
-        "documents[].author"
+        "referenced_documents[].author",
+        "document_issuer.name"
       ]
     },
     {
       "text": "1200 Bay Street, Suite 300",
-      "path": "contact.addresses[].street",
+      "path": "parties[].contact.address.street",
       "alt": [
-        "contact.addresses[].full"
+        "parties[].contact.address.full",
+        "document_issuer.contact.address.street",
+        "document_issuer.contact.address.full"
       ]
     },
     {
       "text": "M5R 2A5",
-      "path": "contact.addresses[].postal_code",
+      "path": "parties[].contact.address.postal_code",
       "alt": [
-        "contact.addresses[].full"
+        "parties[].contact.address.full",
+        "document_issuer.contact.address.postal_code",
+        "document_issuer.contact.address.full"
       ]
     },
     {
       "text": "September 4, 2024",
-      "path": "documents[].date",
+      "path": "referenced_documents[].date",
       "alt": [
         "events[].date"
       ]
     },
     {
       "text": "Jane Doe",
-      "path": "parties[].name"
+      "path": "client.person.full_name"
     },
     {
       "text": "22 King Street West, Unit 4",
-      "path": "contact.addresses[].street",
+      "path": "client.contact.address.street",
       "alt": [
-        "contact.addresses[].full"
+        "client.contact.address.full",
+        "property.address.street",
+        "property.address.full"
       ]
     },
     {
       "text": "M5H 1A1",
-      "path": "contact.addresses[].postal_code",
+      "path": "client.contact.address.postal_code",
       "alt": [
-        "contact.addresses[].full"
+        "client.contact.address.full"
       ]
     },
     {
@@ -76,7 +83,7 @@
     },
     {
       "text": "September 30, 2024",
-      "path": "deadlines[].date"
+      "path": "matter.key_deadlines[].date"
     },
     {
       "text": "Landlord and Tenant Board",
@@ -87,28 +94,34 @@
       "path": "parties[].name",
       "alt": [
         "parties[].represented_by",
-        "documents[].author"
+        "referenced_documents[].author"
       ]
     },
     {
       "text": "Toronto",
-      "path": "contact.addresses[].city",
+      "path": "parties[].contact.address.city",
       "alt": [
-        "contact.addresses[].full"
+        "client.contact.address.city",
+        "parties[].contact.address.full",
+        "client.contact.address.full",
+        "document_issuer.contact.address.city",
+        "document_issuer.contact.address.full"
       ]
     },
     {
       "text": "Ontario",
-      "path": "contact.addresses[].province",
+      "path": "parties[].contact.address.province",
       "alt": [
-        "contact.addresses[].full"
+        "parties[].contact.address.full",
+        "document_issuer.contact.address.province",
+        "document_issuer.contact.address.full"
       ]
     },
     {
       "text": "ON",
-      "path": "contact.addresses[].province",
+      "path": "client.contact.address.province",
       "alt": [
-        "contact.addresses[].full"
+        "client.contact.address.full"
       ]
     }
   ],

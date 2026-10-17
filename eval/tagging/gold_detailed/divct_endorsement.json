@@ -1,6 +1,6 @@
 {
   "file": "eval/ocr/real/divct_endorsement.pdf",
-  "schema": "schemas/legal_intake_coarse.schema.json",
+  "schema": "schemas/legal_intake_detailed.schema.json",
   "context": null,
   "tags": [
     {
@@ -11,20 +11,20 @@
       "text": "SUPERIOR COURT OF JUSTICE",
       "path": "proceedings[].forum",
       "alt": [
-        "parties[].name"
+        "document_issuer.name"
       ]
     },
     {
       "text": "DIVISIONAL COURT",
       "path": "proceedings[].forum",
       "alt": [
-        "parties[].name",
-        "parties[].organization"
+        "document_issuer.name",
+        "document_issuer.department"
       ]
     },
     {
       "text": "Carnwath, Day and Whalen JJ.",
-      "path": "parties[].name"
+      "path": "proceedings[].judge"
     },
     {
       "text": "PUBLIC GUARDIAN AND TRUSTEE",
@@ -85,12 +85,13 @@
       "text": "December 13, 2001",
       "path": "events[].date",
       "alt": [
-        "documents[].date"
+        "referenced_documents[].date",
+        "proceedings[].filing_date"
       ]
     },
     {
       "text": "Carnwath J.",
-      "path": "parties[].name"
+      "path": "proceedings[].judge"
     },
     {
       "text": "ONTARIO",

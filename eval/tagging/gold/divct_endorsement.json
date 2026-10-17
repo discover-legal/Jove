@@ -11,20 +11,20 @@
       "text": "SUPERIOR COURT OF JUSTICE",
       "path": "proceedings[].forum",
       "alt": [
-        "document_issuer.name"
+        "parties[].name"
       ]
     },
     {
       "text": "DIVISIONAL COURT",
       "path": "proceedings[].forum",
       "alt": [
-        "document_issuer.name",
-        "document_issuer.department"
+        "parties[].name",
+        "parties[].organization"
       ]
     },
     {
       "text": "Carnwath, Day and Whalen JJ.",
-      "path": "proceedings[].judge"
+      "path": "parties[].name"
     },
     {
       "text": "PUBLIC GUARDIAN AND TRUSTEE",
@@ -85,13 +85,12 @@
       "text": "December 13, 2001",
       "path": "events[].date",
       "alt": [
-        "referenced_documents[].date",
-        "proceedings[].filing_date"
+        "documents[].date"
       ]
     },
     {
       "text": "Carnwath J.",
-      "path": "proceedings[].judge"
+      "path": "parties[].name"
     },
     {
       "text": "ONTARIO",

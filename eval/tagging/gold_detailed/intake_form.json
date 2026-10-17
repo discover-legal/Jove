@@ -1,6 +1,6 @@
 {
   "file": "eval/ocr/synthetic/intake_form.photo.jpg",
-  "schema": "schemas/legal_intake_coarse.schema.json",
+  "schema": "schemas/legal_intake_detailed.schema.json",
   "context": "Our firm: Harper & Leung LLP. Our client: Jane Doe.",
   "tags": [
     {
@@ -9,48 +9,48 @@
     },
     {
       "text": "Jane Alexandra Doe",
-      "path": "parties[].name"
+      "path": "client.person.full_name"
     },
     {
       "text": "1980-04-03",
-      "path": "parties[].date_of_birth"
+      "path": "client.person.date_of_birth"
     },
     {
       "text": "22 King St W, Unit 4",
-      "path": "contact.addresses[].street",
+      "path": "client.contact.address.street",
       "alt": [
-        "contact.addresses[].full"
+        "client.contact.address.full"
       ]
     },
     {
       "text": "Toronto",
-      "path": "contact.addresses[].city",
+      "path": "client.contact.address.city",
       "alt": [
-        "contact.addresses[].full"
+        "client.contact.address.full"
       ]
     },
     {
       "text": "M5H 1A1",
-      "path": "contact.addresses[].postal_code",
+      "path": "client.contact.address.postal_code",
       "alt": [
-        "contact.addresses[].full"
+        "client.contact.address.full"
       ]
     },
     {
       "text": "(416) 555-0199",
-      "path": "contact.phones[]"
+      "path": "client.contact.phones[]"
     },
     {
       "text": "jane.doe@example.com",
-      "path": "contact.emails[]"
+      "path": "client.contact.emails[]"
     },
     {
       "text": "D6101-40706-60905",
-      "path": "identification[].number"
+      "path": "client.identification[].number"
     },
     {
       "text": "2027-04-03",
-      "path": "identification[].expiry_date"
+      "path": "client.identification[].expiry_date"
     },
     {
       "text": "Landlord and tenant - return of deposit",
@@ -78,21 +78,21 @@
     },
     {
       "text": "Law Society Referral Service",
-      "path": "specifics.referral_source"
+      "path": "referral.source"
     },
     {
       "text": "Ontario",
-      "path": "identification[].issuing_authority"
+      "path": "client.identification[].issuing_authority"
     },
     {
       "text": "driver's licence",
-      "path": "identification[].document_type"
+      "path": "client.identification[].document_type"
     },
     {
       "text": "ON",
-      "path": "contact.addresses[].province",
+      "path": "client.contact.address.province",
       "alt": [
-        "contact.addresses[].full"
+        "client.contact.address.full"
       ]
     }
   ],

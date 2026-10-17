@@ -9,53 +9,46 @@
       "alt": [
         "parties[].represented_by",
         "parties[].organization",
-        "referenced_documents[].author",
-        "document_issuer.name"
+        "documents[].author"
       ]
     },
     {
       "text": "1200 Bay Street, Suite 300",
-      "path": "parties[].contact.address.street",
+      "path": "contact.addresses[].street",
       "alt": [
-        "parties[].contact.address.full",
-        "document_issuer.contact.address.street",
-        "document_issuer.contact.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
       "text": "M5R 2A5",
-      "path": "parties[].contact.address.postal_code",
+      "path": "contact.addresses[].postal_code",
       "alt": [
-        "parties[].contact.address.full",
-        "document_issuer.contact.address.postal_code",
-        "document_issuer.contact.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
       "text": "September 4, 2024",
-      "path": "referenced_documents[].date",
+      "path": "documents[].date",
       "alt": [
         "events[].date"
       ]
     },
     {
       "text": "Jane Doe",
-      "path": "client.person.full_name"
+      "path": "parties[].name"
     },
     {
       "text": "22 King Street West, Unit 4",
-      "path": "client.contact.address.street",
+      "path": "contact.addresses[].street",
       "alt": [
-        "client.contact.address.full",
-        "property.address.street",
-        "property.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
       "text": "M5H 1A1",
-      "path": "client.contact.address.postal_code",
+      "path": "contact.addresses[].postal_code",
       "alt": [
-        "client.contact.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
@@ -83,7 +76,7 @@
     },
     {
       "text": "September 30, 2024",
-      "path": "matter.key_deadlines[].date"
+      "path": "deadlines[].date"
     },
     {
       "text": "Landlord and Tenant Board",
@@ -94,34 +87,28 @@
       "path": "parties[].name",
       "alt": [
         "parties[].represented_by",
-        "referenced_documents[].author"
+        "documents[].author"
       ]
     },
     {
       "text": "Toronto",
-      "path": "parties[].contact.address.city",
+      "path": "contact.addresses[].city",
       "alt": [
-        "client.contact.address.city",
-        "parties[].contact.address.full",
-        "client.contact.address.full",
-        "document_issuer.contact.address.city",
-        "document_issuer.contact.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
       "text": "Ontario",
-      "path": "parties[].contact.address.province",
+      "path": "contact.addresses[].province",
       "alt": [
-        "parties[].contact.address.full",
-        "document_issuer.contact.address.province",
-        "document_issuer.contact.address.full"
+        "contact.addresses[].full"
       ]
     },
     {
       "text": "ON",
-      "path": "client.contact.address.province",
+      "path": "contact.addresses[].province",
       "alt": [
-        "client.contact.address.full"
+        "contact.addresses[].full"
       ]
     }
   ],
