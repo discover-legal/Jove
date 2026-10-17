@@ -21,6 +21,10 @@ ocr = [
 jev = [
     "typesafe-sdk>=0.7.2",
 ]
+graph = [
+    "falkordb>=1.8.0",
+    "typedb-driver>=3.13.6",
+]
 
 [dependency-groups]
 dev = [

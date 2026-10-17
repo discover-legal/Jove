@@ -68,7 +68,7 @@ def test_pipeline_emits_graph(tmp_path):
 
     contains = {(e["from"], e["to"]) for e in recs if e["type"] == "edge" and e["rel"] == "contains"}
     span = next(i for i, n in nodes.items() if n["text"] == "Jane Doe")
-    assert ("p0001", "p0001/b02/l01") in contains and ("p0001/b02/l01", span) in contains
+    assert ("p0001", "p0001/b02") in contains and ("p0001/b02", "p0001/b02/l01") in contains and ("p0001/b02/l01", span) in contains
 
 
 def test_web_roundtrip(tmp_path):

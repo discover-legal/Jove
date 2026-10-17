@@ -414,27 +414,37 @@ One JSON object per line. The order is `job`, `page`, `node`, `edge`, `warning`.
 ```jsonc
 {"type":"job","job_id":"…","created_at":"…","schema_sha256":"…",
  "inputs":[{"filename":"a.pdf","sha256":"…","pages":["p0001"]}],
- "ocr":{"provider":"rapidocr","rec_model":"en_PP-OCRv3_rec_infer.onnx"},
- "chooser":{"provider":"jev","model":"jev-latest"},"separation_threshold":1.5}
+ "ocr":{"provider":"rapidocr", …},"chooser":{"provider":"jev","model":"jev-latest"},
+ "tagger":"flat","split_gate_threshold":0.5,"context":"Our client: Jane Doe."}
 {"type":"page","page_id":"p0001","source":"a.pdf","source_page":1,"sha256":"…",
- "width":1700,"height":2200,"tags":["client.person.full_name"],"placed":true}
-{"type":"node","id":"p0001/b02/l01/s02","kind":"span","page_id":"p0001",
+ "width":1700,"height":2200,"tags":["parties[].name"],"placed":true}
+{"type":"node","id":"p0001/b02","kind":"block","page_id":"p0001","bbox":[…],"text":"…"}
+{"type":"node","id":"p0001/b02/l01","kind":"line","page_id":"p0001","bbox":[…],"text":"Name: Jane Doe"}
+{"type":"node","id":"p0001/v002","kind":"span","page_id":"p0001",
  "bbox":[82,147,241,175],"text":"Jane Doe"}          // kind: block | line | segment | span | chunk (halving)
-{"type":"edge","rel":"contains","from":"p0001/b02/l01","to":"p0001/b02/l01/s02"}
-{"type":"edge","rel":"within","from":"p0001/b02","to":"client.person",
- "score":0.94,"separation":1.04,"asked_from":""}     // split: parts were re-asked from here
-{"type":"edge","rel":"tagged","from":"p0001/b02/l01/s02","to":"client.person.full_name",
- "rank":1,"score":0.91,"separation":6.2,"asked_from":"client.person","instances":{}}
-{"type":"edge","rel":"tagged","from":"p0001/b01","to":"#none","rank":1, …}
-{"type":"warning","code":"unanswered","detail":"p0001/b03 at client"}
+{"type":"edge","rel":"contains","from":"p0001","to":"p0001/b02"}
+{"type":"edge","rel":"contains","from":"p0001/b02","to":"p0001/b02/l01"}
+{"type":"edge","rel":"contains","from":"p0001/b02/l01","to":"p0001/v002"}
+{"type":"edge","rel":"tagged","from":"p0001/v002","to":"parties[].name","rank":1,"score":0.91,
+ "separation":6.2,"instances":{"parties[]":"p0001/b02/l01"},
+ "owner":{"owner":"client","p":0.98,"was":"parties[].name"}}
+{"type":"edge","rel":"tagged","from":"p0001/b01/l01","to":"#none","rank":1, …}
+{"type":"warning","code":"unanswered","detail":"…"}
 ```
 
-- The node ids encode the containment path (`page/block/line/span`).
-- A node that was **split** gets a `within` edge. A node that was **not split** gets
-  `tagged` edges, ranks 1 to 3; spans get rank 1 only.
+- `contains` edges form the document tree: page → block → line → span (or
+  segment, several lines that make one value). The halving tagger emits
+  page → chunk instead.
+- An unsplit line gets `tagged` edges, ranks 1 to 3; a span gets rank 1 only.
+  `mention: true` marks a value found inside a prose line that keeps its own tag.
 - `instances` maps array item paths (e.g. `parties[]`) to the anchoring node
   id. Tags that share an anchor belong to the same item.
+- `owner` is the owners pass's answer to "whose is it?": `client`, `party` or
+  `issuer`, from the schema's `x-owners`.
 - The hashes let a downstream system prove which exact bytes a tag came from.
+- `python -m jove.graph` renders results as a text tree, an Obsidian vault,
+  Cypher (FalkorDB, Neo4j, Memgraph) or a TypeDB hypergraph in which each tag
+  is one relation over text, field, list items and owner (README, "Graphs").
 
 ## Web surface
 

@@ -153,6 +153,9 @@ class FlatTagger:
         values = self._merge(units)
         instances = self._items(values, yes)
         nodes, edges = self._records(page_id, lines, values, instances, split)
+        # The document tree: page → block → line (spans hang off their lines below).
+        nodes[:0] = [_node(b) for b in blocks if b.children]
+        edges[:0] = [{"type": "edge", "rel": "contains", "from": page_id, "to": b.id} for b in blocks if b.children]
 
         # Mentions: extra spans inside prose, which keeps its own tags. A value starts at a
         # word tagged with a field and takes in the words that continue it, unless a word
@@ -333,7 +336,7 @@ class FlatTagger:
         nodes, edges = [], []
         for line in lines:
             nodes.append(_node(line))
-            edges.append({"type": "edge", "rel": "contains", "from": page_id, "to": line.id})
+            edges.append({"type": "edge", "rel": "contains", "from": line.id.rsplit("/", 1)[0], "to": line.id})
         for n, (v, inst) in enumerate(zip(values, instances), start=1):
             members = v.members or [v.doc]
             if len(members) == 1 and not v.word:

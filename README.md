@@ -43,7 +43,8 @@ ingest ──► OCR ──► layout ──► tag ──► emit (JSONL graph)
    checks who each value belongs to (our client, the opposing party, the
    issuer).
 5. **Emit:** a JSONL graph of pages, blocks, lines and spans, with ranked
-   `tagged` edges and SHA-256 provenance.
+   `tagged` edges and SHA-256 provenance. See [Graphs](#graphs) to view it in
+   Obsidian, FalkorDB or TypeDB.
 
 [docs/PLAN.md](docs/PLAN.md) covers the method, output format, configuration
 and measurements in full.
@@ -110,6 +111,43 @@ OCR models once every page is read.
 ```sh
 JOVE_CHOOSER=jev TYPESAFE_API_KEY=... uv run uvicorn jove.web:app
 ```
+
+## Graphs
+
+`jove.graph` turns results (one `result.jsonl` per document, as many as you
+like) into graphs: the document tree (document → page → block → line → span),
+each piece of text's tags, the list items values share and whose each value is.
+Schema fields are shared, so documents meet at the fields they fill.
+
+```sh
+uv run python -m jove.graph data/jobs/*/result.jsonl --to tree               # indented text
+uv run python -m jove.graph data/jobs/*/result.jsonl --to obsidian --out vault/
+uv run python -m jove.graph data/jobs/*/result.jsonl --to cypher --out graph.cypher
+uv run python -m jove.graph data/jobs/*/result.jsonl --to typeql --out typedb/
+```
+
+- **Obsidian:** open `vault/` as a vault. There is one note per node, edges
+  are wikilinks, and the graph view comes coloured by kind.
+- **FalkorDB** (or Neo4j or Memgraph via the `.cypher` file) holds a plain
+  property graph:
+  ```sh
+  uv sync --extra graph
+  docker run -d -p 6379:6379 -p 3000:3000 falkordb/falkordb
+  uv run python -m jove.graph data/jobs/*/result.jsonl --load falkor://localhost:6379/jove
+  ```
+  Browse it at http://localhost:3000 and try
+  `MATCH p=(:Document)-[:CONTAINS*]->() RETURN p`.
+- **TypeDB** holds a hypergraph: each tag is one n-ary `tag` relation that
+  links the text, its field, its list items and its owner:
+  ```sh
+  docker run -d -p 1729:1729 -p 8000:8000 typedb/typedb:3.13.6
+  uv run python -m jove.graph data/jobs/*/result.jsonl --load typedb://localhost:1729/jove
+  ```
+  View it in [TypeDB Studio](https://studio.typedb.com) (connect to
+  `http://localhost:8000`, user `admin`, password `password`). For example:
+  `match $t isa tag, links (value: $v, field: $f, owner: $o); $f has path "parties[].name";`
+
+Loading replaces the named graph or database.
 
 ## Results
 
