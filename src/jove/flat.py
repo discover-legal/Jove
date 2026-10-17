@@ -47,19 +47,6 @@ class Unit:
     link: float  # P(continues the previous unit's value)
     word: bool = False
     members: list[DocNode] = field(default_factory=list)  # set when units merge into one value
-    pos: int | None = None  # a mention's place among its unit's pieces: only neighbours merge
-    repeated: int = 0  # pages its text repeats on (a stamp, a running header): its tag was pooled
-
-
-@dataclass
-class _Asked:
-    """One page after round 1, waiting for the pages its repeated lines share answers with."""
-    page_id: str
-    lines: list[DocNode]
-    state: dict
-    yes: dict
-    tops: list[list[Path]]
-    repeated: dict[int, int] = field(default_factory=dict)  # line index -> pages it repeats on
 
 
 class FlatTagger:
@@ -75,21 +62,13 @@ class FlatTagger:
         self.warnings: list[dict] = []
         # Objects/list items whose values may be mentioned inside prose (x-mentions).
         self.mention_nodes = [n for n in schema.walk() if n.mentions and not n.leaf]
-        # Fields whose every example has a digit (amounts, dates): a mention without one isn't theirs.
-        self.numeric = {n.path for n in schema.walk() if n.leaf and n.examples
-                        and all(any(c.isdigit() for c in str(e)) for e in n.examples)}
 
     # ------------------------------------------------------------------ public
 
     def tag(self, pages: dict[str, list[DocNode]]) -> tuple[list[dict], list[dict]]:
         """Return (node records, edge records) in the pipeline's JSONL shapes."""
-        units = {pid: [u for b in blocks for u in (paragraphs(b) if self.paragraphs else b.children)]
-                 for pid, blocks in pages.items()}
-        repeats = _repeats(units)
         with ThreadPoolExecutor(self.workers) as pool:
-            asked = list(pool.map(lambda item: self._round1(*item, repeats), units.items()))
-            _pool(asked, repeats, self.keep)
-            per_page = list(pool.map(self._rest, asked))
+            per_page = list(pool.map(lambda item: self._page(*item), pages.items()))
         nodes, edges = [], []
         for n, e in per_page:
             nodes += n
@@ -98,14 +77,18 @@ class FlatTagger:
 
     # ------------------------------------------------------------------ one page
 
-    def _round1(self, page_id: str, lines: list[DocNode], repeats: dict[str, list[DocNode]]) -> _Asked:
-        """Round 1: everything about every unit (lines, and paragraphs of prose), in parallel."""
+    def _page(self, page_id: str, blocks: list[DocNode]) -> tuple[list[dict], list[dict]]:
+        # The units asked about: lines, and paragraphs of prose (kind "paragraph", lines as children).
+        lines = [u for b in blocks for u in (paragraphs(b) if self.paragraphs else b.children)]
+        if not lines:
+            return [], []
         state = _state(page_id, lines, self.context)
+
+        # Round 1: everything about every line, in parallel.
         choice_qs, keys = {}, []
         for i, line in enumerate(lines):
             ctx = _neighbours(lines, i)
-            keys.append(self._choices(choice_qs, f"l{i}", line, ctx, "Neighbouring lines",
-                                      note=_repeat_note(line, repeats)))
+            keys.append(self._choices(choice_qs, f"l{i}", line, ctx, "Neighbouring lines"))
         yn = {}
         for i, line in enumerate(lines):
             if i >= 1:
@@ -113,15 +96,8 @@ class FlatTagger:
                 yn[f"same1_{i}"] = self._same_item_q(lines[i - 1].text, line.text)
             if i >= 2:
                 yn[f"same2_{i}"] = self._same_item_q(lines[i - 2].text, line.text)
-        choices, yes = self._ask(state, choice_qs, yn) if lines else ({}, {})
-        return _Asked(page_id, lines, state, yes, [self._top(choices, choice_qs, k, lines[i])
-                                                   for i, k in enumerate(keys)])
-
-    def _rest(self, page: _Asked) -> tuple[list[dict], list[dict]]:
-        """Rounds 2 and 3, then assembly."""
-        page_id, lines, state, yes, line_tops = page.page_id, page.lines, page.state, page.yes, page.tops
-        if not lines:
-            return [], []
+        choices, yes = self._ask(state, choice_qs, yn)
+        line_tops = [self._top(choices, choice_qs, k, lines[i]) for i, k in enumerate(keys)]
 
         # Round 2: should each multi-word line be split? Asked for every such line
         # (a confident single label can hide a second value), but only now, so the
@@ -152,14 +128,18 @@ class FlatTagger:
             for j in range(1, len(words)):
                 word_yn[f"cont{i}_{j}"] = self._continues_q(words[j - 1].text, words[j].text, "word",
                                                             within=lines[i].text)
-        # ... and pieces (words of a line, clauses of a paragraph) of prose that mentions an
-        # x-mentions field, asked only within it.
+        # ... and the words of prose that mentions an x-mentions field, asked only within it;
+        # whether each word continues the previous one's value draws the value's edges.
         mention_keys = {}
         for i, k in mentions:
             m = self.mention_nodes[k]
-            mention_keys[(i, k)] = [self._choices(word_qs, f"m{i}_{k}w{j}", w, lines[i].text,
-                                                  "It appears inside", start=m)
-                                    for j, w in enumerate(_pieces(lines[i]))]
+            words = _words(lines[i])
+            mention_keys[(i, k)] = [self._choices(word_qs, f"m{i}_{k}w{j}", w, _window(words, j),
+                                                  "It appears in", start=m)
+                                    for j, w in enumerate(words)]
+            for j in range(1, len(words)):
+                word_yn[f"mc{i}_{k}_{j}"] = self._continues_q(words[j - 1].text, words[j].text, "word",
+                                                              within=_window(words, j))
         word_choices, word_yes = self._ask(state, word_qs, word_yn) if word_qs else ({}, {})
 
         # Units in reading order: unsplit lines, and the words of split lines.
@@ -174,35 +154,41 @@ class FlatTagger:
                         units.append(Unit(w, i, top, _separation(top), link, word=True))
             elif line_tops[i]:
                 top = line_tops[i]
-                units.append(Unit(line, i, top, _separation(top), first_link, repeated=page.repeated.get(i, 0)))
+                units.append(Unit(line, i, top, _separation(top), first_link))
 
         values = self._merge(units)
         instances = self._items(values, yes)
         nodes, edges = self._records(page_id, lines, values, instances, split)
 
-        # Mentions: extra spans inside prose, which keeps its own tags. In reading order
-        # (mention_keys follows the lines); pieces between them gave no value.
-        found: list[Unit] = []
+        # Mentions: extra spans inside prose, which keeps its own tags. A value starts at a
+        # word tagged with a field and takes in the words that continue it, unless a word
+        # gives a field of its own ("$2,450" inside "rent of $2,450 for July").
+        mvalues: list[Unit] = []
         for (i, k), keys in mention_keys.items():
             m = self.mention_nodes[k]
-            for j, w in enumerate(_pieces(lines[i])):
+            current = None
+            for j, w in enumerate(_words(lines[i])):
                 top = self._top(word_choices, word_qs, keys[j], w, start=m)
-                if top and is_value(top[0].target) and (
-                        top[0].target not in self.numeric or any(ch.isdigit() for ch in w.text)):
-                    found.append(Unit(w, i, top, _separation(top), 0.0, word=True, pos=j))
-        mvalues = self._merge(found)
+                own = top[0].target if top and is_value(top[0].target) else None
+                continues = self._p(word_yes, f"mc{i}_{k}_{j}", w.id, default=0.0) >= self.threshold if j else False
+                if current and continues and own in (None, current.top[0].target):
+                    current.members.append(w)
+                    continue
+                current = Unit(w, i, top, _separation(top), 0.0, word=True, members=[w]) if own else None
+                if current:
+                    mvalues.append(current)
         n2, e2 = self._records(page_id, [], mvalues, self._items(mvalues, yes), [], prefix="m", mention=True)
         return nodes + n2, edges + e2
 
     # ------------------------------------------------------------------ questions
 
     def _choices(self, qs: dict, prefix: str, doc: DocNode, context: str, context_prefix: str,
-                 start: SchemaNode | None = None, note: str = "") -> list:
+                 start: SchemaNode | None = None) -> list:
         start = start or self.schema
         out = []
         for k, node in enumerate(start.internal_nodes()):
             key = f"{prefix}n{k}"
-            qs[key] = choice(doc, node, context, context_prefix, bool(self.context), note)
+            qs[key] = choice(doc, node, context, context_prefix, bool(self.context))
             out.append((key, node))
         return out
 
@@ -303,12 +289,9 @@ class FlatTagger:
             same_tag = prev is not None and prev.top[0].target == u.top[0].target and prev.word == u.word
             # Adjacent words of one line with the same tag are one value ("Senior Adjudicator");
             # across lines, only the "continues" answer joins them.
-            # Clauses are whole phrases already ("$2,450" stays apart from "rent of").
-            same_line_words = same_tag and u.word and prev.line_index == u.line_index \
-                and u.doc.kind != "clause" and (u.pos is None or u.pos == prev.pos + 1)
+            same_line_words = same_tag and u.word and prev.line_index == u.line_index
             if same_tag and (same_line_words or (not u.word and u.link >= self.threshold)):
                 prev.members = (prev.members or [prev.doc]) + [u.doc]
-                prev.pos = u.pos
                 continue
             out.append(u)
         return out
@@ -384,69 +367,8 @@ class FlatTagger:
                     edge["instances"] = inst
                     if mention:
                         edge["mention"] = True  # found inside a prose line that keeps its own tag
-                    if v.repeated:
-                        edge["repeated_on"] = v.repeated  # pages whose answers chose this tag together
                 edges.append(edge)
         return nodes, edges
-
-
-def _repeat_key(unit: DocNode) -> str | None:
-    """Lines that differ only in their numbers ("HAM0064156_0001", "HAM0064156_0002") share a key."""
-    text = " ".join(unit.text.lower().split())
-    if unit.kind != "line" or sum(c.isalpha() for c in text) < 3:
-        return None
-    return re.sub(r"\d+", "#", text)
-
-
-def _repeats(pages: dict[str, list[DocNode]], min_pages: int = 3) -> dict[str, list[DocNode]]:
-    """Text that repeats on several pages (stamps, running headers, page footers), by key.
-
-    Tagged page by page, a stamp drifts between fields; its pages are told it
-    repeats, and their answers are pooled so it gets one tag everywhere.
-    """
-    seen: dict[str, dict[str, DocNode]] = {}
-    for pid, units in pages.items():
-        for u in units:
-            key = _repeat_key(u)
-            if key:
-                seen.setdefault(key, {}).setdefault(pid, u)
-    return {k: list(by_page.values()) for k, by_page in seen.items() if len(by_page) >= min_pages}
-
-
-def _repeat_note(unit: DocNode, repeats: dict[str, list[DocNode]]) -> str:
-    group = repeats.get(_repeat_key(unit) or "")
-    if not group:
-        return ""
-    texts = list(dict.fromkeys(u.text for u in group))
-    if len(texts) == 1:
-        return f" The same text appears on {len(group)} pages of this document."
-    return (f" Text like it, with only the numbers changing, appears on {len(group)} pages of this document"
-            f" ({texts[0]!r}, {texts[1]!r}, ...).")
-
-
-def _pool(pages: list[_Asked], repeats: dict[str, list[DocNode]], keep: int) -> None:
-    """Give each repeated text the tag its pages' answers favour together (mean path score)."""
-    members: dict[str, list[tuple[_Asked, int]]] = {}
-    for page in pages:
-        for i, u in enumerate(page.lines):
-            key = _repeat_key(u)
-            if key in repeats and page.tops[i] and any(u is m for m in repeats[key]):  # one per page
-                members.setdefault(key, []).append((page, i))
-    for group in members.values():
-        if len(group) < 2:
-            continue
-        total: dict[str, float] = {}
-        best_path: dict[str, Path] = {}
-        for page, i in group:
-            for path in page.tops[i]:
-                total[path.target] = total.get(path.target, 0.0) + path.score
-                if path.target not in best_path or path.score > best_path[path.target].score:
-                    best_path[path.target] = path
-        ranked = sorted(total, key=lambda t: -total[t])
-        for page, i in group:
-            own = {p.target: p for p in page.tops[i]}
-            page.tops[i] = [own.get(t) or best_path[t] for t in ranked[:keep]]
-            page.repeated[i] = len(group)
 
 
 def _separation(top: list[Path]) -> float:
@@ -533,64 +455,9 @@ def _words(unit: DocNode) -> list[DocNode]:
     return [w for l in unit.children for w in l.children] if unit.kind == "paragraph" else unit.children
 
 
-def _pieces(unit: DocNode) -> list[DocNode]:
-    """What a mention can be made of: a line's words, or a paragraph's clauses.
-
-    Asked word by word, a sentence comes back as scattered single words ("in", "of",
-    "December"); its clauses ("of the City of Ottawa,", "on May 3, 2024,") are the
-    phrases a value is written in. Money and dates are pieces of their own first
-    ("$4,900.00", "September 30, 2024"): no clause cut splits one, and no long clause
-    hides one. A clause ends at , ; : or a sentence's full stop (not an
-    abbreviation's: "O. Reg.", "A.").
-    """
-    if unit.kind != "paragraph":
-        return unit.children
-    words = _words(unit)
-    ends, pos = [], -1
-    for w in words:  # each word's end offset in the joined text
-        pos += len(w.text) + 1
-        ends.append(pos)
-    text = " ".join(w.text for w in words)
-    value_at = {}  # first word of a value -> one past its last word
-    for m in _VALUE.finditer(text):
-        first = next(i for i, e in enumerate(ends) if e > m.start())
-        last = next(i for i, e in enumerate(ends) if e >= m.end())
-        value_at[first] = last + 1
-
-    out: list[DocNode] = []
-
-    def emit(piece: list[DocNode]) -> None:
-        if piece:
-            box = (min(x.bbox[0] for x in piece), min(x.bbox[1] for x in piece),
-                   max(x.bbox[2] for x in piece), max(x.bbox[3] for x in piece))
-            out.append(DocNode(f"{unit.id}/c{len(out) + 1:02d}", "clause", unit.page_id, box,
-                               " ".join(x.text for x in piece)))
-
-    run: list[DocNode] = []
-    n = 0
-    while n < len(words):
-        if n in value_at:
-            emit(run)
-            emit(words[n: value_at[n]])
-            run, n = [], value_at[n]
-            continue
-        t = words[n].text
-        run.append(words[n])
-        if any(c.isalnum() for c in t) and (t[-1:] in ",;:" or (t.endswith(".") and len(t.rstrip(".")) > 3)):
-            emit(run)
-            run = []
-        n += 1
-    emit(run)
-    return out
-
-
-_MONTH = r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\.?"
-# Values worth asking about on their own: money, and dates in their common written forms.
-_VALUE = re.compile(
-    r"\$\s?\d[\d,]*(?:\.\d{2})?"
-    rf"|\b{_MONTH}\s+\d{{1,2}}(?:st|nd|rd|th)?[^\w\s]{{0,3}}(?:\s+[^\w\s]{{1,3}})?,?\s+\d{{4}}\b"
-    rf"|\b\d{{1,2}}(?:st|nd|rd|th)?\s+(?:day\s+of\s+)?{_MONTH},?\s+\d{{4}}\b"
-    r"|\b\d{1,4}[/-]\d{1,2}[/-]\d{2,4}\b")
+def _window(words: list[DocNode], j: int, n: int = 12) -> str:
+    """The words around word j: what a word inside a long paragraph is read with."""
+    return " ".join(w.text for w in words[max(0, j - n): j + n + 1])
 
 
 def _state(page_id: str, lines: list[DocNode], context: dict) -> dict:

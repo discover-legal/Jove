@@ -153,22 +153,24 @@ thresholds, except for running prose:
   mid-sentence runs on (a pre-printed jurat with the date filled in). Only runs
   of at least 2 lines and 12 words, at least 30% lowercase words and no row of
   several `Label:` captions count as prose. Values named inside a paragraph are
-  found by the mentions pass, asked clause by clause; money and dates are
-  pieces of their own first (pattern-matched), so no clause cut splits
-  "September 30, 2024" and no long clause hides "$4,900.00". On the affidavit of
-  documents this made 111 lines into 53 lines and 19 paragraphs.
-  Measured (Clef, 10 documents without the removed flyer, first version: clauses
-  only, short lines without punctuation always running on): F1 0.630 against
-  0.640 line by line (recall 128 vs 134/217, precision 0.677 vs 0.664), 670
-  requests instead of 856, 23% faster. The losses were values inside sentences
-  (a date or amount inside a long clause) and a sign whose logo words joined a
-  paragraph. With the value pieces and the stricter run-on rule (a comma or a
-  lowercase last word): F1 0.620, recall back to 132/217 but precision 0.631,
-  689 requests. Most of the new false positives were plain clauses beside money
-  ("In response,", "At mediation,") tagged as amounts; a mention of a field
-  whose every example has a digit now needs a digit, which on the same answers
-  gives F1 0.629 (precision 0.652). Net: about 0.01 F1 below line by line, a
-  fifth fewer requests, and prose that reads as paragraphs.
+  found by the mentions pass, word by word: Jev labels each word and says
+  whether it continues the previous word's value, and a value runs until a word
+  doesn't continue it or gives a field of its own. No patterns decide where a
+  value ends. On the affidavit of documents this made 111 lines into 53 lines
+  and 19 paragraphs.
+  Measured with Jev on 10 documents (2026-10-17; one run each, noise ±0.007):
+
+  | setup | recall | precision | F1 |
+  |---|---|---|---|
+  | earlier line-by-line runs (3) | 0.82–0.85 | 0.86 | 0.840–0.855 |
+  | line by line, today | 0.816 | 0.838 | 0.827 |
+  | paragraphs, mentions by clause + money/date/phone/web patterns | 0.788–0.806 | 0.835–0.850 | 0.818–0.820 |
+  | **paragraphs, mentions word by word (current)** | 0.788 | 0.807–0.822 | 0.798–0.805 |
+
+  The patterns were removed for a smaller design at a cost of about 0.02 F1.
+  Its main losses: a sign whose panels OCR reads as one paragraph (the phone
+  number and web address inside are never asked about on their own), and
+  amounts and dates inside a letter's sentences.
 - **Round 1, one parallel batch per page:** every line's schema Choice fan-out
   (with its neighbouring lines), "does it continue the previous line's value?",
   and "is it about the same item as the line one back / two back?".

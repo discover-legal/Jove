@@ -62,6 +62,18 @@ def test_two_parties_on_one_line_are_two_items(tmp_path):
     assert inst["Acme"] == inst["landlord"] and inst["Bolt"] == inst["tenant"] and inst["Acme"] != inst["Bolt"]
 
 
+def joins(q):
+    """Gate for the mention tests: prose mentions performers; a name's two words are one value."""
+    text = q.instructions
+    if "mention a performers" in text:
+        return 0.9
+    pairs = [("'Dana'", "'Okafor'"), ("'Dana'", "'Okafor,'"), ("'Theo'", "'Marchetti'"), ("'Theo'", "'Marchetti,'")]
+    if "continue the same single value" in text and any(f"Previous word: {a}. This word: {b}." in text
+                                                        for a, b in pairs):
+        return 0.9
+    return 0.1
+
+
 FLYER = {
     "type": "object",
     "properties": {
@@ -84,10 +96,7 @@ def test_mentions_inside_prose(tmp_path):
             return "performers[].name" if q.subject in names else "performers[].role" if q.subject in roles else None
         return None
 
-    def gate(q):
-        return 0.9 if "mention a performers" in q.instructions else 0.1
-
-    out = run("j", tmp_path, [("b.png", png())], FLYER, ocr, FakeChooser(choice, gate=gate))
+    out = run("j", tmp_path, [("b.png", png())], FLYER, ocr, FakeChooser(choice, gate=joins))
     recs = [json.loads(l) for l in out.read_text().splitlines()]
     nodes = {r["id"]: r for r in recs if r["type"] == "node"}
     tags = [(nodes[e["from"]]["text"], e["to"], e.get("instances"), e.get("mention")) for e in recs
@@ -138,19 +147,16 @@ def test_a_paragraph_is_tagged_once_and_mentions_inside_it_are_found(tmp_path):
                              "Dana Okafor, on percussion, and Theo Marchetti, on bass, for the whole show."]})
     asked = []
 
-    def choice(q):  # mentions come back as clauses, not scattered words
+    def choice(q):
         asked.append(q.subject)
         if q.node == "" and q.subject.startswith("joined on stage"):
             return "description[]"
         if q.node == "performers[]":
-            return {"by Dana Okafor,": "performers[].name", "and Theo Marchetti,": "performers[].name",
-                    "on percussion,": "performers[].role", "on bass,": "performers[].role"}.get(q.subject)
+            return {"Dana": "performers[].name", "Theo": "performers[].name",
+                    "percussion,": "performers[].role", "bass,": "performers[].role"}.get(q.subject)
         return None
 
-    def gate(q):
-        return 0.9 if "mention a performers" in q.instructions else 0.1
-
-    out = run("j", tmp_path, [("b.png", png())], FLYER, ocr, FakeChooser(choice, gate=gate))
+    out = run("j", tmp_path, [("b.png", png())], FLYER, ocr, FakeChooser(choice, gate=joins))
     recs = [json.loads(l) for l in out.read_text().splitlines()]
     nodes = {r["id"]: r for r in recs if r["type"] == "node"}
     [para] = [n for n in nodes.values() if n["kind"] == "paragraph"]
@@ -159,8 +165,8 @@ def test_a_paragraph_is_tagged_once_and_mentions_inside_it_are_found(tmp_path):
     assert (para["text"], "description[]", None) in tags
     assert not any(s in asked for s in (ocr._lines["p0001"]))  # the lines themselves were never asked
     found = {t: p for t, p, m in tags if m}
-    assert found == {"by Dana Okafor,": "performers[].name", "on percussion,": "performers[].role",
-                     "and Theo Marchetti,": "performers[].name", "on bass,": "performers[].role"}
+    assert found == {"Dana Okafor,": "performers[].name", "percussion,": "performers[].role",
+                     "Theo Marchetti,": "performers[].name", "bass,": "performers[].role"}
 
 
 def test_a_short_line_mid_sentence_runs_on():
@@ -187,77 +193,12 @@ def test_a_paragraph_tagged_inside_a_mentions_field_is_still_searched(tmp_path):
         if q.node == "performers[]":
             if paragraph:
                 return "performers[].role"
-            return "performers[].name" if q.subject.startswith("Dana Okafor") else None
+            return "performers[].name" if q.subject == "Dana" else None
         return None
 
-    def gate(q):
-        return 0.9 if "mention a performers" in q.instructions else 0.1
-
-    out = run("j", tmp_path, [("b.png", png())], FLYER, ocr, FakeChooser(choice, gate=gate))
+    out = run("j", tmp_path, [("b.png", png())], FLYER, ocr, FakeChooser(choice, gate=joins))
     recs = [json.loads(l) for l in out.read_text().splitlines()]
     nodes = {r["id"]: r for r in recs if r["type"] == "node"}
     found = {nodes[e["from"]]["text"]: e["to"] for e in recs
              if e["type"] == "edge" and e["rel"] == "tagged" and e.get("mention")}
     assert found == {"Dana Okafor,": "performers[].name"}  # ...and still yields the names inside it
-
-
-def test_paragraph_pieces_keep_money_and_dates_whole():
-    from jove.flat import _pieces
-    from jove.layout import DocNode
-
-    text = ("Rent of $2,450 for each of July and August remains unpaid, for a total of $4,900.00. "
-            "Unless paid by September 30, 2024, our client will apply.")
-    words = [DocNode(f"w{i}", "word", "p", (0, 0, 1, 1), t) for i, t in enumerate(text.split())]
-    para = DocNode("p", "paragraph", "p", (0, 0, 1, 1), text, [DocNode("l", "line", "p", (0, 0, 1, 1), text, words)])
-    assert [c.text for c in _pieces(para)] == [
-        "Rent of", "$2,450", "for each of July and August remains unpaid,", "for a total of", "$4,900.00.",
-        "Unless paid by", "September 30, 2024,", "our client will apply."]
-
-
-def test_a_mention_of_a_numeric_field_needs_a_digit(tmp_path):
-    schema = {"type": "object", "properties": {
-        "description": {"type": "array", "items": {"type": "string"}},
-        "amounts": {"type": "array", "x-mentions": True, "items": {"type": "object", "properties": {
-            "amount": {"type": "string", "examples": ["$1,200.00", "CAD 45,000"]}}}}}}
-    ocr = FakeOcr({"p0001": ["In response, the ministry said that the whole fee of the request was",
-                             "$120.00, which it would waive for the appellant in this appeal."]})
-
-    def choice(q):
-        if q.node == "":
-            return "description[]"
-        return "amounts[].amount" if q.node == "amounts[]" else None  # every clause, as Clef did
-
-    def gate(q):
-        return 0.9 if "mention a amounts" in q.instructions else 0.1
-
-    out = run("j", tmp_path, [("b.png", png())], schema, ocr, FakeChooser(choice, gate=gate))
-    recs = [json.loads(l) for l in out.read_text().splitlines()]
-    nodes = {r["id"]: r for r in recs if r["type"] == "node"}
-    found = [nodes[e["from"]]["text"] for e in recs if e["type"] == "edge" and e["rel"] == "tagged" and e.get("mention")]
-    assert found == ["$120.00,"]
-
-
-def test_a_stamp_on_every_page_gets_one_tag(tmp_path):
-    schema = {"type": "object", "properties": {
-        "production_numbers": {"type": "array", "items": {"type": "string"}},
-        "envelope_id": {"type": "string"}}}
-    stamps = [f"HAM0064156_000{n}" for n in range(1, 5)]
-    ocr = FakeOcr({f"p000{n}": [stamp, "", "Body text of the page"] for n, stamp in enumerate(stamps, start=1)})
-    notes = []
-
-    def choice(q):
-        if q.subject not in stamps:
-            return None
-        notes.append("only the numbers changing, appears on 4 pages" in q.instructions)
-        if q.subject.endswith("1"):  # one page drifts...
-            return {"envelope_id": 0.5, "production_numbers[]": 0.4}
-        return {"production_numbers[]": 0.6, "envelope_id": 0.3}
-
-    files = [(f"{n}.png", png()) for n in range(1, 5)]
-    out = run("j", tmp_path, files, schema, ocr, FakeChooser(choice, gate=lambda q: 0.1))
-    recs = [json.loads(l) for l in out.read_text().splitlines()]
-    nodes = {r["id"]: r for r in recs if r["type"] == "node"}
-    tags = {nodes[e["from"]]["text"]: (e["to"], e.get("repeated_on")) for e in recs
-            if e["type"] == "edge" and e["rel"] == "tagged" and e["rank"] == 1}
-    assert all(notes) and len(notes) == 4  # each page was told
-    assert {tags[s] for s in stamps} == {("production_numbers[]", 4)}  # ...and is outvoted
