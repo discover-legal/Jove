@@ -1,5 +1,7 @@
 # Jove
 
+[![tests](https://github.com/discover-legal/Jove/actions/workflows/tests.yml/badge.svg)](https://github.com/discover-legal/Jove/actions/workflows/tests.yml)
+
 Jove turns scanned documents into structured data. Give it scanned pages
 (PDFs or images) and a data schema (a JSON Schema). It tags every piece of text
 with the schema field that text gives a value for, and it emits a JSONL graph
