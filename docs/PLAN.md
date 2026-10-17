@@ -189,6 +189,9 @@ thresholds, except for running prose:
   setup (ONCA 250 and its fax copy 23/27). Precision is the gap: mostly the
   wrong field for a well-cut chunk (an issuer's address as the client's,
   judges as parties); list items no longer group (0/13).
+  Classifying each chunk with the chunk it was cut from (±60 words) instead
+  of its neighbours made it worse: F1 0.677, wrong-branch tags 17 → 24, forms
+  down (N4 18 → 15/27) while court decisions gained one value each. Reverted.
 - **Round 1, one parallel batch per page:** every line's schema Choice fan-out
   (with its neighbouring lines), "does it continue the previous line's value?",
   and "is it about the same item as the line one back / two back?".
