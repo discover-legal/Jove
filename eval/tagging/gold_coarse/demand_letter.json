@@ -1,0 +1,125 @@
+{
+  "file": "eval/ocr/synthetic/demand_letter.photo.jpg",
+  "schema": "schemas/legal_intake_coarse.schema.json",
+  "context": "Our firm: Harper & Leung LLP. Our client: Jane Doe.",
+  "tags": [
+    {
+      "text": "Smith & Co. LLP",
+      "path": "parties[].name",
+      "alt": [
+        "parties[].represented_by",
+        "parties[].organization",
+        "documents[].author"
+      ]
+    },
+    {
+      "text": "1200 Bay Street, Suite 300",
+      "path": "contact.addresses[].street",
+      "alt": [
+        "contact.addresses[].full"
+      ]
+    },
+    {
+      "text": "M5R 2A5",
+      "path": "contact.addresses[].postal_code",
+      "alt": [
+        "contact.addresses[].full"
+      ]
+    },
+    {
+      "text": "September 4, 2024",
+      "path": "documents[].date",
+      "alt": [
+        "events[].date"
+      ]
+    },
+    {
+      "text": "Jane Doe",
+      "path": "parties[].name"
+    },
+    {
+      "text": "22 King Street West, Unit 4",
+      "path": "contact.addresses[].street",
+      "alt": [
+        "contact.addresses[].full"
+      ]
+    },
+    {
+      "text": "M5H 1A1",
+      "path": "contact.addresses[].postal_code",
+      "alt": [
+        "contact.addresses[].full"
+      ]
+    },
+    {
+      "text": "Unpaid rent",
+      "path": "matter.type",
+      "alt": [
+        "matter.summary"
+      ]
+    },
+    {
+      "text": "ABC-99",
+      "path": "matter.reference_numbers[]"
+    },
+    {
+      "text": "Acme Property Management Inc.",
+      "path": "parties[].name"
+    },
+    {
+      "text": "$2,450",
+      "path": "amounts[].amount"
+    },
+    {
+      "text": "$4,900.00",
+      "path": "amounts[].amount"
+    },
+    {
+      "text": "September 30, 2024",
+      "path": "deadlines[].date"
+    },
+    {
+      "text": "Landlord and Tenant Board",
+      "path": "proceedings[].forum"
+    },
+    {
+      "text": "Wei Chen",
+      "path": "parties[].name",
+      "alt": [
+        "parties[].represented_by",
+        "documents[].author"
+      ]
+    },
+    {
+      "text": "Toronto",
+      "path": "contact.addresses[].city",
+      "alt": [
+        "contact.addresses[].full"
+      ]
+    },
+    {
+      "text": "Ontario",
+      "path": "contact.addresses[].province",
+      "alt": [
+        "contact.addresses[].full"
+      ]
+    },
+    {
+      "text": "ON",
+      "path": "contact.addresses[].province",
+      "alt": [
+        "contact.addresses[].full"
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "array": "parties[]",
+      "texts": [
+        "Smith & Co. LLP",
+        "1200 Bay Street, Suite 300",
+        "M5R 2A5"
+      ]
+    }
+  ]
+}

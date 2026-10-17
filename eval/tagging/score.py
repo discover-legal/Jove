@@ -1,6 +1,6 @@
 """Score a tagger's JSONL against eval/tagging/gold.
 
-    uv run python eval/tagging/score.py eval/tagging/results/<tagger>
+    uv run python eval/tagging/score.py eval/tagging/results/<run> [-v] [--gold gold_coarse]
 
 Predictions are rank-1 `tagged` edges that aren't `#none` or `#label`, with their node's text.
   recall     gold values found with an accepted field. Strict on text: the
@@ -87,8 +87,9 @@ def score(gold: dict, preds: list[dict]) -> dict:
 def main() -> None:
     results = Path(sys.argv[1])
     verbose = "-v" in sys.argv
+    gold_dir = GOLD.parent / sys.argv[sys.argv.index("--gold") + 1] if "--gold" in sys.argv else GOLD
     totals = {"recall": [0, 0], "precision": [0, 0], "groups": [0, 0]}
-    for gold_path in sorted(GOLD.glob("*.json")):
+    for gold_path in sorted(gold_dir.glob("*.json")):
         result = results / f"{gold_path.stem}.jsonl"
         if not result.exists():
             print(f"{gold_path.stem:<20} (no result)")

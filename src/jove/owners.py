@@ -44,7 +44,10 @@ class Owners:
 
     def equivalent(self, owner: str, kind: str) -> str | None:
         o = self.owners[owner]
-        path = o["name"][0] if kind == "name" else (o["contact"] + kind if o.get("contact") else None)
+        if kind == "name":
+            path = o["name"][0] if o.get("name") else None
+        else:
+            path = o["contact"] + kind if o.get("contact") else None
         return path if path in self.fields else None
 
     def apply(self, nodes: list[dict], edges: list[dict]) -> list[dict]:
@@ -58,7 +61,9 @@ class Owners:
             pages[by_id[e["from"]]["page_id"]].append(e)
 
         for page_id, page_edges in pages.items():
-            lines = [n for n in nodes if n["page_id"] == page_id and n["kind"] == "line"]
+            # The page as read: its lines, or the halving tagger's chunks (it emits no lines).
+            lines = [n for n in nodes if n["page_id"] == page_id and n["kind"] == "line"] or \
+                [n for n in nodes if n["page_id"] == page_id and n["kind"] == "chunk"]
             state = {"page": page_id, "lines": [{"id": n["id"], "text": n["text"]} for n in lines]}
             if self.context:
                 state = {"context": self.context, **state}

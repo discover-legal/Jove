@@ -1,0 +1,109 @@
+{
+  "file": "eval/tagging/docs/ipc_po2917_p1-2.pdf",
+  "schema": "schemas/legal_intake_coarse.schema.json",
+  "context": null,
+  "tags": [
+    {
+      "text": "PO-2917",
+      "path": "proceedings[].case_number",
+      "alt": [
+        "matter.reference_numbers[]"
+      ]
+    },
+    {
+      "text": "PA07-159",
+      "path": "proceedings[].case_number",
+      "alt": [
+        "matter.reference_numbers[]"
+      ]
+    },
+    {
+      "text": "Ministry of Community and Social Services",
+      "path": "parties[].name"
+    },
+    {
+      "text": "October 7, 2010",
+      "path": "events[].date",
+      "alt": [
+        "documents[].date"
+      ]
+    },
+    {
+      "text": "Family Responsibility Office",
+      "path": "parties[].name",
+      "alt": [
+        "parties[].organization"
+      ]
+    },
+    {
+      "text": "Tribunal Services Department",
+      "path": "proceedings[].forum",
+      "alt": [
+        "parties[].organization",
+        "parties[].name"
+      ]
+    },
+    {
+      "text": "$93.40",
+      "path": "amounts[].amount"
+    },
+    {
+      "text": "This appeal concerns records of the Family Responsibility Office (FRO), which is part of the Ministry of Community and Social Services (the ministry).",
+      "path": "matter.summary",
+      "alt": [
+        "matter.type"
+      ],
+      "region": true
+    },
+    {
+      "text": "[IPC Order PO-2917/October 7, 2010] NATURE OF THE APPEAL: This appeal concerns records of the Family Responsibility Office (FRO), which is part of the Ministry of Community and Social Services (the ministry). The FRO enforces family support orders made by the courts and agreements made by parties on separation and divorce. The ministry received a request under the Freedom of Information and Protection of Privacy Act (the Act or FIPPA) from an individual for all the records in an identified FRO file. The requester asked for: all records in my FRO file from the beginning. I would like to review the entire file at the FRO office first and will mark which pages I want copied. I would like the copies to be provided on disk, which clearly certifies that they are copies made by the FRO office from my FRO file. The ministry identified records responsive to the request but instead of issuing an access decision at that time, the ministry forwarded correspondence to the requester informing him that he would receive telephone notification when the identified file was ready for review. A subsequent letter further advised that if he wished to obtain an electronic copy of the records the ministry was prepared to disclose, FRO would have to design a computer program to extract them, for a fee. Shortly thereafter, the ministry issued its access decision letter. The ministry granted access in full, or in part, to a large number of responsive records. The ministry claimed that the exclusion at section 65(6)3 (labour relations/employment-related records) applied to the full names of FRO employees contained in the records. The ministry also relied on the exemptions at sections 14(1)(a) (law enforcement), 14(1)(e) (endanger life or safety), 14(1)(l) (facilitate unlawful act), 19 (solicitor-client privilege), 20 (danger to safety or health) and 21 (invasion of privacy), as well as section 49(b) (personal privacy) of the Act, to deny access to the records, or portions of the records (including the full names of FRO employees) that it was not prepared to disclose. The decision letter did not indicate the amount of the fee payable for obtaining access to the records, or parts of the records, that the ministry had decided to disclose. The requester (now the appellant) decided not to attend to review the records the ministry was prepared to disclose. Instead, he appealed the decision denying access. At mediation, the appellant reiterated his request for the entire file, but withdrew his request for an electronic version of the records. In response, the ministry issued a supplementary decision letter advising that the fee for access to the records, or portions of the records, that it decided to disclose was $93.40. The appellant advised the mediator that he is not appealing the fee. Also at mediation, the ministry further clarified that it was relying on the discretionary exemption at section 49(a) (discretion to withhold requester’s own information), in conjunction with sections 14(1)(a), 14(1)(e), 14(1)(l), 19 and 20, to deny access to the records, or portions of the records, that it had initially claimed were subject to the latter exemptions without referring to section 49(a). The ministry’s position on each particular record is set out in the ministry’s detailed index of records that the mediator forwarded to the appellant, along with the Mediator’s Report at the conclusion of mediation.",
+      "path": "events[].description",
+      "alt": [
+        "matter.summary"
+      ],
+      "region": true
+    },
+    {
+      "text": "2 Bloor Street East",
+      "path": "contact.addresses[].street",
+      "alt": [
+        "contact.addresses[].full"
+      ]
+    },
+    {
+      "text": "Suite 1400",
+      "path": "contact.addresses[].street",
+      "alt": [
+        "contact.addresses[].full"
+      ]
+    },
+    {
+      "text": "M4W 1A8",
+      "path": "contact.addresses[].postal_code",
+      "alt": [
+        "contact.addresses[].full"
+      ]
+    },
+    {
+      "text": "416-326-3333",
+      "path": "contact.phones[]"
+    },
+    {
+      "text": "1-800-387-0073",
+      "path": "contact.phones[]"
+    },
+    {
+      "text": "416-325-9188",
+      "path": "contact.phones[]"
+    },
+    {
+      "text": "416-325-7539",
+      "path": "contact.phones[]"
+    },
+    {
+      "text": "http://www.ipc.on.ca",
+      "path": "contact.websites[]"
+    }
+  ],
+  "groups": []
+}

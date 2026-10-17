@@ -70,6 +70,7 @@ class Reader:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--only")
+    ap.add_argument("--gold", default="gold", help="gold directory: gold, or gold_coarse for the coarse schema")
     ap.add_argument("--tagger", choices=["flat", "halve"], default="flat")
     ap.add_argument("--no-owners", action="store_true", help="skip the ownership pass")
     ap.add_argument("--no-paragraphs", action="store_true", help="ask line by line, prose too")
@@ -84,7 +85,7 @@ def main() -> None:
     ocr = CachedOcr(args.ocr, args.ocr_cache)
     chooser = None
     total = {"secs": 0.0, "requests": 0, "tokens": 0}
-    for gold_path in sorted((ROOT / "gold").glob("*.json")):
+    for gold_path in sorted((ROOT / args.gold).glob("*.json")):
         if args.only and gold_path.stem != args.only:
             continue
         gold = json.loads(gold_path.read_text())

@@ -1,0 +1,764 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jove.local/schemas/legal_intake_coarse.schema.json",
+  "x-jurisdiction": "Ontario, Canada",
+  "title": "Legal intake (coarse)",
+  "description": "What an Ontario law firm captures when opening a matter, with one home for each kind of value: every person or organization is a party, every contact detail sits under contact, every sum of money is an amount, every dated happening an event or deadline. Whose a name or contact detail is (the client's, another party's, the document issuer's) is decided by a separate question, not by the field.",
+  "x-instructions": "Record everything from the point of view of the law firm opening this file. 'The client' is the firm's own client: the person or organization the intake is about. If state.context.job_context names the firm or the client, use it. Documents from other lawyers (demand letters, pleadings, notices) are usually written for the other side: in them, 'we act for X' or 'our client X' means X is an opposing party.",
+  "x-owners": {
+    "client": {
+      "description": "the firm's own client: the person or organization the file is about",
+      "name": [
+        "parties[].name"
+      ],
+      "contact": "contact"
+    },
+    "party": {
+      "description": "another party: the opposing side, their lawyers or paralegals, co-tenants, family members, witnesses, or other people and organizations involved in the matter",
+      "name": [
+        "parties[].name"
+      ],
+      "contact": "contact"
+    },
+    "issuer": {
+      "description": "the court, tribunal, government office or firm that issued or sent this document (its letterhead, caption or signature)",
+      "name": [
+        "parties[].name"
+      ],
+      "contact": "contact"
+    },
+    "property": {
+      "description": "the real estate the matter is about (its address)",
+      "name": [],
+      "contact": "contact"
+    }
+  },
+  "type": "object",
+  "properties": {
+    "parties": {
+      "type": "array",
+      "description": "Every person or organization named: the firm's client, opposing parties, lawyers and firms, judges and adjudicators, the court, tribunal or office that issued the document, witnesses, family members, employers, landlords, insurers. One item per party.",
+      "items": {
+        "type": "object",
+        "description": "One party.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Person or organization name.",
+            "examples": [
+              "Acme Property Management Inc.",
+              "John Smith"
+            ]
+          },
+          "role": {
+            "type": "string",
+            "description": "Their role in the matter or document.",
+            "examples": [
+              "client",
+              "opposing party",
+              "landlord",
+              "tenant",
+              "opposing counsel",
+              "judge",
+              "adjudicator",
+              "tribunal",
+              "witness",
+              "spouse",
+              "child",
+              "employer",
+              "deceased",
+              "referrer"
+            ]
+          },
+          "relationship_to_client": {
+            "type": "string",
+            "description": "How they relate to the client.",
+            "examples": [
+              "ex-husband",
+              "former employer",
+              "neighbour"
+            ]
+          },
+          "organization": {
+            "type": "string",
+            "description": "Organization they belong to or act for.",
+            "examples": [
+              "Smith & Co. LLP"
+            ],
+            "x-not-for": "The party's own name when the party is itself the organization."
+          },
+          "represented_by": {
+            "type": "string",
+            "description": "Their lawyer, paralegal or law firm.",
+            "examples": [
+              "Harper Lee LLP (Ms. Chen)",
+              "Legal Aid Ontario"
+            ]
+          },
+          "date_of_birth": {
+            "type": "string",
+            "description": "Their date of birth.",
+            "format": "date",
+            "examples": [
+              "March 12, 2024",
+              "2024-03-12",
+              "12/03/2024"
+            ]
+          },
+          "occupation": {
+            "type": "string",
+            "description": "Job or occupation.",
+            "examples": [
+              "accountant",
+              "retired"
+            ]
+          },
+          "other_names": {
+            "type": "array",
+            "description": "Former, maiden, alias, trading or operating names.",
+            "items": {
+              "type": "string",
+              "description": "One other name."
+            }
+          },
+          "registration_number": {
+            "type": "string",
+            "description": "Corporation or business registration number, for an organization.",
+            "examples": [
+              "ON 1234567",
+              "BN 123456789RC0001"
+            ]
+          },
+          "personal_details": {
+            "type": "array",
+            "description": "Gender, nationality, marital status, language or interpreter needs, as stated.",
+            "items": {
+              "type": "string",
+              "description": "One detail as written.",
+              "examples": [
+                "married",
+                "Canadian citizen",
+                "needs a Tamil interpreter"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "contact": {
+      "type": "object",
+      "description": "Contact details found in the document, whoever they belong to.",
+      "properties": {
+        "phones": {
+          "type": "array",
+          "description": "Phone numbers for the client.",
+          "items": {
+            "type": "string",
+            "description": "A phone number, including any label such as mobile/home/work.",
+            "examples": [
+              "(416) 555-0199",
+              "Cell: 647-555-0142",
+              "+1 613 555 0100 ext. 22"
+            ]
+          }
+        },
+        "emails": {
+          "type": "array",
+          "description": "Email addresses for the client.",
+          "items": {
+            "type": "string",
+            "description": "An email address.",
+            "examples": [
+              "jane.doe@example.com"
+            ]
+          }
+        },
+        "websites": {
+          "type": "array",
+          "description": "Web addresses.",
+          "items": {
+            "type": "string",
+            "description": "A web address.",
+            "examples": [
+              "yrt.ca",
+              "www.tribunalsontario.ca/ltb"
+            ]
+          }
+        },
+        "addresses": {
+          "type": "array",
+          "description": "Postal or street addresses. One item per address.",
+          "items": {
+            "type": "object",
+            "description": "One postal or street address, split into parts where the document separates them. Whose it is (the client's, another party's, the issuer's, the property's) is decided separately.",
+            "properties": {
+              "street": {
+                "type": "string",
+                "description": "Street line(s): number, street name, unit/suite/apartment, RR or PO box.",
+                "examples": [
+                  "1200 Bay St, Suite 300",
+                  "Unit 4 - 22 King St W",
+                  "RR 2"
+                ]
+              },
+              "city": {
+                "type": "string",
+                "description": "City, town or municipality.",
+                "examples": [
+                  "Toronto",
+                  "Mississauga",
+                  "Thunder Bay"
+                ]
+              },
+              "province": {
+                "type": "string",
+                "description": "Province, territory or state.",
+                "examples": [
+                  "ON",
+                  "Ontario",
+                  "QC"
+                ]
+              },
+              "postal_code": {
+                "type": "string",
+                "description": "Postal code (or US ZIP code).",
+                "examples": [
+                  "M5R 2A5",
+                  "K1A 0B1",
+                  "L4W5K4"
+                ]
+              },
+              "country": {
+                "type": "string",
+                "description": "Country, written out or as a code.",
+                "examples": [
+                  "Canada",
+                  "CAN",
+                  "USA"
+                ]
+              },
+              "full": {
+                "type": "string",
+                "description": "The whole address as a single line, when it is not split into parts.",
+                "examples": [
+                  "22 King St W, Toronto ON M5H 1A1"
+                ],
+                "x-not-for": "Addresses already split into street/city/postal code on the page."
+              }
+            }
+          }
+        }
+      }
+    },
+    "identification": {
+      "type": "array",
+      "description": "Identity documents the client produced for KYC checks.",
+      "items": {
+        "type": "object",
+        "description": "One ID document.",
+        "properties": {
+          "document_type": {
+            "type": "string",
+            "description": "Kind of ID.",
+            "examples": [
+              "Canadian passport",
+              "Ontario driver's licence",
+              "Ontario Photo Card",
+              "PR card",
+              "Status Card"
+            ]
+          },
+          "number": {
+            "type": "string",
+            "description": "Document number.",
+            "examples": [
+              "AB123456",
+              "D6101-40706-60905"
+            ],
+            "x-not-for": "Case, file, account or policy numbers."
+          },
+          "issuing_authority": {
+            "type": "string",
+            "description": "Issuing country or authority.",
+            "examples": [
+              "Canada",
+              "Ontario",
+              "IRCC"
+            ]
+          },
+          "issue_date": {
+            "type": "string",
+            "description": "Date issued.",
+            "format": "date",
+            "examples": [
+              "March 12, 2024",
+              "2024-03-12",
+              "12/03/2024"
+            ]
+          },
+          "expiry_date": {
+            "type": "string",
+            "description": "Expiry date.",
+            "format": "date",
+            "examples": [
+              "March 12, 2024",
+              "2024-03-12",
+              "12/03/2024"
+            ]
+          }
+        }
+      }
+    },
+    "matter": {
+      "type": "object",
+      "description": "What the client needs help with, as a whole.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Area of law or kind of matter: civil litigation, personal injury, debt recovery, construction, corporate or commercial, real estate, landlord and tenant, family, wills and estates, employment, criminal, immigration, intellectual property, other.",
+          "examples": [
+            "wrongful dismissal",
+            "residential purchase",
+            "divorce",
+            "LTB eviction"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "description": "The client's account of the problem, or a summary of it.",
+          "examples": [
+            "My landlord kept my last month's rent deposit after I moved out."
+          ],
+          "x-not-for": "Individual dated incidents (those go in events)."
+        },
+        "objectives": {
+          "type": "array",
+          "description": "What the client wants to achieve.",
+          "items": {
+            "type": "string",
+            "description": "One objective.",
+            "examples": [
+              "recover the deposit",
+              "decision-making responsibility for both children"
+            ]
+          }
+        },
+        "jurisdiction": {
+          "type": "string",
+          "description": "Province or country whose law or courts apply.",
+          "examples": [
+            "Ontario",
+            "federal",
+            "Quebec"
+          ]
+        },
+        "urgency": {
+          "type": "string",
+          "description": "Stated urgency or deadline pressure.",
+          "examples": [
+            "urgent",
+            "hearing next week"
+          ]
+        },
+        "reference_numbers": {
+          "type": "array",
+          "description": "Reference numbers for this matter: the firm's own file number and references on correspondence.",
+          "items": {
+            "type": "string",
+            "description": "One reference.",
+            "examples": [
+              "Our File No. 24-0117",
+              "Your File: ABC-99"
+            ]
+          },
+          "x-not-for": "Court case numbers (proceedings) and ID document numbers (client.identification)."
+        }
+      }
+    },
+    "deadlines": {
+      "type": "array",
+      "description": "Deadlines that matter to the case: limitation periods, filing or response deadlines, closing dates.",
+      "items": {
+        "type": "object",
+        "description": "One deadline.",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "The deadline date.",
+            "format": "date",
+            "examples": [
+              "March 12, 2024",
+              "2024-03-12",
+              "12/03/2024"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "What must happen by then.",
+            "examples": [
+              "statement of defence due",
+              "2-year limitation period expires",
+              "deadline to appeal"
+            ]
+          }
+        }
+      },
+      "x-not-for": "Hearing dates (proceedings) and past events (events)."
+    },
+    "events": {
+      "type": "array",
+      "description": "Dated things that happened or will happen: incidents, meetings, notices, filings, hearings, hiring and dismissal, marriage and separation, deaths, arrests, closings.",
+      "items": {
+        "type": "object",
+        "description": "One event.",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "When it happened.",
+            "format": "date",
+            "examples": [
+              "March 12, 2024",
+              "2024-03-12",
+              "12/03/2024"
+            ]
+          },
+          "time": {
+            "type": "string",
+            "description": "Time of day, if given.",
+            "examples": [
+              "around 3 p.m.",
+              "14:30"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "What happened.",
+            "examples": [
+              "slipped on an unmarked wet floor",
+              "received termination letter",
+              "served N4 notice"
+            ]
+          },
+          "location": {
+            "type": "string",
+            "description": "Where it happened.",
+            "examples": [
+              "Loblaws, Queen St W",
+              "Highway 401 eastbound near Keele"
+            ]
+          }
+        }
+      }
+    },
+    "amounts": {
+      "type": "array",
+      "description": "Every sum of money: claims, debts, rent, damages, fees, invoices, salary, prices, deposits, mortgages, support payments, estate values.",
+      "items": {
+        "type": "object",
+        "description": "One amount.",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "The figure as written, with currency symbol or code.",
+            "examples": [
+              "$1,200.00",
+              "CAD 45,000",
+              "$3 500,00"
+            ]
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency, if stated separately.",
+            "examples": [
+              "CAD",
+              "USD"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "What the money is.",
+            "examples": [
+              "unpaid invoice #402",
+              "rent arrears",
+              "Rule 49 offer to settle"
+            ]
+          },
+          "date": {
+            "type": "string",
+            "description": "Date the amount relates to.",
+            "format": "date",
+            "examples": [
+              "March 12, 2024",
+              "2024-03-12",
+              "12/03/2024"
+            ]
+          }
+        }
+      }
+    },
+    "proceedings": {
+      "type": "array",
+      "description": "Court, tribunal or regulator cases, existing or threatened.",
+      "items": {
+        "type": "object",
+        "description": "One proceeding.",
+        "properties": {
+          "forum": {
+            "type": "string",
+            "description": "Court, tribunal or body.",
+            "examples": [
+              "Ontario Superior Court of Justice",
+              "Small Claims Court (Toronto)",
+              "Landlord and Tenant Board",
+              "Human Rights Tribunal of Ontario",
+              "Ontario Court of Justice",
+              "Court of Appeal for Ontario"
+            ]
+          },
+          "case_number": {
+            "type": "string",
+            "description": "Court or tribunal file number.",
+            "examples": [
+              "CV-24-00712345-0000",
+              "SC-24-00001234-0000",
+              "LTB-L-012345-24",
+              "FS-24-1234",
+              "2024-12345-I"
+            ],
+            "x-not-for": "The firm's own file references (matter.reference_numbers)."
+          },
+          "sides": {
+            "type": "array",
+            "description": "The sides of the case as its caption lists them: one item per side (e.g. the applicants, the respondents), with the side's procedural role and every name listed under it.",
+            "items": {
+              "type": "object",
+              "description": "One side of the caption.",
+              "properties": {
+                "role": {
+                  "type": "string",
+                  "description": "The side's procedural role, as printed.",
+                  "examples": [
+                    "Applicant",
+                    "Respondents",
+                    "Plaintiffs (Appellants)",
+                    "Defendants (Respondents)"
+                  ]
+                },
+                "names": {
+                  "type": "array",
+                  "description": "Every party name listed on this side.",
+                  "items": {
+                    "type": "string",
+                    "description": "One party name.",
+                    "examples": [
+                      "PUBLIC GUARDIAN AND TRUSTEE",
+                      "DAVID GOODIS",
+                      "Metrolinx"
+                    ]
+                  }
+                }
+              }
+            },
+            "x-not-for": "Descriptions of a party that aren't its procedural role (parties[].role: 'Senior Adjudicator', 'landlord')."
+          },
+          "stage": {
+            "type": "string",
+            "description": "Where the case stands.",
+            "examples": [
+              "statement of claim issued",
+              "discoveries",
+              "pre-trial conference",
+              "appeal"
+            ]
+          },
+          "orders": {
+            "type": "array",
+            "description": "Orders or judgments made.",
+            "items": {
+              "type": "string",
+              "description": "One order.",
+              "examples": [
+                "interim injunction granted May 3",
+                "temporary order for parenting time"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "documents": {
+      "type": "array",
+      "description": "Documents mentioned in, or making up, the scans: contracts, leases, letters, notices, wills, invoices, ROEs, reports.",
+      "items": {
+        "type": "object",
+        "description": "One document.",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Document title or kind.",
+            "examples": [
+              "Residential Tenancy Agreement (Standard Form of Lease)",
+              "Form N4",
+              "Record of Employment",
+              "Agreement of Purchase and Sale"
+            ]
+          },
+          "date": {
+            "type": "string",
+            "description": "Document date.",
+            "format": "date",
+            "examples": [
+              "March 12, 2024",
+              "2024-03-12",
+              "12/03/2024"
+            ]
+          },
+          "author": {
+            "type": "string",
+            "description": "Who wrote, sent or issued it.",
+            "examples": [
+              "HR Department, Acme Ltd."
+            ]
+          },
+          "recipient": {
+            "type": "string",
+            "description": "Who it was addressed to.",
+            "examples": [
+              "Ms. J. Doe"
+            ]
+          },
+          "reference": {
+            "type": "string",
+            "description": "Its reference or invoice number.",
+            "examples": [
+              "INV-0042"
+            ]
+          }
+        }
+      }
+    },
+    "property": {
+      "type": "object",
+      "description": "Real estate at the heart of the matter (its address goes under contact).",
+      "properties": {
+        "legal_description": {
+          "type": "string",
+          "description": "Land registry identifiers: PIN, lot and plan, LRO.",
+          "examples": [
+            "PIN 21401-0123 (LT)",
+            "Lot 12, Plan 66M-2345",
+            "LRO #80"
+          ]
+        },
+        "property_type": {
+          "type": "string",
+          "description": "Kind of property.",
+          "examples": [
+            "detached house",
+            "condominium unit",
+            "retail unit"
+          ]
+        },
+        "transaction_type": {
+          "type": "string",
+          "description": "Purchase, sale, lease, refinance...",
+          "examples": [
+            "purchase",
+            "sale",
+            "commercial lease",
+            "refinance"
+          ]
+        },
+        "lender": {
+          "type": "string",
+          "description": "Mortgage lender.",
+          "examples": [
+            "RBC",
+            "TD Canada Trust",
+            "First National"
+          ]
+        }
+      }
+    },
+    "specifics": {
+      "type": "object",
+      "description": "Facts particular to one area of law that no field above covers.",
+      "properties": {
+        "employment": {
+          "type": "string",
+          "description": "Employment terms: job title, hours, contract type, reason for leaving.",
+          "examples": [
+            "Senior Analyst",
+            "full-time, 37.5 h/week",
+            "dismissed without cause"
+          ]
+        },
+        "family": {
+          "type": "string",
+          "description": "Family status: divorce status, who children live with.",
+          "examples": [
+            "divorce pending",
+            "lives with mother"
+          ]
+        },
+        "estate_assets": {
+          "type": "array",
+          "description": "Assets of a deceased person's estate.",
+          "items": {
+            "type": "string",
+            "description": "One asset.",
+            "examples": [
+              "house at 12 Elm St",
+              "RRSP"
+            ]
+          }
+        },
+        "criminal": {
+          "type": "array",
+          "description": "Charges, investigating agency, bail or release conditions.",
+          "items": {
+            "type": "string",
+            "description": "One item as written.",
+            "examples": [
+              "impaired driving, s. 320.14",
+              "Toronto Police Service",
+              "no contact with the complainant"
+            ]
+          }
+        },
+        "immigration": {
+          "type": "array",
+          "description": "Immigration status, application type and number, citizenship.",
+          "items": {
+            "type": "string",
+            "description": "One item as written.",
+            "examples": [
+              "study permit",
+              "PR application",
+              "UCI 1234-5678"
+            ]
+          }
+        },
+        "intellectual_property": {
+          "type": "array",
+          "description": "Trademarks, patents, copyrights or designs, with their numbers.",
+          "items": {
+            "type": "string",
+            "description": "One right as written.",
+            "examples": [
+              "TMA1,234,567 MAPLEWAY"
+            ]
+          }
+        },
+        "referral_source": {
+          "type": "string",
+          "description": "How the client came to the firm.",
+          "examples": [
+            "Google search",
+            "Law Society Referral Service"
+          ]
+        }
+      }
+    }
+  }
+}

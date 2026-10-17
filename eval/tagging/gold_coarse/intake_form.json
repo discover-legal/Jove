@@ -1,0 +1,108 @@
+{
+  "file": "eval/ocr/synthetic/intake_form.photo.jpg",
+  "schema": "schemas/legal_intake_coarse.schema.json",
+  "context": "Our firm: Harper & Leung LLP. Our client: Jane Doe.",
+  "tags": [
+    {
+      "text": "24-0117",
+      "path": "matter.reference_numbers[]"
+    },
+    {
+      "text": "Jane Alexandra Doe",
+      "path": "parties[].name"
+    },
+    {
+      "text": "1980-04-03",
+      "path": "parties[].date_of_birth"
+    },
+    {
+      "text": "22 King St W, Unit 4",
+      "path": "contact.addresses[].street",
+      "alt": [
+        "contact.addresses[].full"
+      ]
+    },
+    {
+      "text": "Toronto",
+      "path": "contact.addresses[].city",
+      "alt": [
+        "contact.addresses[].full"
+      ]
+    },
+    {
+      "text": "M5H 1A1",
+      "path": "contact.addresses[].postal_code",
+      "alt": [
+        "contact.addresses[].full"
+      ]
+    },
+    {
+      "text": "(416) 555-0199",
+      "path": "contact.phones[]"
+    },
+    {
+      "text": "jane.doe@example.com",
+      "path": "contact.emails[]"
+    },
+    {
+      "text": "D6101-40706-60905",
+      "path": "identification[].number"
+    },
+    {
+      "text": "2027-04-03",
+      "path": "identification[].expiry_date"
+    },
+    {
+      "text": "Landlord and tenant - return of deposit",
+      "path": "matter.type"
+    },
+    {
+      "text": "Acme Property Management Inc.",
+      "path": "parties[].name"
+    },
+    {
+      "text": "landlord",
+      "path": "parties[].role"
+    },
+    {
+      "text": "Smith & Co. LLP",
+      "path": "parties[].represented_by",
+      "alt": [
+        "parties[].name",
+        "parties[].organization"
+      ]
+    },
+    {
+      "text": "$2,450.00",
+      "path": "amounts[].amount"
+    },
+    {
+      "text": "Law Society Referral Service",
+      "path": "specifics.referral_source"
+    },
+    {
+      "text": "Ontario",
+      "path": "identification[].issuing_authority"
+    },
+    {
+      "text": "driver's licence",
+      "path": "identification[].document_type"
+    },
+    {
+      "text": "ON",
+      "path": "contact.addresses[].province",
+      "alt": [
+        "contact.addresses[].full"
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "array": "parties[]",
+      "texts": [
+        "Acme Property Management Inc.",
+        "landlord"
+      ]
+    }
+  ]
+}

@@ -195,6 +195,26 @@ thresholds, except for running prose:
   Classifying each chunk with the chunk it was cut from (±60 words) instead
   of its neighbours made it worse: F1 0.677, wrong-branch tags 17 → 24, forms
   down (N4 18 → 15/27) while court decisions gained one value each. Reverted.
+  **Owners pass fixed for halving:** it showed Jev the page's lines, and the
+  halving tagger emits none, so "whose is it?" was asked blind. With the page's
+  chunks instead: F1 0.732 → 0.784, recall 182/217 (the highest of any setup).
+
+**Coarse schema (2026-10-17).** `legal_intake_coarse` gives each kind of value
+one home: every person or organization is a party (role says client, judge,
+tribunal...), every contact detail sits under `contact` (the owners pass says
+whose), all money is `amounts[]`, dated things are `events[]` or
+`deadlines[]`. 62 fields under 14 sections, against 134 under 30. The gold is
+mapped by `eval/tagging/make_coarse_gold.py` into `gold_coarse/` (run.py and
+score.py take `--gold gold_coarse`). Jev, 10 documents, one run each:
+
+| tagger | fine schema | coarse schema |
+|---|---|---|
+| flat | F1 0.798 (P 0.807), $0.47 | F1 0.789 (P 0.868), $0.22 |
+| halving | F1 0.784 (R 182/217), $0.34 | F1 0.785 (R 183/217), $0.17 |
+
+Accuracy is the same within noise; the coarse schema halves the cost. The
+coarse scores don't check whose a contact detail is (that is on the edge as
+`owner`, which the scorer ignores), so they are slightly more lenient there.
 - **Round 1, one parallel batch per page:** every line's schema Choice fan-out
   (with its neighbouring lines), "does it continue the previous line's value?",
   and "is it about the same item as the line one back / two back?".

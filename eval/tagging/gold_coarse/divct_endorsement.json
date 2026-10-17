@@ -1,0 +1,137 @@
+{
+  "file": "eval/ocr/real/divct_endorsement.pdf",
+  "schema": "schemas/legal_intake_coarse.schema.json",
+  "context": null,
+  "tags": [
+    {
+      "text": "490/00",
+      "path": "proceedings[].case_number"
+    },
+    {
+      "text": "SUPERIOR COURT OF JUSTICE",
+      "path": "proceedings[].forum",
+      "alt": [
+        "parties[].name"
+      ]
+    },
+    {
+      "text": "DIVISIONAL COURT",
+      "path": "proceedings[].forum",
+      "alt": [
+        "parties[].name",
+        "parties[].organization"
+      ]
+    },
+    {
+      "text": "Carnwath, Day and Whalen JJ.",
+      "path": "parties[].name"
+    },
+    {
+      "text": "PUBLIC GUARDIAN AND TRUSTEE",
+      "path": "parties[].name",
+      "alt": [
+        "proceedings[].sides[].names[]"
+      ]
+    },
+    {
+      "text": "Applicant",
+      "path": "parties[].role",
+      "alt": [
+        "proceedings[].sides[].role"
+      ]
+    },
+    {
+      "text": "DAVID GOODIS",
+      "path": "parties[].name",
+      "alt": [
+        "proceedings[].sides[].names[]"
+      ]
+    },
+    {
+      "text": "Senior Adjudicator",
+      "path": "parties[].role"
+    },
+    {
+      "text": "JOHN DOE",
+      "path": "parties[].name",
+      "alt": [
+        "proceedings[].sides[].names[]"
+      ]
+    },
+    {
+      "text": "Requester",
+      "path": "parties[].role"
+    },
+    {
+      "text": "Respondents",
+      "path": "parties[].role",
+      "alt": [
+        "proceedings[].sides[].role"
+      ]
+    },
+    {
+      "text": "the application must be dismissed",
+      "path": "proceedings[].orders[]"
+    },
+    {
+      "text": "Costs to Requester fixed at $3000",
+      "path": "proceedings[].orders[]",
+      "alt": [
+        "amounts[].amount",
+        "amounts[].description"
+      ]
+    },
+    {
+      "text": "December 13, 2001",
+      "path": "events[].date",
+      "alt": [
+        "documents[].date"
+      ]
+    },
+    {
+      "text": "Carnwath J.",
+      "path": "parties[].name"
+    },
+    {
+      "text": "ONTARIO",
+      "path": "matter.jurisdiction",
+      "alt": [
+        "proceedings[].forum"
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "array": [
+        "parties[]",
+        "proceedings[].sides[]"
+      ],
+      "texts": [
+        "PUBLIC GUARDIAN AND TRUSTEE",
+        "Applicant"
+      ]
+    },
+    {
+      "array": "parties[]",
+      "texts": [
+        "DAVID GOODIS",
+        "Senior Adjudicator"
+      ]
+    },
+    {
+      "array": "parties[]",
+      "texts": [
+        "JOHN DOE",
+        "Requester"
+      ]
+    },
+    {
+      "array": "proceedings[].sides[]",
+      "texts": [
+        "DAVID GOODIS",
+        "JOHN DOE",
+        "Respondents"
+      ]
+    }
+  ]
+}

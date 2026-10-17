@@ -1,0 +1,143 @@
+{
+  "file": "eval/tagging/docs/coa_2022_onca_100_p1.pdf",
+  "schema": "schemas/legal_intake_coarse.schema.json",
+  "context": null,
+  "tags": [
+    {
+      "text": "COURT OF APPEAL FOR ONTARIO",
+      "path": "proceedings[].forum",
+      "alt": [
+        "parties[].name"
+      ]
+    },
+    {
+      "text": "2022 ONCA 100",
+      "path": "proceedings[].case_number",
+      "alt": [
+        "matter.reference_numbers[]"
+      ]
+    },
+    {
+      "text": "C69265",
+      "path": "proceedings[].case_number",
+      "alt": [
+        "matter.reference_numbers[]"
+      ]
+    },
+    {
+      "text": "20220203",
+      "path": "events[].date",
+      "alt": [
+        "documents[].date"
+      ]
+    },
+    {
+      "text": "Doherty, Benotto and Huscroft JJ.A.",
+      "path": "parties[].name"
+    },
+    {
+      "text": "UD Trading Group Holding Pte. Limited",
+      "path": "parties[].name",
+      "alt": [
+        "proceedings[].sides[].names[]"
+      ]
+    },
+    {
+      "text": "Prateek Gupta",
+      "path": "parties[].name",
+      "alt": [
+        "proceedings[].sides[].names[]"
+      ]
+    },
+    {
+      "text": "Plaintiffs (Appellants)",
+      "path": "parties[].role",
+      "alt": [
+        "proceedings[].sides[].role"
+      ]
+    },
+    {
+      "text": "TransAsia Private Capital Limited",
+      "path": "parties[].name",
+      "alt": [
+        "proceedings[].sides[].names[]"
+      ]
+    },
+    {
+      "text": "Export Development Canada",
+      "path": "parties[].name",
+      "alt": [
+        "proceedings[].sides[].names[]"
+      ]
+    },
+    {
+      "text": "Defendants (Respondents)",
+      "path": "parties[].role",
+      "alt": [
+        "proceedings[].sides[].role"
+      ]
+    },
+    {
+      "text": "Michael D. Schafler and Ara Basmadjian",
+      "path": "parties[].represented_by",
+      "alt": [
+        "parties[].name"
+      ]
+    },
+    {
+      "text": "Jamie Macdonald",
+      "path": "parties[].represented_by",
+      "alt": [
+        "parties[].name"
+      ]
+    },
+    {
+      "text": "December 3, 2021",
+      "path": "events[].date",
+      "alt": [
+        "deadlines[].date"
+      ]
+    },
+    {
+      "text": "Justice C. Gilmore",
+      "path": "parties[].name"
+    },
+    {
+      "text": "March 17, 2021",
+      "path": "events[].date",
+      "alt": [
+        "documents[].date"
+      ]
+    },
+    {
+      "text": "2021 ONSC 1957",
+      "path": "proceedings[].case_number",
+      "alt": [
+        "documents[].reference"
+      ]
+    },
+    {
+      "text": "On appeal from the order of Justice C. Gilmore of the Superior Court of Justice, dated March 17, 2021, with reasons reported at 2021 ONSC 1957.",
+      "path": "proceedings[].stage",
+      "region": true
+    }
+  ],
+  "groups": [
+    {
+      "array": "proceedings[].sides[]",
+      "texts": [
+        "UD Trading Group Holding Pte. Limited",
+        "Prateek Gupta",
+        "Plaintiffs (Appellants)"
+      ]
+    },
+    {
+      "array": "proceedings[].sides[]",
+      "texts": [
+        "TransAsia Private Capital Limited",
+        "Export Development Canada",
+        "Defendants (Respondents)"
+      ]
+    }
+  ]
+}

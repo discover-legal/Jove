@@ -1,0 +1,116 @@
+{
+  "file": "eval/ocr/real/transit_sign.jpg",
+  "schema": "schemas/flyer.schema.json",
+  "context": null,
+  "tags": [
+    {
+      "text": "A SAFER",
+      "path": "headline"
+    },
+    {
+      "text": "IS YOU",
+      "path": "headline"
+    },
+    {
+      "text": "www.1800222tips.com",
+      "path": "contact.websites[]"
+    },
+    {
+      "text": "Crime Stoppers will pay a cash reward for information which",
+      "path": "offer.description"
+    },
+    {
+      "text": "Callers never have to identify themselves or testify",
+      "path": "offer.assurances"
+    },
+    {
+      "text": "Working in partnership with",
+      "path": "partners[].relationship"
+    },
+    {
+      "text": "the Regional Municipality of York",
+      "path": "partners[].name"
+    },
+    {
+      "text": "No Littering",
+      "path": "rules[].text"
+    },
+    {
+      "text": "No Skateboarding",
+      "path": "rules[].text"
+    },
+    {
+      "text": "No Posting",
+      "path": "rules[].text"
+    },
+    {
+      "text": "(including e-cigarettes)",
+      "path": "rules[].clarification"
+    },
+    {
+      "text": "Bylaw #2017-7",
+      "path": "legal_references[]"
+    },
+    {
+      "text": "1-866-MOVE-YRT",
+      "path": "contact.phones[].number"
+    },
+    {
+      "text": "yrt.ca",
+      "path": "contact.websites[]"
+    },
+    {
+      "text": "CRIME STOPPERS OF YORE REGION",
+      "path": "publisher.name",
+      "alt": [
+        "partners[].name",
+        "headline"
+      ],
+      "region": true
+    },
+    {
+      "text": "YORK REGION TRANSIT York Regio",
+      "path": "partners[].name",
+      "alt": [
+        "publisher.name"
+      ],
+      "region": true
+    },
+    {
+      "text": "vandalism, theft and other crimes on York Region Transit prope",
+      "path": "offer.conditions"
+    },
+    {
+      "text": "1-800-2",
+      "path": "contact.phones[].number"
+    },
+    {
+      "text": "For emergencies, please call 911.",
+      "path": "calls_to_action[]",
+      "alt": [
+        "contact.phones[].number"
+      ]
+    },
+    {
+      "text": "No Smoking / No Vaping",
+      "path": "rules[].text"
+    },
+    {
+      "text": "SAYit HERE",
+      "path": "headline",
+      "alt": [
+        "calls_to_action[]"
+      ],
+      "region": true
+    }
+  ],
+  "groups": [
+    {
+      "array": "partners[]",
+      "texts": [
+        "Working in partnership with",
+        "the Regional Municipality of York"
+      ]
+    }
+  ]
+}
