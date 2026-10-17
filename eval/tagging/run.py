@@ -1,10 +1,10 @@
-"""Run a tagger over every gold document and save its JSONL for score.py.
+"""Run the tagger over every gold document and save its JSONL for score.py.
 
-    uv run python eval/tagging/run.py tree|flat [--only NAME]
+    uv run python eval/tagging/run.py [--chooser clef] [--only NAME] [--out NAME]
 
 OCR is cached per page (by page hash) under eval/tagging/cache, so every
-tagger sees identical text and OCR runs once. The default chooser, jev, needs
-TYPESAFE_API_KEY; clef, llm and laya are local (see README).
+run sees identical text and OCR runs once. The default chooser, jev, needs
+TYPESAFE_API_KEY; clef and llm are local (see README).
 """
 
 import argparse
@@ -69,18 +69,17 @@ class Reader:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("tagger", choices=["tree", "flat"])
     ap.add_argument("--only")
     ap.add_argument("--no-owners", action="store_true", help="skip the ownership pass")
     ap.add_argument("--layout", choices=["rules", "docling"], default="rules")
-    ap.add_argument("--no-paragraphs", action="store_true", help="flat tagger: ask line by line, prose too")
-    ap.add_argument("--chooser", choices=["jev", "clef", "llm", "laya"], default="jev")
+    ap.add_argument("--no-paragraphs", action="store_true", help="ask line by line, prose too")
+    ap.add_argument("--chooser", choices=["jev", "clef", "llm"], default="jev")
     ap.add_argument("--ocr", choices=["app", "tesseract", "ppocr4", "v6"], default="app",
                     help="OCR engine; all but app read the page image even when there is a text layer")
-    ap.add_argument("--out", help="results subdirectory (default: the tagger name)")
+    ap.add_argument("--out", help="results subdirectory (default: the chooser name)")
     ap.add_argument("--ocr-cache", help="OCR cache subdirectory, e.g. to re-read pages with a changed OCR stack")
     args = ap.parse_args()
-    out = ROOT / "results" / (args.out or args.tagger)
+    out = ROOT / "results" / (args.out or args.chooser)
     out.mkdir(parents=True, exist_ok=True)
     ocr = CachedOcr(args.ocr, args.ocr_cache)
     chooser = None
@@ -96,7 +95,7 @@ def main() -> None:
         with tempfile.TemporaryDirectory() as tmp:
             t = time.time()
             result = run(gold_path.stem, Path(tmp), [(src.name, src.read_bytes())], schema, ocr, chooser,
-                         context=gold.get("context"), tagger=args.tagger, owners=not args.no_owners,
+                         context=gold.get("context"), owners=not args.no_owners,
                          layout_engine=args.layout, paragraphs=not args.no_paragraphs)
             secs = time.time() - t
             shutil.copy(result, out / f"{gold_path.stem}.jsonl")

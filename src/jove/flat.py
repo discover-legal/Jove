@@ -1,9 +1,8 @@
 """Flat boundary tagger: Jev decides grouping as well as labels.
 
-The tree tagger (tagger.py) lets the layout's blocks decide which lines belong
-together and descends block -> line -> word. This one treats OCR lines as the
-atoms (layout is used only for reading order) and asks the chooser everything
-about each line in one parallel round per page:
+OCR lines are the atoms (layout is used only for reading order and
+paragraphs); the chooser is asked everything about each line in one parallel
+round per page:
 
 - the schema Choice fan-out (which field is this line?), with its neighbours as context;
 - continues: does it continue the same single value as the previous line?
@@ -34,7 +33,7 @@ from dataclasses import dataclass, field
 from .choose import Chooser, YesNo, is_value
 from .layout import DocNode
 from .schema import SchemaNode
-from .tagger import _LABEL, UNTRUSTED, Path, Tagger, _paths, _Task
+from .questions import LABEL_PAIR, POV, UNTRUSTED, Path, choice, label, paths, standing
 
 THRESHOLD = 0.5
 
@@ -60,7 +59,7 @@ class FlatTagger:
         self.keep = keep
         self.workers = workers
         self.paragraphs = paragraphs
-        self._q = Tagger(schema, chooser, context=context)  # question builder + shared context
+        self.context = standing(schema, context)  # goes in the chooser's shared state
         self.warnings: list[dict] = []
         # Objects/list items whose values may be mentioned inside prose (x-mentions).
         self.mention_nodes = [n for n in schema.walk() if n.mentions and not n.leaf]
@@ -87,7 +86,7 @@ class FlatTagger:
         lines = [u for b in blocks for u in (paragraphs(b) if self.paragraphs else b.children)]
         if not lines:
             return [], []
-        state = _state(page_id, lines, self._q.context)
+        state = _state(page_id, lines, self.context)
 
         # Round 1: everything about every line, in parallel.
         choice_qs, keys = {}, []
@@ -180,18 +179,15 @@ class FlatTagger:
     def _choices(self, qs: dict, prefix: str, doc: DocNode, context: str, context_prefix: str,
                  start: SchemaNode | None = None) -> list:
         start = start or self.schema
-        task = _Task(doc, start, context, {})
         out = []
         for k, node in enumerate(start.internal_nodes()):
             key = f"{prefix}n{k}"
-            qs[key] = self._q._question(task, node, context_prefix=context_prefix)
+            qs[key] = choice(doc, node, context, context_prefix, bool(self.context))
             out.append((key, node))
         return out
 
     def _split_q(self, line: DocNode, neighbours: str, top: list[Path]) -> YesNo:
-        from .tagger import _label
-
-        labels = ", ".join(f"{_label(p.target)} ({p.score:.2f})" for p in top)
+        labels = ", ".join(f"{label(p.target)} ({p.score:.2f})" for p in top)
         return YesNo(
             instructions=UNTRUSTED + f"Line {line.id} reads: {line.text!r}. Neighbouring lines: {neighbours!r}."
             + f" The best schema labels for the whole line are: {labels}."
@@ -246,7 +242,7 @@ class FlatTagger:
         )
 
     def _pov(self) -> str:
-        return " Interpret it as state.context describes." if self._q.context else ""
+        return POV if self.context else ""
 
     # ------------------------------------------------------------------ answers
 
@@ -275,7 +271,7 @@ class FlatTagger:
             dists[node.path] = {qs[key].labels[k]: p for k, p in probs.items()}
         if start.path not in dists:
             return []
-        return sorted(_paths(start, dists), key=lambda p: -p.score)[: self.keep]
+        return sorted(paths(start, dists), key=lambda p: -p.score)[: self.keep]
 
     # ------------------------------------------------------------------ assembly
 
@@ -438,7 +434,7 @@ def _prose(run: list[DocNode]) -> bool:
     words = [w for l in run for w in l.text.split()]
     lower = sum(w[0].islower() for w in words if w[0].isalpha())
     return (len(run) >= 2 and len(words) >= 12 and lower >= 0.3 * len(words)
-            and not any(len(_LABEL.findall(l.text)) >= 2 for l in run))
+            and not any(len(LABEL_PAIR.findall(l.text)) >= 2 for l in run))
 
 
 def _join(run: list[DocNode]) -> str:

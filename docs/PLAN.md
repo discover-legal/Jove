@@ -81,17 +81,16 @@ ingest ──► ocr ──► layout ──► tag ──► emit (JSONL graph)
        one is missing, and unbacked numbers revert to the OCR's visibly uncertain
        reading.
      - When detection finds almost nothing, glm's whole-page reading is used.
-     - All three models run locally in Ollama. The older single-model re-read is
-       still available with `JOVE_OCR_REREAD=vlm`.
+     - All three models run locally in Ollama. It replaced a single-model
+       re-read (word F1 0.910 against the vote's 0.975 on eval/ocr round 2).
    - **Missed lines (`recover.py`):** glm-ocr reads the whole page. Rows with a
      word no detected line has (and at most 12 words) are located by
      qwen3-vl:4b-instruct. The stretch of the row no detected line covers is
      cropped and read again, and the line is added only if that reading matches,
      numbers included. `JOVE_OCR_RECOVER=off` disables it.
-   - **Straightening (`straighten.py`, opt-in with `JOVE_OCR_STRAIGHTEN=on`):**
-     flattens a photographed sheet, or levels a tilted page, reads it again, and
-     keeps the surer reading. Boxes are mapped back to the page as uploaded. It
-     is off because it cost word F1 on eval/ocr (round 4).
+   - Straightening whole photographed pages before OCR was tried and removed:
+     it cost word F1 on eval/ocr (round 4), and the vote already straightens
+     every line it re-reads.
    - Images are turned upright from their EXIF orientation at ingest.
    - **GPU hand-off:** once every page is read, the OCR models are unloaded from
      Ollama (`keep_alive: 0`), so the chooser gets the whole GPU.
@@ -121,36 +120,11 @@ Every internal schema node becomes a **Choice** over its direct children plus
 names. A path's score is the geometric mean of its edge probabilities.
 **Separation** is the best path's score divided by the runner-up's.
 
-- **Fan-out.** Every block is asked every internal node's Choice in one go:
+- **Fan-out.** Every unit is asked every internal node's Choice in one go:
   26 questions for the reference schema. Because every edge gets a probability,
-  every path can be scored exactly, and no beam pruning is needed.
-- **Clear answer** (separation ≥ 1.5, set by `JOVE_SEPARATION`): the chunk is
-  tagged with its top 3 paths. `none` is a real answer (`#none` for the root,
+  every path can be scored exactly, and no beam pruning is needed. The top 3
+  paths are kept; `none` is a real answer (`#none` for the root,
   `client#none` inside `client`).
-- **Ambiguous answer**: the chunk probably holds several things. It is split
-  into its parts (block → lines → words; single-child levels are skipped).
-  The parts are re-asked **from the schema node where the two best paths
-  diverged**, not from the root.
-  - Example: "Name: Jane Doe  DOB: 1980" is clearly `client`, but torn between
-    name and DOB. Its words are re-asked from `client`, and each word sees its
-    line as context.
-- **Forced splits.** Some chunks hold several values even when one tag clearly
-  dominates, so they are split regardless of separation and re-asked from where
-  they were asked:
-  - a multi-line block tagged with a single field (the MATTER block also names
-    parties and amounts);
-  - a line with two or more "Label:" pairs ("Full name: …  Date of birth: …").
-- **Split gate (yes/no).** Separation and the structural rules only say a
-  chunk *might* hold several values; running prose that merely mentions things
-  looks the same. So before any split, the chooser is asked one yes/no question
-  (a Jev `Noul`, one batched request per page per round) with the chunk's text
-  and its best labels so far: "should this be split and labelled piece by
-  piece?" Below 0.5 (`JOVE_SPLIT_GATE`), the chunk keeps its tags whole, and the
-  `split_gate` value is recorded on its edge.
-  - On the court endorsement this cut word fragments from 46 to 2, and the
-    reasoning paragraphs stay whole (P(split) 0.09–0.30).
-  - It kept every useful split: name + date of birth 0.93, phone + email
-    0.93, amount + deadline 0.77, addresses 0.81–0.85.
 - **Labels are their own answer.** Every Choice offers `label` next to `none`
   ("the text names a field rather than giving its value"), so a form caption
   becomes `<node>#label` instead of being forced into a field. Text typed into
@@ -162,20 +136,14 @@ names. A path's score is the geometric mean of its edge probabilities.
   another owner, the tag moves to that owner's equivalent field
   (`client.contact.address.city` → `document_issuer.contact.address.city`).
   The answer is recorded on the edge as `owner`.
-- **Parts see their parent's text** as context: "22 King Street West" only
-  reads as a party's address next to "Ms. Jane Doe".
-- **Array items**: when a chunk is split inside an array item node, that chunk
-  becomes the item's **instance anchor**, and all its parts inherit it. A
-  forced split of a clear chunk anchors its whole path. Words anchor to their
-  line, the smallest unit that can hold a list item, so "Smith & Co. LLP" split
-  into words is still one party. So a
-  block tagged `parties[]` whose lines split into name and role is one party.
-- **Words**: runs of consecutive words with the same tag and anchor are merged
-  into **spans**. "Jane" and "Doe" become the span "Jane Doe".
+- **History.** A tree tagger came first: it asked about layout blocks and split
+  ambiguous ones into lines and words, re-asked from the schema node where the
+  two best paths diverged. The flat tagger beat it on every round (Measured,
+  rounds 1–2), and the tree tagger was removed on 2026-10-16.
 
-### Flat boundary tagger (`JOVE_TAGGER=flat`)
+### The flat tagger (`flat.py`)
 
-This is the alternative to the tree. OCR lines are the atoms; layout supplies
+OCR lines are the atoms; layout supplies
 only reading order. Grouping is Jev's decision, not a set of geometry
 thresholds, except for running prose:
 - **Paragraphs (`JOVE_PARAGRAPHS`, on):** a block's lines that read as prose
@@ -234,8 +202,8 @@ public sources:
 | **flat (default)** | **0.865** | **0.807** | **0.835** | ~10.3M | ~$0.43 |
 
 Flat wins most on degraded scans: on the faxed decision it found 21/27 values
-against tree's 17/27. It is also about 20% cheaper. It is the default;
-`JOVE_TAGGER=tree` restores the tree.
+against tree's 17/27. It is also about 20% cheaper. It became the default
+(and later the only tagger).
 
 **Round 3 (2026-09-30):** label option, a `document_issuer` branch in the
 legal schema, and the ownership pass. Flat tagger, 11 documents, 230 gold
@@ -286,7 +254,7 @@ One run.
 | Jev (3 runs) | 0.828 | 0.859 | 0.843 | 4/14 | ~364 | 13.7M | minutes |
 | Clef-Flash Q4_K_M | 0.630 | 0.661 | 0.645 | 2/14 | 856 | 9.2M | 103 min |
 
-- It does real work, unlike Laya (0/45): it is closest to Jev on the flyer
+- It does real work, unlike Laya (0/45; tried 2026-10-01 and removed): it is closest to Jev on the flyer
   (11/13), the transit sign (16/21) and the Divisional Court endorsement
   (12/16). It is weakest on the demand letter (8/18), the intake form (10/19)
   and ONCA 100 (10/18), where it leaves values as `none`.
@@ -394,7 +362,6 @@ are dropped, the rest are renormalised, and unanswered questions produce warning
 | `llm` (local) | Any OpenAI-compatible endpoint; the default is Ollama `qwen3.5:9b-16k` with thinking off. The model *states* the probabilities, and on the flyer it was overconfident enough that nothing ever split. |
 | `jev` | TypeSafe Jev via `typesafe-sdk`. It returns real option probabilities. Requests are packed to Jev's limits (32k tokens for state + longest question, 64k for everything). The budget is in bytes: we measured ~2.5 bytes/token and budget at 2.0; a batch Jev still rejects is halved and retried. A reference-schema block is about 13k tokens (~$0.0005). A whole page tags in ~2 s. **Page text leaves the machine.** |
 | `clef` (default, local) | Cloudflare Clef-Flash (Qwen3.5-9B + a joint schema head, Apache-2.0) served by llama-server (b11655+, `ggml-org/Clef-Flash-GGUF` Q4_K_M, 6.2 GB). It speaks Jev's `/v1/systemone`, so `JevChooser` and the SDK are reused with `JOVE_CLEF_BASE_URL`. The head reads the whole request in one micro-batch: on 8 GB, `-ub 16384` is the most that fits (a 32k micro-batch wants an 8.7 GB compute buffer), and llama-server's "too large to process" halves the batch like Jev's `max_tokens_exceeded`. About 1,700 tokens/s on the RTX 5060, so ~8 min per dense page. Local; nothing leaves the machine. F1 0.645 against Jev's 0.843 (see Measured). |
-| `laya` | Laya (convaiinnovations/laya, 421M, Apache-2.0), a local decision model with Jev's choice/noul types. Reads ≤512 tokens, so each question gets its own small state (the quoted line and neighbours), and only the question sentence goes in the instructions; on caption lines, evidence in the instructions put the right field at 0.02–0.06. Runs at ~20 ms/question on the RTX 5060. **Not usable yet:** flat tagger on ONCA 100 + 250 scored recall 0/45 (Jev: 32/45). It answers `none`, or the wrong section, for lines like "DATE: 20220324" and "DOCKET: C69486". It might work as a gate (yes/no) or on a far smaller option set; untested. |
 | `fake` | Rule-driven, for tests. |
 
 ## Output: JSONL graph
@@ -454,20 +421,17 @@ Jobs run in the background, in-process, and store their state under `data/jobs/<
 | var | default |
 |---|---|
 | `JOVE_OCR` | `rapidocr` |
-| `JOVE_OCR_REREAD` | `vote` (or `vlm`; anything else turns re-reading off) |
+| `JOVE_OCR_REREAD` | `vote` (anything else turns re-reading off) |
 | `JOVE_OCR_READER` / `JOVE_OCR_TIEBREAKER` / `JOVE_OCR_ESCALATION` | `glm-ocr` / `granite3.2-vision` / `qwen3.5:9b-16k` |
 | `JOVE_OCR_RECOVER` / `JOVE_OCR_LOCATOR` | `on` / `qwen3-vl:4b-instruct` |
-| `JOVE_OCR_STRAIGHTEN` | `off` (`on` straightens photographed pages) |
-| `JOVE_CHOOSER` | `clef` (or `llm`, `jev`, `laya`) |
+| `JOVE_CHOOSER` | `clef` (or `llm`, `jev`) |
 | `JOVE_LLM_BASE_URL` / `JOVE_LLM_MODEL` / `JOVE_LLM_API_KEY` | `http://localhost:11434/v1` / `qwen3.5:9b-16k` / — |
 | `JOVE_LLM_REASONING` | `none` (turns off model thinking; empty omits the parameter) |
 | `JOVE_JEV_MODEL` | `jev-latest` |
 | `JOVE_CLEF_BASE_URL` / `JOVE_CLEF_MODEL` | `http://localhost:8080` / `clef-flash` |
 | `TYPESAFE_API_KEY` | *(required for `jev`)* |
-| `JOVE_SEPARATION` | `1.5` |
 | `JOVE_SPLIT_GATE` | `0.5` (split only if the yes/no gate's P(split) ≥ this) |
-| `JOVE_TAGGER` | `flat` (or `tree`) |
-| `JOVE_PARAGRAPHS` | `on`: flat tagger asks about prose paragraph by paragraph (`off`: line by line) |
+| `JOVE_PARAGRAPHS` | `on`: the tagger asks about prose paragraph by paragraph (`off`: line by line) |
 | `JOVE_OWNERS` | `on` (`off` skips the ownership pass) |
 | `JOVE_DATA_DIR` | `./data` |
 
@@ -488,7 +452,7 @@ Jobs run in the background, in-process, and store their state under `data/jobs/<
 - **Next: run it for real.** Put real Ontario scans through Jev (needs a key)
   and through Ollama. Build a small labelled evaluation set and a scorer
   (per-field precision and recall on spans, and whether list items group
-  correctly). Tune `JOVE_SEPARATION` and the block gap on that set.
+  correctly). Tune the split gate and the block gap on that set.
 - **Cost:** block fan-out asks all 26 nodes every time. Asking level by level
   would cut tokens but add round trips. Only worth it if cost matters.
 - **Layout:** tables and multi-column pages; word boxes from OCR character

@@ -21,7 +21,7 @@ from collections import defaultdict
 
 from .choose import NONE, Chooser, Question
 from .schema import SchemaNode
-from .tagger import UNTRUSTED
+from .questions import UNTRUSTED
 
 
 class Owners:

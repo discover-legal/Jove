@@ -20,8 +20,7 @@ import httpx
 from .ingest import Page
 from .ocr import Ocr, OcrLine, release
 from .ollama import chat, unload
-from .reread import similarity
-from .vote import first_line, norm, unbacked
+from .vote import first_line, norm, similarity, unbacked
 
 log = logging.getLogger(__name__)
 

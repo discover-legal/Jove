@@ -68,3 +68,22 @@ def test_tidy_and_partial_number_revert():
     # same-length groups: only the unbacked number reverts, the words keep their fixes
     assert back_numbers("474 Lakeview Newmarket ON", ["4n4 Lakoview Newmnarkel ON"], "4n4 Lakoview Newmnarkel ON") \
         == "4n4 Lakeview Newmarket ON"
+
+
+def test_line_crop_straightens_and_enlarges():
+    import numpy as np
+
+    from jove.vote import line_crop
+
+    img = np.full((200, 400, 3), 255, np.uint8)
+    crop = line_crop(img, ((10, 20), (210, 40), (208, 60), (8, 40)))
+    assert crop.shape[0] >= 64 and crop.shape[1] > crop.shape[0]
+
+
+def test_respace():
+    from jove.ocr import respace
+
+    chars = [(c, 0.9, [[x, 0], [x + 10, 0], [x + 10, 10], [x, 10]]) for c, x in
+             zip("expires2027", [0, 11, 22, 33, 44, 55, 66, 85, 96, 107, 118])]
+    assert respace("expires2027", chars) == "expires 2027"
+    assert respace("ID:Ontario at 10:00", None) == "ID: Ontario at 10:00"

@@ -25,11 +25,34 @@ import httpx
 from .ingest import Page
 from .ocr import Ocr, OcrLine, release
 from .ollama import chat, unload
-from .reread import _CONFUSABLE, line_crop, similarity
 
 log = logging.getLogger(__name__)
 TRANSCRIBE = "Transcribe the single line of text in this image exactly. Output only the text."
 _EDGE = re.compile(r"^\W+|\W+$")
+_CONFUSABLE = str.maketrans("OoQDIl|iSsZzBbGg", "0000111155228869")  # glyphs OCR mistakes for digits
+
+
+def similarity(a: str, b: str) -> float:
+    return difflib.SequenceMatcher(a=a.lower(), b=b.lower(), autojunk=False).ratio()
+
+
+def line_crop(img, quad, pad_x: float = 0.5, pad_y: float = 0.1, height: int = 64):
+    """Straighten one line out of the page and scale it to at least ``height`` px.
+
+    Vertical padding is kept small so neighbouring lines stay out of the crop.
+    """
+    import cv2
+    import numpy as np
+
+    q = np.float32(quad)
+    w = int(max(np.linalg.norm(q[1] - q[0]), np.linalg.norm(q[2] - q[3])))
+    h = int(max(np.linalg.norm(q[3] - q[0]), np.linalg.norm(q[2] - q[1])))
+    px, py = pad_x * h, pad_y * h
+    dst = np.float32([[px, py], [w + px, py], [w + px, h + py], [px, h + py]])
+    crop = cv2.warpPerspective(img, cv2.getPerspectiveTransform(q, dst), (int(w + 2 * px), int(h + 2 * py)),
+                               borderMode=cv2.BORDER_REPLICATE)
+    f = height / crop.shape[0]
+    return cv2.resize(crop, None, fx=f, fy=f, interpolation=cv2.INTER_CUBIC) if f > 1 else crop
 
 
 def norm(text: str) -> str:

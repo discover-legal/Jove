@@ -20,7 +20,6 @@ def create_app(
     data_dir: Path | None = None,
     make_ocr: Callable[[], Ocr] = config.make_ocr,
     make_chooser: Callable[[], Chooser] = config.make_chooser,
-    separation: float | None = None,
     schemas_dir: Path | None = None,
 ) -> FastAPI:
     root = (data_dir or config.data_dir()) / "jobs"
@@ -43,10 +42,9 @@ def create_app(
     def work(job_id: str, d: Path, files: list[tuple[str, bytes]], schema: dict, context: str | None) -> None:
         set_status(d, "running")
         try:
-            pipeline.run(job_id, d, files, schema, make_ocr(), make_chooser(),
-                         separation if separation is not None else config.separation(), context=context,
-                         gate=config.split_gate(), tagger=config.tagger(), owners=config.owners(),
-                         layout_engine=config.layout(), paragraphs=config.paragraphs())
+            pipeline.run(job_id, d, files, schema, make_ocr(), make_chooser(), context=context,
+                         gate=config.split_gate(), owners=config.owners(), layout_engine=config.layout(),
+                         paragraphs=config.paragraphs())
         except Exception as e:
             set_status(d, "failed", f"{type(e).__name__}: {e}")
         else:

@@ -57,7 +57,6 @@ The chooser is the model that answers the tagging questions. Set it with
 | `clef` (default) | local, llama.cpp | [Cloudflare Clef-Flash](https://huggingface.co/Cloudflare/clef-flash) (9B, Apache-2.0), an open decision model that speaks Jev's API and returns real option probabilities. |
 | `jev` | hosted | [TypeSafe Jev](https://typesafe.ai) via `typesafe-sdk`. The most accurate option, and about 2 s per page. **Page text leaves the machine.** |
 | `llm` | local, Ollama | Any OpenAI-compatible chat model (`qwen3.5:9b-16k` by default). The model *states* its probabilities as text: slower and less accurate than Clef. |
-| `laya` | local | Laya (421M). Tried and not usable for this task (recall 0/45). |
 
 ## Run
 
@@ -117,13 +116,14 @@ Measured on [eval/tagging](eval/tagging/README.md): 11 documents and 230
 hand-labelled values. The set covers public Ontario court and tribunal
 decisions, a fax-degraded copy, an LTB Form N4 filled with invented values
 (both digital and as a phone photo), synthetic intake documents, and two
-real-world photos. All runs use the flat tagger on identical cached OCR.
+real-world photos. All runs use identical cached OCR. (The event-flyer photo has since been
+removed; on the remaining 10 documents Clef scores 0.640 line by line and 0.62–0.63
+reading prose by paragraph, the default.)
 
 | chooser | recall | precision | F1 | time (11 docs) |
 |---|---|---|---|---|
 | Jev (hosted), mean of 3 runs | 0.83 | 0.87 | 0.843 ± 0.007 | minutes |
 | **Clef-Flash Q4_K_M (local default, RTX 5060 8 GB)** | 0.63 | 0.66 | 0.645 | 103 min |
-| Laya (local) | 0/45 on two documents | | | |
 
 Clef gives the same answers every run; Jev doesn't, hence its three runs. On
 the four shortest documents (71 values), the `llm` chooser (qwen3.5:9b) scored

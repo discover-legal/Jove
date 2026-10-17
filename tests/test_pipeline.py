@@ -9,7 +9,7 @@ from jove.pipeline import run
 from jove.web import create_app
 
 from .conftest import pdf, png
-from .test_tagger import RULES, rule
+from .test_questions import RULES, rule
 
 SCHEMA = {
     "type": "object",
@@ -27,9 +27,19 @@ OCR = FakeOcr({
 })
 
 
+def gate(q):
+    text = q.instructions
+    if "hold two or more separate values" in text:
+        return 0.9 if LINE in text else 0.1
+    if "same person, organization" in text:
+        return 0.9 if "'Acme'" in text and "'landlord'" in text else 0.1
+    if "continue the same single value" in text:
+        return 0.9 if "'Jane'" in text and "'Doe'" in text else 0.1
+    return 0.1
+
+
 def chooser():
-    return FakeChooser(rule(RULES | {("client", LINE): {"client.name": 0.5, "client.dob": 0.45},
-                                     ("parties[]", "Acme\nlandlord"): {"parties[].name": 0.5, "parties[].role": 0.45}}))
+    return FakeChooser(rule(RULES | {("", "Doe"): "client"}), gate=gate)
 
 
 def records(path):
@@ -49,24 +59,20 @@ def test_pipeline_emits_graph(tmp_path):
     assert pages["p0003"]["tags"] == ["parties[].name", "parties[].role"]
 
     nodes = {r["id"]: r for r in recs if r["type"] == "node"}
-    tagged = {(e["from"], e["to"]) for e in recs if e["type"] == "edge" and e["rel"] == "tagged" and e["rank"] == 1}
-    spans = {nodes[f]["text"]: t for f, t in tagged if nodes[f]["kind"] == "span"}
-    assert spans == {"Name:": "client#none", "Jane Doe": "client.name", "DOB:": "client#none", "1980": "client.dob"}
-    assert ("p0001/b01", "#none") in tagged  # the heading, explicitly none
-
-    within = [e for e in recs if e["type"] == "edge" and e["rel"] == "within"]
-    assert {(e["from"], e["to"]) for e in within} == {("p0001/b02", "client"), ("p0003/b01", "parties[]")}
-
-    party = [e["instances"] for e in recs if e["type"] == "edge" and e["rel"] == "tagged"
-             and e["rank"] == 1 and e["from"].startswith("p0003")]
-    assert party == [{"parties[]": "p0003/b01"}] * 2
+    tagged = {nodes[e["from"]]["text"]: (e["to"], e["instances"]) for e in recs
+              if e["type"] == "edge" and e["rel"] == "tagged" and e["rank"] == 1}
+    assert tagged["Jane Doe"][0] == "client.name" and tagged["1980"][0] == "client.dob"  # the line, split
+    assert tagged["INTAKE FORM"][0] == "#none"  # the heading, explicitly none
+    assert tagged["Acme"] == ("parties[].name", {"parties[]": "p0003/b01/l01"})
+    assert tagged["landlord"] == ("parties[].role", {"parties[]": "p0003/b01/l01"})  # one party
 
     contains = {(e["from"], e["to"]) for e in recs if e["type"] == "edge" and e["rel"] == "contains"}
-    assert ("p0001", "p0001/b02") in contains and ("p0001/b02/l01", "p0001/b02/l01/s02") in contains
+    span = next(i for i, n in nodes.items() if n["text"] == "Jane Doe")
+    assert ("p0001", "p0001/b02/l01") in contains and ("p0001/b02/l01", span) in contains
 
 
 def test_web_roundtrip(tmp_path):
-    client = TestClient(create_app(tmp_path, make_ocr=lambda: OCR, make_chooser=chooser, separation=1.5))
+    client = TestClient(create_app(tmp_path, make_ocr=lambda: OCR, make_chooser=chooser))
     resp = client.post("/jobs", files=[("files", ("a.pdf", pdf(2))), ("files", ("b.png", png()))],
                        data={"schema": json.dumps(SCHEMA)})
     assert resp.status_code == 200
@@ -196,7 +202,7 @@ def test_form_values_are_marked_in_questions(tmp_path):
     from jove.ingest import ingest
     from jove.layout import build
     from jove.ocr import TextLayerFirst
-    from jove.tagger import Tagger, _Task
+    from jove.questions import choice
     from jove.schema import build_tree
 
     pdf = (Path(__file__).parent.parent / "eval/tagging/docs/n4_filled.pdf").read_bytes()
@@ -206,7 +212,7 @@ def test_form_values_are_marked_in_questions(tmp_path):
     label = next(l for l in lines if l.text == "Address of Rental Unit:")
     assert value.form and not label.form
     tree = build_tree(SCHEMA)
-    q = Tagger(tree, None)._question(_Task(value, tree, None, {}), tree)
+    q = choice(value, tree, None, "", pov=False)
     assert "fillable form field" in q.instructions and "label" in q.options
 
 

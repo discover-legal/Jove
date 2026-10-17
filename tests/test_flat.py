@@ -6,7 +6,7 @@ from jove.pipeline import run
 
 from .conftest import png
 from .test_pipeline import SCHEMA
-from .test_tagger import RULES, rule
+from .test_questions import RULES, rule
 
 OCR = FakeOcr({"p0001": ["INTAKE", "Acme", "landlord", "Bolt", "tenant", "Name: Jane Doe DOB: 1980"]})
 LINE = "Name: Jane Doe DOB: 1980"
@@ -28,7 +28,7 @@ def records(tmp_path):
     chooser = FakeChooser(rule(RULES | {("", "Bolt"): "parties[]", ("", "tenant"): "parties[]", ("", "Doe"): "client",
                                         ("parties[]", "Bolt"): "parties[].name",
                                         ("parties[]", "tenant"): "parties[].role"}), gate=gate)
-    out = run("j", tmp_path, [("b.png", png())], SCHEMA, OCR, chooser, tagger="flat")
+    out = run("j", tmp_path, [("b.png", png())], SCHEMA, OCR, chooser)
     return [json.loads(l) for l in out.read_text().splitlines()]
 
 
@@ -43,7 +43,6 @@ def test_flat_tags_splits_and_groups(tmp_path):
     acme, landlord = tags["Acme"][1]["parties[]"], tags["landlord"][1]["parties[]"]
     bolt, tenant = tags["Bolt"][1]["parties[]"], tags["tenant"][1]["parties[]"]
     assert acme == landlord and bolt == tenant and acme != bolt
-    assert recs[0]["tagger"] == "flat"
 
 
 def test_two_parties_on_one_line_are_two_items(tmp_path):
@@ -55,7 +54,7 @@ def test_two_parties_on_one_line_are_two_items(tmp_path):
 
     rules = RULES | {("", "Bolt"): "parties[]", ("", "tenant"): "parties[]", ("", line): "parties[]",
                      ("parties[]", "Bolt"): "parties[].name", ("parties[]", "tenant"): "parties[].role"}
-    out = run("j", tmp_path, [("b.png", png())], SCHEMA, ocr, FakeChooser(rule(rules), gate=g), tagger="flat")
+    out = run("j", tmp_path, [("b.png", png())], SCHEMA, ocr, FakeChooser(rule(rules), gate=g))
     recs = [json.loads(l) for l in out.read_text().splitlines()]
     nodes = {r["id"]: r for r in recs if r["type"] == "node"}
     inst = {nodes[e["from"]]["text"]: e["instances"]["parties[]"] for e in recs
@@ -88,7 +87,7 @@ def test_mentions_inside_prose(tmp_path):
     def gate(q):
         return 0.9 if "mention a performers" in q.instructions else 0.1
 
-    out = run("j", tmp_path, [("b.png", png())], FLYER, ocr, FakeChooser(choice, gate=gate), tagger="flat")
+    out = run("j", tmp_path, [("b.png", png())], FLYER, ocr, FakeChooser(choice, gate=gate))
     recs = [json.loads(l) for l in out.read_text().splitlines()]
     nodes = {r["id"]: r for r in recs if r["type"] == "node"}
     tags = [(nodes[e["from"]]["text"], e["to"], e.get("instances"), e.get("mention")) for e in recs
@@ -151,7 +150,7 @@ def test_a_paragraph_is_tagged_once_and_mentions_inside_it_are_found(tmp_path):
     def gate(q):
         return 0.9 if "mention a performers" in q.instructions else 0.1
 
-    out = run("j", tmp_path, [("b.png", png())], FLYER, ocr, FakeChooser(choice, gate=gate), tagger="flat")
+    out = run("j", tmp_path, [("b.png", png())], FLYER, ocr, FakeChooser(choice, gate=gate))
     recs = [json.loads(l) for l in out.read_text().splitlines()]
     nodes = {r["id"]: r for r in recs if r["type"] == "node"}
     [para] = [n for n in nodes.values() if n["kind"] == "paragraph"]
@@ -194,7 +193,7 @@ def test_a_paragraph_tagged_inside_a_mentions_field_is_still_searched(tmp_path):
     def gate(q):
         return 0.9 if "mention a performers" in q.instructions else 0.1
 
-    out = run("j", tmp_path, [("b.png", png())], FLYER, ocr, FakeChooser(choice, gate=gate), tagger="flat")
+    out = run("j", tmp_path, [("b.png", png())], FLYER, ocr, FakeChooser(choice, gate=gate))
     recs = [json.loads(l) for l in out.read_text().splitlines()]
     nodes = {r["id"]: r for r in recs if r["type"] == "node"}
     found = {nodes[e["from"]]["text"]: e["to"] for e in recs
@@ -231,7 +230,7 @@ def test_a_mention_of_a_numeric_field_needs_a_digit(tmp_path):
     def gate(q):
         return 0.9 if "mention a amounts" in q.instructions else 0.1
 
-    out = run("j", tmp_path, [("b.png", png())], schema, ocr, FakeChooser(choice, gate=gate), tagger="flat")
+    out = run("j", tmp_path, [("b.png", png())], schema, ocr, FakeChooser(choice, gate=gate))
     recs = [json.loads(l) for l in out.read_text().splitlines()]
     nodes = {r["id"]: r for r in recs if r["type"] == "node"}
     found = [nodes[e["from"]]["text"] for e in recs if e["type"] == "edge" and e["rel"] == "tagged" and e.get("mention")]

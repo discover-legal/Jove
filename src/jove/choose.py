@@ -40,7 +40,7 @@ class Chooser(Protocol):
         """Return a probability per option for each answered question key."""
         ...
 
-    # Optional: choosers without it get no split gate (every candidate split happens).
+    # Optional: without it no line is split or joined, and nothing is found inside prose.
     def yes_no(self, state: dict, questions: dict[str, YesNo]) -> dict[str, float]:
         """Return P(yes) for each answered question key."""
         ...

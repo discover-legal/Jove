@@ -11,7 +11,7 @@ from jove.jev import MAX_REQUEST_BYTES, MAX_STATE_QUESTION_BYTES, JevChooser, ba
 from jove.layout import build
 from jove.ocr import OcrLine
 from jove.schema import build_tree
-from jove.tagger import Tagger
+from jove.flat import FlatTagger
 
 
 class FakeClient:
@@ -53,8 +53,8 @@ def test_legal_schema_fan_out_fits_and_runs():
     tree = build_tree(json.loads((Path(__file__).parent.parent / "schemas" / "legal_intake.schema.json").read_text()))
     client = FakeClient()
     blocks = build("p0001", [OcrLine("Name: Jane Doe", (0, 0, 140, 18))])
-    decisions = Tagger(tree, JevChooser(client=client)).tag({"p0001": blocks})
-    assert decisions
+    nodes, edges = FlatTagger(tree, JevChooser(client=client)).tag({"p0001": blocks})
+    assert edges
     first = client.calls[0]
     assert len(first) == len(tree.internal_nodes())
 

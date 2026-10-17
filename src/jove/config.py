@@ -16,17 +16,6 @@ def schemas_dir() -> Path:
     return Path(os.environ.get("JOVE_SCHEMAS_DIR", Path(__file__).resolve().parents[2] / "schemas"))
 
 
-def separation() -> float:
-    return float(os.environ.get("JOVE_SEPARATION", "1.5"))
-
-
-def tagger() -> str:
-    name = os.environ.get("JOVE_TAGGER", "flat")  # measured better: docs/PLAN.md "Measured"
-    if name not in ("tree", "flat"):
-        raise ValueError(f"unknown JOVE_TAGGER {name!r}")
-    return name
-
-
 def layout() -> str:
     name = os.environ.get("JOVE_LAYOUT", "rules")
     if name not in ("rules", "docling"):
@@ -57,12 +46,7 @@ def make_ocr() -> Ocr:
     from .ocr import RapidOcr
 
     ocr: Ocr = RapidOcr()
-    if os.environ.get("JOVE_OCR_STRAIGHTEN", "off") == "on":  # off: it cost word F1 on eval/ocr (docs/PLAN.md)
-        from .straighten import Straighten
-
-        ocr = Straighten(ocr)
-    mode = os.environ.get("JOVE_OCR_REREAD", "vote")
-    if mode == "vote":
+    if os.environ.get("JOVE_OCR_REREAD", "vote") == "vote":
         from .vote import LineVote
 
         ocr = LineVote(
@@ -81,15 +65,6 @@ def make_ocr() -> Ocr:
                 reader=os.environ.get("JOVE_OCR_READER", "glm-ocr"),
                 locator=os.environ.get("JOVE_OCR_LOCATOR", "qwen3-vl:4b-instruct"),
             )
-    elif mode == "vlm":
-        from .reread import VlmReread
-
-        ocr = VlmReread(
-            ocr,
-            base_url=os.environ.get("JOVE_LLM_BASE_URL", LLM_BASE_URL),
-            model=os.environ.get("JOVE_VLM_MODEL", LLM_MODEL),
-            threshold=float(os.environ.get("JOVE_OCR_REREAD_BELOW", "0.98")),
-        )
     from .ocr import TextLayerFirst
 
     return TextLayerFirst(ocr)
@@ -130,8 +105,4 @@ def make_chooser(name: str | None = None) -> Chooser:
         return JevChooser(model=os.environ.get("JOVE_JEV_MODEL") or None)
     if name == "clef":
         return make_clef()
-    if name == "laya":
-        from .laya import LayaChooser
-
-        return LayaChooser(model=os.environ.get("JOVE_LAYA_MODEL") or None)
     raise ValueError(f"unknown JOVE_CHOOSER {name!r}")
