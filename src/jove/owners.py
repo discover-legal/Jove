@@ -80,7 +80,7 @@ class Owners:
                 if best in (NONE, current):
                     continue
                 target = self.equivalent(best, kind)
-                if target is None:
+                if target is None or target == e["to"]:  # coarse schemas: one field, the owner is the answer
                     continue
                 e["to"] = target
                 # Leave the old owner's lists; a value moved into a list (parties[]) starts its own item.

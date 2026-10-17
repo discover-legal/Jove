@@ -211,9 +211,12 @@ score.py take `--gold gold_coarse`). Jev, 10 documents, one run each:
 |---|---|---|
 | flat | F1 0.798 (P 0.807), $0.47 | F1 0.789 (P 0.868), $0.22 |
 | halving | F1 0.784 (R 182/217), $0.34 | F1 0.785 (R 183/217), $0.17 |
+| flat, line by line | F1 0.827 (P 0.838), $0.60 | F1 0.820–0.825 (P 0.835), $0.27 |
 
 Accuracy is the same within noise; the coarse schema halves the cost. The
-coarse scores don't check whose a contact detail is (that is on the edge as
+coarse runs before the owners fix below grouped no list items (0/13): with one
+shared name field, an owner answer "moved" a tag to the same field and reset
+its list item; it now only records the owner (groups 3/13). The coarse scores don't check whose a contact detail is (that is on the edge as
 `owner`, which the scorer ignores), so they are slightly more lenient there.
 - **Round 1, one parallel batch per page:** every line's schema Choice fan-out
   (with its neighbouring lines), "does it continue the previous line's value?",
