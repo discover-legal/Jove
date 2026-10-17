@@ -39,8 +39,10 @@ def standing(schema: SchemaNode, context: str | None) -> dict:
     return {k: v for k, v in (("schema_instructions", schema.instructions), ("job_context", context)) if v}
 
 
-def choice(doc: DocNode, node: SchemaNode, around: str | None, around_prefix: str, pov: bool) -> Question:
-    """Which child of ``node`` does ``doc`` give a value for? ``around`` is nearby text."""
+def choice(doc: DocNode, node: SchemaNode, around: str | None, around_prefix: str, pov: bool,
+           note: str = "") -> Question:
+    """Which child of ``node`` does ``doc`` give a value for? ``around`` is nearby text, ``note``
+    what else is known about it."""
     options: dict[str, dict] = {}
     labels: dict[str, str] = {}
     for i, child in enumerate(node.children):
@@ -62,7 +64,7 @@ def choice(doc: DocNode, node: SchemaNode, around: str | None, around_prefix: st
     return Question(
         instructions=(
             UNTRUSTED
-            + f"Text {doc.id} ({doc.kind}) reads: {doc.text!r}.{form}{context}"
+            + f"Text {doc.id} ({doc.kind}) reads: {doc.text!r}.{form}{note}{context}"
             + f" Which option of {where} does this text give a value for?"
             + " If it covers several options, choose the one most of it belongs to."
             + (POV if pov else "")

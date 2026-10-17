@@ -235,3 +235,29 @@ def test_a_mention_of_a_numeric_field_needs_a_digit(tmp_path):
     nodes = {r["id"]: r for r in recs if r["type"] == "node"}
     found = [nodes[e["from"]]["text"] for e in recs if e["type"] == "edge" and e["rel"] == "tagged" and e.get("mention")]
     assert found == ["$120.00,"]
+
+
+def test_a_stamp_on_every_page_gets_one_tag(tmp_path):
+    schema = {"type": "object", "properties": {
+        "production_numbers": {"type": "array", "items": {"type": "string"}},
+        "envelope_id": {"type": "string"}}}
+    stamps = [f"HAM0064156_000{n}" for n in range(1, 5)]
+    ocr = FakeOcr({f"p000{n}": [stamp, "", "Body text of the page"] for n, stamp in enumerate(stamps, start=1)})
+    notes = []
+
+    def choice(q):
+        if q.subject not in stamps:
+            return None
+        notes.append("only the numbers changing, appears on 4 pages" in q.instructions)
+        if q.subject.endswith("1"):  # one page drifts...
+            return {"envelope_id": 0.5, "production_numbers[]": 0.4}
+        return {"production_numbers[]": 0.6, "envelope_id": 0.3}
+
+    files = [(f"{n}.png", png()) for n in range(1, 5)]
+    out = run("j", tmp_path, files, schema, ocr, FakeChooser(choice, gate=lambda q: 0.1))
+    recs = [json.loads(l) for l in out.read_text().splitlines()]
+    nodes = {r["id"]: r for r in recs if r["type"] == "node"}
+    tags = {nodes[e["from"]]["text"]: (e["to"], e.get("repeated_on")) for e in recs
+            if e["type"] == "edge" and e["rel"] == "tagged" and e["rank"] == 1}
+    assert all(notes) and len(notes) == 4  # each page was told
+    assert {tags[s] for s in stamps} == {("production_numbers[]", 4)}  # ...and is outvoted

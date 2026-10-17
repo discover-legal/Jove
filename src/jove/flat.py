@@ -48,6 +48,18 @@ class Unit:
     word: bool = False
     members: list[DocNode] = field(default_factory=list)  # set when units merge into one value
     pos: int | None = None  # a mention's place among its unit's pieces: only neighbours merge
+    repeated: int = 0  # pages its text repeats on (a stamp, a running header): its tag was pooled
+
+
+@dataclass
+class _Asked:
+    """One page after round 1, waiting for the pages its repeated lines share answers with."""
+    page_id: str
+    lines: list[DocNode]
+    state: dict
+    yes: dict
+    tops: list[list[Path]]
+    repeated: dict[int, int] = field(default_factory=dict)  # line index -> pages it repeats on
 
 
 class FlatTagger:
@@ -71,8 +83,13 @@ class FlatTagger:
 
     def tag(self, pages: dict[str, list[DocNode]]) -> tuple[list[dict], list[dict]]:
         """Return (node records, edge records) in the pipeline's JSONL shapes."""
+        units = {pid: [u for b in blocks for u in (paragraphs(b) if self.paragraphs else b.children)]
+                 for pid, blocks in pages.items()}
+        repeats = _repeats(units)
         with ThreadPoolExecutor(self.workers) as pool:
-            per_page = list(pool.map(lambda item: self._page(*item), pages.items()))
+            asked = list(pool.map(lambda item: self._round1(*item, repeats), units.items()))
+            _pool(asked, repeats, self.keep)
+            per_page = list(pool.map(self._rest, asked))
         nodes, edges = [], []
         for n, e in per_page:
             nodes += n
@@ -81,18 +98,14 @@ class FlatTagger:
 
     # ------------------------------------------------------------------ one page
 
-    def _page(self, page_id: str, blocks: list[DocNode]) -> tuple[list[dict], list[dict]]:
-        # The units asked about: lines, and paragraphs of prose (kind "paragraph", lines as children).
-        lines = [u for b in blocks for u in (paragraphs(b) if self.paragraphs else b.children)]
-        if not lines:
-            return [], []
+    def _round1(self, page_id: str, lines: list[DocNode], repeats: dict[str, list[DocNode]]) -> _Asked:
+        """Round 1: everything about every unit (lines, and paragraphs of prose), in parallel."""
         state = _state(page_id, lines, self.context)
-
-        # Round 1: everything about every line, in parallel.
         choice_qs, keys = {}, []
         for i, line in enumerate(lines):
             ctx = _neighbours(lines, i)
-            keys.append(self._choices(choice_qs, f"l{i}", line, ctx, "Neighbouring lines"))
+            keys.append(self._choices(choice_qs, f"l{i}", line, ctx, "Neighbouring lines",
+                                      note=_repeat_note(line, repeats)))
         yn = {}
         for i, line in enumerate(lines):
             if i >= 1:
@@ -100,8 +113,15 @@ class FlatTagger:
                 yn[f"same1_{i}"] = self._same_item_q(lines[i - 1].text, line.text)
             if i >= 2:
                 yn[f"same2_{i}"] = self._same_item_q(lines[i - 2].text, line.text)
-        choices, yes = self._ask(state, choice_qs, yn)
-        line_tops = [self._top(choices, choice_qs, k, lines[i]) for i, k in enumerate(keys)]
+        choices, yes = self._ask(state, choice_qs, yn) if lines else ({}, {})
+        return _Asked(page_id, lines, state, yes, [self._top(choices, choice_qs, k, lines[i])
+                                                   for i, k in enumerate(keys)])
+
+    def _rest(self, page: _Asked) -> tuple[list[dict], list[dict]]:
+        """Rounds 2 and 3, then assembly."""
+        page_id, lines, state, yes, line_tops = page.page_id, page.lines, page.state, page.yes, page.tops
+        if not lines:
+            return [], []
 
         # Round 2: should each multi-word line be split? Asked for every such line
         # (a confident single label can hide a second value), but only now, so the
@@ -154,7 +174,7 @@ class FlatTagger:
                         units.append(Unit(w, i, top, _separation(top), link, word=True))
             elif line_tops[i]:
                 top = line_tops[i]
-                units.append(Unit(line, i, top, _separation(top), first_link))
+                units.append(Unit(line, i, top, _separation(top), first_link, repeated=page.repeated.get(i, 0)))
 
         values = self._merge(units)
         instances = self._items(values, yes)
@@ -177,12 +197,12 @@ class FlatTagger:
     # ------------------------------------------------------------------ questions
 
     def _choices(self, qs: dict, prefix: str, doc: DocNode, context: str, context_prefix: str,
-                 start: SchemaNode | None = None) -> list:
+                 start: SchemaNode | None = None, note: str = "") -> list:
         start = start or self.schema
         out = []
         for k, node in enumerate(start.internal_nodes()):
             key = f"{prefix}n{k}"
-            qs[key] = choice(doc, node, context, context_prefix, bool(self.context))
+            qs[key] = choice(doc, node, context, context_prefix, bool(self.context), note)
             out.append((key, node))
         return out
 
@@ -364,8 +384,69 @@ class FlatTagger:
                     edge["instances"] = inst
                     if mention:
                         edge["mention"] = True  # found inside a prose line that keeps its own tag
+                    if v.repeated:
+                        edge["repeated_on"] = v.repeated  # pages whose answers chose this tag together
                 edges.append(edge)
         return nodes, edges
+
+
+def _repeat_key(unit: DocNode) -> str | None:
+    """Lines that differ only in their numbers ("HAM0064156_0001", "HAM0064156_0002") share a key."""
+    text = " ".join(unit.text.lower().split())
+    if unit.kind != "line" or sum(c.isalpha() for c in text) < 3:
+        return None
+    return re.sub(r"\d+", "#", text)
+
+
+def _repeats(pages: dict[str, list[DocNode]], min_pages: int = 3) -> dict[str, list[DocNode]]:
+    """Text that repeats on several pages (stamps, running headers, page footers), by key.
+
+    Tagged page by page, a stamp drifts between fields; its pages are told it
+    repeats, and their answers are pooled so it gets one tag everywhere.
+    """
+    seen: dict[str, dict[str, DocNode]] = {}
+    for pid, units in pages.items():
+        for u in units:
+            key = _repeat_key(u)
+            if key:
+                seen.setdefault(key, {}).setdefault(pid, u)
+    return {k: list(by_page.values()) for k, by_page in seen.items() if len(by_page) >= min_pages}
+
+
+def _repeat_note(unit: DocNode, repeats: dict[str, list[DocNode]]) -> str:
+    group = repeats.get(_repeat_key(unit) or "")
+    if not group:
+        return ""
+    texts = list(dict.fromkeys(u.text for u in group))
+    if len(texts) == 1:
+        return f" The same text appears on {len(group)} pages of this document."
+    return (f" Text like it, with only the numbers changing, appears on {len(group)} pages of this document"
+            f" ({texts[0]!r}, {texts[1]!r}, ...).")
+
+
+def _pool(pages: list[_Asked], repeats: dict[str, list[DocNode]], keep: int) -> None:
+    """Give each repeated text the tag its pages' answers favour together (mean path score)."""
+    members: dict[str, list[tuple[_Asked, int]]] = {}
+    for page in pages:
+        for i, u in enumerate(page.lines):
+            key = _repeat_key(u)
+            if key in repeats and page.tops[i] and any(u is m for m in repeats[key]):  # one per page
+                members.setdefault(key, []).append((page, i))
+    for group in members.values():
+        if len(group) < 2:
+            continue
+        total: dict[str, float] = {}
+        best_path: dict[str, Path] = {}
+        for page, i in group:
+            for path in page.tops[i]:
+                total[path.target] = total.get(path.target, 0.0) + path.score
+                if path.target not in best_path or path.score > best_path[path.target].score:
+                    best_path[path.target] = path
+        ranked = sorted(total, key=lambda t: -total[t])
+        for page, i in group:
+            own = {p.target: p for p in page.tops[i]}
+            page.tops[i] = [own.get(t) or best_path[t] for t in ranked[:keep]]
+            page.repeated[i] = len(group)
 
 
 def _separation(top: list[Path]) -> float:
