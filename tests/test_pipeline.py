@@ -176,6 +176,15 @@ def test_pdf_text_layer_is_used(tmp_path):
     assert 0 < box[0] < box[2] <= pages[0].width and 0 < box[1] < box[3] < pages[0].height / 4  # top right of page
 
 
+def test_a_text_run_that_moves_to_another_line_is_split():
+    from jove.ingest import _new_line
+
+    date = [(318, 300, 333, 319), (521, 300, 533, 319)]  # PDF boxes (l, b, r, t): y grows upwards
+    assert _new_line(date, (1095, 260, 1112, 283))  # the signer's name, lower and to the right
+    assert not _new_line(date, (536, 296, 539, 302))  # a comma hangs below the baseline
+    assert not _new_line([(10, 500, 22, 512)], (10, 486, 22, 498))  # vertical margin text: stacked letters
+
+
 def test_images_have_no_text_layer(tmp_path):
     from jove.ingest import ingest
 

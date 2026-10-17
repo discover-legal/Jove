@@ -89,6 +89,19 @@ def _text_layer(page, pdf) -> list[tuple[str, tuple[float, float, float, float]]
     return lines or None
 
 
+_RULE = "-_.·…–—="  # underscores, leaders, signature rules: below or across a line, never a line of their own
+
+
+def _new_line(run: list, box) -> bool:
+    """Some PDFs (e-signed ones) store several printed lines as one text run: a
+    character entirely above or below the run so far, and not stacked under the
+    previous character (vertical margin text), starts a new line."""
+    bottom, top = min(b[1] for b in run), max(b[3] for b in run)  # PDF y grows upwards
+    prev = run[-1]
+    beside = box[0] >= prev[2] or box[2] <= prev[0]
+    return (box[3] < bottom or box[1] > top) and beside
+
+
 def _form_values(page, pdf) -> list[tuple[str, tuple[float, float, float, float]]]:
     form = getattr(pdf, "formenv", None)
     if form is None:
@@ -145,9 +158,12 @@ def _page_text(page) -> list[tuple[str, tuple[float, float, float, float]]] | No
             if ch in "\r\n":
                 flush()
                 continue
+            box = None if ch.isspace() else tp.get_charbox(i)
+            if box and boxes and ch not in _RULE and _new_line(boxes, box):
+                flush()
             chars.append(ch)
-            if not ch.isspace():
-                boxes.append(tp.get_charbox(i))
+            if box:
+                boxes.append(box)
         flush()
         return lines or None
     finally:
