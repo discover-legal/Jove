@@ -64,6 +64,9 @@ class FlatTagger:
         self.warnings: list[dict] = []
         # Objects/list items whose values may be mentioned inside prose (x-mentions).
         self.mention_nodes = [n for n in schema.walk() if n.mentions and not n.leaf]
+        # Fields whose every example has a digit (amounts, dates): a mention without one isn't theirs.
+        self.numeric = {n.path for n in schema.walk() if n.leaf and n.examples
+                        and all(any(c.isdigit() for c in str(e)) for e in n.examples)}
 
     # ------------------------------------------------------------------ public
 
@@ -165,7 +168,8 @@ class FlatTagger:
             m = self.mention_nodes[k]
             for j, w in enumerate(_pieces(lines[i])):
                 top = self._top(word_choices, word_qs, keys[j], w, start=m)
-                if top and is_value(top[0].target):
+                if top and is_value(top[0].target) and (
+                        top[0].target not in self.numeric or any(ch.isdigit() for ch in w.text)):
                     found.append(Unit(w, i, top, _separation(top), 0.0, word=True, pos=j))
         mvalues = self._merge(found)
         n2, e2 = self._records(page_id, [], mvalues, self._items(mvalues, yes), [], prefix="m", mention=True)

@@ -213,3 +213,26 @@ def test_paragraph_pieces_keep_money_and_dates_whole():
     assert [c.text for c in _pieces(para)] == [
         "Rent of", "$2,450", "for each of July and August remains unpaid,", "for a total of", "$4,900.00.",
         "Unless paid by", "September 30, 2024,", "our client will apply."]
+
+
+def test_a_mention_of_a_numeric_field_needs_a_digit(tmp_path):
+    schema = {"type": "object", "properties": {
+        "description": {"type": "array", "items": {"type": "string"}},
+        "amounts": {"type": "array", "x-mentions": True, "items": {"type": "object", "properties": {
+            "amount": {"type": "string", "examples": ["$1,200.00", "CAD 45,000"]}}}}}}
+    ocr = FakeOcr({"p0001": ["In response, the ministry said that the whole fee of the request was",
+                             "$120.00, which it would waive for the appellant in this appeal."]})
+
+    def choice(q):
+        if q.node == "":
+            return "description[]"
+        return "amounts[].amount" if q.node == "amounts[]" else None  # every clause, as Clef did
+
+    def gate(q):
+        return 0.9 if "mention a amounts" in q.instructions else 0.1
+
+    out = run("j", tmp_path, [("b.png", png())], schema, ocr, FakeChooser(choice, gate=gate), tagger="flat")
+    recs = [json.loads(l) for l in out.read_text().splitlines()]
+    nodes = {r["id"]: r for r in recs if r["type"] == "node"}
+    found = [nodes[e["from"]]["text"] for e in recs if e["type"] == "edge" and e["rel"] == "tagged" and e.get("mention")]
+    assert found == ["$120.00,"]

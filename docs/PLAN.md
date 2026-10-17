@@ -194,8 +194,13 @@ thresholds, except for running prose:
   0.640 line by line (recall 128 vs 134/217, precision 0.677 vs 0.664), 670
   requests instead of 856, 23% faster. The losses were values inside sentences
   (a date or amount inside a long clause) and a sign whose logo words joined a
-  paragraph; the value pieces and the stricter run-on rule (a comma or a
-  lowercase last word) address both.
+  paragraph. With the value pieces and the stricter run-on rule (a comma or a
+  lowercase last word): F1 0.620, recall back to 132/217 but precision 0.631,
+  689 requests. Most of the new false positives were plain clauses beside money
+  ("In response,", "At mediation,") tagged as amounts; a mention of a field
+  whose every example has a digit now needs a digit, which on the same answers
+  gives F1 0.629 (precision 0.652). Net: about 0.01 F1 below line by line, a
+  fifth fewer requests, and prose that reads as paragraphs.
 - **Round 1, one parallel batch per page:** every line's schema Choice fan-out
   (with its neighbouring lines), "does it continue the previous line's value?",
   and "is it about the same item as the line one back / two back?".
