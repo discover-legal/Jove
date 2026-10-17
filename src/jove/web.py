@@ -44,7 +44,7 @@ def create_app(
         try:
             pipeline.run(job_id, d, files, schema, make_ocr(), make_chooser(), context=context,
                          gate=config.split_gate(), owners=config.owners(), layout_engine=config.layout(),
-                         paragraphs=config.paragraphs())
+                         paragraphs=config.paragraphs(), tagger=config.tagger())
         except Exception as e:
             set_status(d, "failed", f"{type(e).__name__}: {e}")
         else:

@@ -27,6 +27,13 @@ def owners() -> bool:
     return os.environ.get("JOVE_OWNERS", "on") != "off"
 
 
+def tagger() -> str:
+    name = os.environ.get("JOVE_TAGGER", "flat")
+    if name not in ("flat", "halve"):
+        raise ValueError(f"unknown JOVE_TAGGER {name!r}")
+    return name
+
+
 def paragraphs() -> bool:
     return os.environ.get("JOVE_PARAGRAPHS", "on") != "off"
 

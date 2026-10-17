@@ -11,12 +11,13 @@ from .ingest import ingest, sha256
 from .ocr import Ocr, release
 from .schema import build_tree
 from .flat import FlatTagger
+from .halve import HalvingTagger
 from .questions import standing
 
 
 def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict,
         ocr: Ocr, chooser: Chooser, context: str | None = None, gate: float = 0.5,
-        owners: bool = True, layout_engine: str = "rules", paragraphs: bool = True) -> Path:
+        owners: bool = True, layout_engine: str = "rules", paragraphs: bool = True, tagger: str = "flat") -> Path:
     tree = build_tree(schema)
     inputs, pages = ingest(files, job_dir / "pages")
     if layout_engine == "docling":
@@ -35,9 +36,12 @@ def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict
     # Every page is read: free the OCR models' GPU memory before the chooser needs it.
     release(ocr)
 
-    tagger = FlatTagger(tree, chooser, context=context, threshold=gate, paragraphs=paragraphs)
-    nodes, edges = tagger.tag(blocks)
-    warnings = list(tagger.warnings)
+    if tagger == "halve":
+        engine = HalvingTagger(tree, chooser, context=context, threshold=gate)
+    else:
+        engine = FlatTagger(tree, chooser, context=context, threshold=gate, paragraphs=paragraphs)
+    nodes, edges = engine.tag(blocks)
+    warnings = list(engine.warnings)
     if owners and schema.get("x-owners"):
         from .owners import Owners
 
@@ -53,6 +57,7 @@ def run(job_id: str, job_dir: Path, files: list[tuple[str, bytes]], schema: dict
         "inputs": [asdict(i) for i in inputs],
         "ocr": ocr.describe(),
         "chooser": chooser.describe(),
+        "tagger": tagger,
         "layout": layout_engine,
         "split_gate_threshold": gate,
         "paragraphs": paragraphs,

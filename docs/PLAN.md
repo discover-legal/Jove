@@ -171,6 +171,17 @@ thresholds, except for running prose:
   Its main losses: a sign whose panels OCR reads as one paragraph (the phone
   number and web address inside are never asked about on their own), and
   amounts and dates inside a letter's sentences.
+- **Halving (`JOVE_TAGGER=halve`, `halve.py`, experimental).** Start from the
+  whole document and ask, given the schema (in the shared state), "does this
+  hold more than one value, so it should be cut in two?"; halve where yes
+  (at the line boundary nearest the middle, or the word gap nearest it inside
+  one line) and ask both halves again; classify each chunk where the answer is
+  no. Neighbouring chunks on one line with the same field are rejoined. First
+  run, Jev, 10 documents (2026-10-17): F1 0.655 (recall 155/217, precision
+  0.605), 296 requests, $0.36. Better than line by line on the court decisions
+  (recall 20/27 vs 17–18 on ONCA 250), much worse on forms (N4 17/27 vs 24/27):
+  a cut at the middle falls inside values ("Marcus Oyelaran and Priya
+  Oyelaran" became "Marcus Oyelaran" / "and Priya" / "Oyelaran").
 - **Round 1, one parallel batch per page:** every line's schema Choice fan-out
   (with its neighbouring lines), "does it continue the previous line's value?",
   and "is it about the same item as the line one back / two back?".

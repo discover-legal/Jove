@@ -70,6 +70,7 @@ class Reader:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--only")
+    ap.add_argument("--tagger", choices=["flat", "halve"], default="flat")
     ap.add_argument("--no-owners", action="store_true", help="skip the ownership pass")
     ap.add_argument("--layout", choices=["rules", "docling"], default="rules")
     ap.add_argument("--no-paragraphs", action="store_true", help="ask line by line, prose too")
@@ -96,7 +97,8 @@ def main() -> None:
             t = time.time()
             result = run(gold_path.stem, Path(tmp), [(src.name, src.read_bytes())], schema, ocr, chooser,
                          context=gold.get("context"), owners=not args.no_owners,
-                         layout_engine=args.layout, paragraphs=not args.no_paragraphs)
+                         layout_engine=args.layout, paragraphs=not args.no_paragraphs,
+                         tagger=args.tagger)
             secs = time.time() - t
             shutil.copy(result, out / f"{gold_path.stem}.jsonl")
         total["secs"] += secs
