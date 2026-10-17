@@ -6,21 +6,22 @@ halved and both halves are asked again; where the answer is no, that chunk is
 one unit and is classified against the schema as it stands. Jev stops before
 the pieces become nonsense, so nothing decides by rule where a value ends.
 
-A cut falls at the line boundary nearest the middle of the chunk's text, or,
-inside one line, at the nearest gap between words. A chunk too long to quote
-in a question is halved without asking.
+Jev also picks where to cut, from the few gaps nearest the middle of the
+chunk's text (line boundaries first), so a cut doesn't fall inside a name. A
+chunk too long to quote in a question is halved at the middle without asking.
 """
 
 import math
 from dataclasses import dataclass, field
 
-from .choose import Chooser, YesNo, is_value
+from .choose import Chooser, Question, YesNo, is_value
 from .layout import DocNode
 from .questions import POV, UNTRUSTED, Path, choice, paths, standing
 from .schema import SchemaNode
 
 THRESHOLD = 0.5
 MAX_TEXT = 30_000  # characters; Jev takes 64 kB of state and question together
+CUTS = 5  # gaps near the middle Jev chooses the cut from
 
 
 @dataclass
@@ -74,25 +75,47 @@ class HalvingTagger:
             for c, v in p.items():
                 if v is None and yes_no:
                     self.warnings.append({"code": "unanswered", "detail": f"halve {self._text(*c)[:60]!r}"})
-            follow = []
-            for a, b in todo:
-                too_long = b - a > 1 and (a, b) not in p
-                if too_long or (p.get((a, b)) or 0.0) >= self.threshold:
-                    m = self._cut(a, b)
-                    follow += [(a, m), (m, b)]
-                else:
-                    leaves.append((a, b))
-            todo = follow
+            halve = [c for c in todo if c[1] - c[0] > 1 and (c not in p or (p[c] or 0.0) >= self.threshold)]
+            leaves += [c for c in todo if c not in halve]
+            cuts = self._cuts(halve, asked=p)
+            todo = [half for (a, b), m in zip(halve, cuts) for half in ((a, m), (m, b))]
         return sorted(leaves)
 
-    def _cut(self, a: int, b: int) -> int:
-        """The line boundary nearest the middle of [a, b), or the word gap nearest it in one line."""
-        cuts = [i for i in range(a + 1, b) if self.line_of[i] is not self.line_of[i - 1]] or list(range(a + 1, b))
+    def _cuts(self, chunks: list[tuple[int, int]], asked: dict) -> list[int]:
+        """Where to cut each chunk: Jev's pick among the gaps nearest the middle."""
+        options = [self._near_middle(a, b) for a, b in chunks]
+        qs = {f"x{n}": self._cut_q(a, b, opts) for n, ((a, b), opts) in enumerate(zip(chunks, options))
+              if len(opts) > 1 and (a, b) in asked}
+        answers = self.chooser.choose(self.state, qs) if qs else {}
+        out = []
+        for n, opts in enumerate(options):
+            probs = answers.get(f"x{n}")
+            out.append(opts[int(max(probs, key=probs.get)[1:])] if probs else opts[0])
+        return out
+
+    def _near_middle(self, a: int, b: int) -> list[int]:
+        """Up to CUTS gaps in [a, b), nearest the middle first: line boundaries, then word gaps."""
         size = [0]
         for w in self.words[a:b]:
             size.append(size[-1] + len(w.text) + 1)
         half = size[-1] / 2
-        return min(cuts, key=lambda i: abs(size[i - a] - half))
+        gaps = sorted(range(a + 1, b), key=lambda i: abs(size[i - a] - half))
+        lines = [i for i in gaps if self.line_of[i] is not self.line_of[i - 1]]
+        return (lines[: CUTS - 2] + [i for i in gaps if i not in lines])[:CUTS] if lines else gaps[:CUTS]
+
+    def _cut_q(self, a: int, b: int, cuts: list[int]) -> Question:
+        def side(i, j):
+            return self._text(i, j).replace("\n", " / ")
+        options = {f"o{k}": {"what": f"Cut between {side(max(a, i - 4), i)!r} and {side(i, min(b, i + 4))!r}."}
+                   for k, i in enumerate(cuts)}
+        text = self._text(a, b)
+        return Question(
+            instructions=UNTRUSTED + f"Text reads: {text!r}."
+            + " It holds more than one value for the fields in state.schema and will be cut in two."
+            + " Where should it be cut, so that no single value (a name, an address, a date, a sentence)"
+            + " is split between the halves?" + (POV if self.context else ""),
+            options=options, subject=text, node="", labels={k: k for k in options},
+        )
 
     def _text(self, a: int, b: int) -> str:
         out = []

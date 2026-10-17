@@ -182,6 +182,13 @@ thresholds, except for running prose:
   (recall 20/27 vs 17–18 on ONCA 250), much worse on forms (N4 17/27 vs 24/27):
   a cut at the middle falls inside values ("Marcus Oyelaran and Priya
   Oyelaran" became "Marcus Oyelaran" / "and Priya" / "Oyelaran").
+  **Jev picks the cut:** when it says halve, a Choice over the 5 gaps nearest
+  the middle (line boundaries first), each shown with the words either side:
+  F1 0.732 (recall 172/217, precision 0.680), 371 requests, $0.34. Recall is
+  close to line by line (177), and the court decisions are the best of any
+  setup (ONCA 250 and its fax copy 23/27). Precision is the gap: mostly the
+  wrong field for a well-cut chunk (an issuer's address as the client's,
+  judges as parties); list items no longer group (0/13).
 - **Round 1, one parallel batch per page:** every line's schema Choice fan-out
   (with its neighbouring lines), "does it continue the previous line's value?",
   and "is it about the same item as the line one back / two back?".

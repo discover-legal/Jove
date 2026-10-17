@@ -28,6 +28,8 @@ def gate(q):
 
 
 def choice(q):
+    if "Where should it be cut" in q.instructions:  # any cut that keeps "Jane Doe" whole
+        return next(k for k, o in q.options.items() if "Jane' and 'Doe" not in o["what"])
     [value] = touched(q.subject) or [None]
     if value is None:
         return None
@@ -43,7 +45,9 @@ def test_halving_stops_where_jev_says_one_value(tmp_path):
     nodes = {r["id"]: r for r in recs if r["type"] == "node"}
     tags = {nodes[e["from"]]["text"]: (e["to"], e["instances"]) for e in recs
             if e["type"] == "edge" and e["rel"] == "tagged" and e["rank"] == 1}
-    assert tags["Jane Doe"][0] == "client.name" and tags["1980"][0] == "client.dob"  # "Jane | Doe" cut, rejoined
+    assert tags["Jane Doe"][0] == "client.name" and tags["1980"][0] == "client.dob"  # never cut inside the name
+    cut_qs = [q for _, call in chooser.calls for q in call.values() if "Where should it be cut" in q.instructions]
+    assert cut_qs and not any("Jane" in t for t in tags if t != "Jane Doe")
     assert tags["Name:"][0] == tags["DOB:"][0] == "client#label"
     assert tags["CLIENT INTAKE"][0] == "#none"
     assert tags["Acme"][0] == "parties[].name" and tags["landlord"][0] == "parties[].role"
