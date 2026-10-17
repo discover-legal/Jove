@@ -24,6 +24,7 @@ the result is assembled with no tuned thresholds on geometry:
 """
 
 import math
+from itertools import islice
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
@@ -33,6 +34,7 @@ from .schema import SchemaNode
 from .questions import POV, UNTRUSTED, Path, choice, label, paths, standing
 
 THRESHOLD = 0.5
+SURE = 0.7  # a word this sure of a different field starts its own value, even if it 'continues'
 
 
 @dataclass
@@ -141,9 +143,13 @@ class FlatTagger:
         for i, line in enumerate(lines):
             first_link = self._p(yes, f"cont{i}", line.id, default=0.0) if i else 0.0
             if i in word_keys:
+                kept = True
                 for j, w in enumerate(line.children):
                     top = self._top(word_choices, word_qs, word_keys[i][j], w)
-                    link = first_link if j == 0 else self._p(word_yes, f"cont{i}_{j}", w.id, default=0.0)
+                    # A link is to the word just before; if that word went unanswered, there is none.
+                    link = first_link if j == 0 else (self._p(word_yes, f"cont{i}_{j}", w.id, default=0.0)
+                                                      if kept else 0.0)
+                    kept = bool(top)
                     if top:
                         units.append(Unit(w, i, top, _separation(top), link, word=True))
             elif line_tops[i]:
@@ -226,7 +232,7 @@ class FlatTagger:
             + f" Does this {unit} continue the same single value as the previous {unit}?" + self._pov(),
             options={
                 "true": "Yes: one value runs across both (the rest of a name, an address, a date, "
-                        "a phone number, or the same sentence).",
+                        "a phone number" + (")." if unit == "word" else ", or the same sentence)."),
                 "false": f"No: this {unit} starts a new value, a label, or unrelated text.",
             },
             subject=cur,
@@ -283,6 +289,19 @@ class FlatTagger:
         out: list[Unit] = []
         for u in units:
             prev = out[-1] if out else None
+            # Words of one split line that continue a value are part of it ("Smith & Co. LLP",
+            # even when its words lean to different fields); it takes its strongest member's field.
+            # A caption never starts one: "Phone:" stays apart from the number it introduces; and
+            # a word sure of a field of its own starts a new value ("Toronto, ON M5H 1A1").
+            own = u.top[0]
+            if prev is not None and u.word and prev.word and prev.line_index == u.line_index \
+                    and u.link >= self.threshold and is_value(prev.top[0].target) \
+                    and (own.target == prev.top[0].target or not is_value(own.target) or own.score < SURE):
+                prev.members = (prev.members or [prev.doc]) + [u.doc]
+                if is_value(u.top[0].target) and (not is_value(prev.top[0].target)
+                                                  or u.top[0].score > prev.top[0].score):
+                    prev.top, prev.separation = u.top, u.separation
+                continue
             same_tag = prev is not None and prev.top[0].target == u.top[0].target and prev.word == u.word
             # Adjacent words of one line with the same tag are one value ("Senior Adjudicator");
             # across lines, only the "continues" answer joins them.
@@ -304,13 +323,11 @@ class FlatTagger:
                     continue
                 arr, leaf = node.path, v.top[0].target
                 joined = None
-                for back in (1, 2):
-                    if k - back < 0:
-                        break
-                    other = values[k - back]
-                    oid = out[k - back].get(arr)
-                    if oid is None:
-                        continue
+                # The two nearest values in this list: captions and other non-values between
+                # them don't count ("Jane Doe Date of birth: 1980" is one party).
+                nearest = list(islice((b for b in range(k - 1, -1, -1) if out[b].get(arr) is not None), 2))
+                for b in nearest:
+                    other, oid = values[b], out[b][arr]
                     if other.line_index == v.line_index:
                         p = 1.0  # same line
                     else:

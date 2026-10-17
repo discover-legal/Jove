@@ -115,42 +115,68 @@ JOVE_CHOOSER=jev TYPESAFE_API_KEY=... uv run uvicorn jove.web:app
 ## Graphs
 
 `jove.graph` turns results (one `result.jsonl` per document, as many as you
-like) into graphs: the document tree (document → page → block → line → span),
-each piece of text's tags, the list items values share and whose each value is.
-Schema fields are shared, so documents meet at the fields they fill.
+like) into views for people and graphs for tools. The values are grouped as
+records: each list item (Party 1, Address 1, Amount 1) and each section outside
+lists (Matter, Contact). Each value carries its owner (our client, the other
+party, the issuer) and the page and line it was read from. Values scoring below
+0.7 are marked unsure. Captions ("Full name:"), brackets and trailing commas
+are dropped for display; the tag still covers the text as read. `--all` keeps
+captions, rank-2/3 tags and one-line blocks.
 
 ```sh
-uv run python -m jove.graph data/jobs/*/result.jsonl --to tree               # indented text
-uv run python -m jove.graph data/jobs/*/result.jsonl --to dot | dot -Tsvg > graph.svg
+uv run python -m jove.graph data/jobs/*/result.jsonl --to summary    # records, as text
+uv run python -m jove.graph data/jobs/*/result.jsonl --to dot | dot -Tsvg > cards.svg
 uv run python -m jove.graph data/jobs/*/result.jsonl --to obsidian --out vault/
+uv run python -m jove.graph data/jobs/*/result.jsonl --to tree       # the page tree
 uv run python -m jove.graph data/jobs/*/result.jsonl --to cypher --out graph.cypher
 uv run python -m jove.graph data/jobs/*/result.jsonl --to typeql --out typedb/
 ```
 
-- **Graphviz:** `--to dot | dot -Tsvg > graph.svg` draws the tree with each tag
-  as a small diamond joining text, field, list item and owner. No server needed.
-- **Obsidian:** open `vault/` as a vault. There is one note per node, edges
-  are wikilinks, and the graph view comes coloured by kind.
-- **FalkorDB** (or Neo4j or Memgraph via the `.cypher` file) holds a plain
-  property graph:
+```
+intake_form.photo.jpg
+  Party 1  (Our client)
+    Name                 Jane Alexandra Doe          p1 l4
+    Date of birth        1980-04-03                  p1 l4
+  Party 2  (Other party)
+    Name                 Acme Property Management Inc.  p1 l10
+    Role                 landlord                    p1 l10
+```
+
+- **Graphviz** (`--to dot`) draws one card per record (field, value, page and
+  line), coloured by owner, beside the page's lines, with a line from each value
+  to where it was read. `--to dot-full` draws the full graph instead: page tree,
+  schema fields, and each tag as a diamond joining text, field, item and owner.
+- **Obsidian:** open `vault/` as a vault.
+  - `Documents/` holds each document's home note, with every record as a
+    table.
+  - `Records/` holds a note per record: its values as properties and a table
+    linking each value to its source line.
+  - `Owners/` links each owner to their records.
+  - The page lines (`Source/`) and the schema (`Schema/`) are hidden from the
+    graph view, which shows records, owners and documents.
+- **FalkorDB** (or Neo4j or Memgraph via the `.cypher` file) holds a property
+  graph. Every node has a readable `name`, which the browsers show. Each list
+  item also carries its values as properties (`date_of_birth`, `role`, `owner`;
+  a field called `name` becomes `value_name`).
   ```sh
   uv sync --extra graph
   docker run -d -p 6379:6379 -p 3000:3000 falkordb/falkordb
   uv run python -m jove.graph data/jobs/*/result.jsonl --load falkor://localhost:6379/jove
   ```
-  Browse it at http://localhost:3000 and try
-  `MATCH p=(:Document)-[:CONTAINS*]->() RETURN p`.
-- **TypeDB** holds a hypergraph: each tag is one n-ary `tag` relation that
-  links the text, its field, its list items and its owner:
+  Browse it at http://localhost:3000:
+  `MATCH (p:Item {list: 'parties[]'}) RETURN p.value_name, p.role, p.date_of_birth, p.owner`.
+- **TypeDB** holds a hypergraph: each tag is one n-ary `tag` relation that links
+  the text, its field, its list items and its owner, named for reading
+  ("Party › Name = Jane Alexandra Doe").
   ```sh
   docker run -d -p 1729:1729 -p 8000:8000 typedb/typedb:3.13.6
   uv run python -m jove.graph data/jobs/*/result.jsonl --load typedb://localhost:1729/jove
   ```
   View it in [TypeDB Studio](https://studio.typedb.com) (connect to
-  `http://localhost:8000`, user `admin`, password `password`). For example:
-  `match $t isa tag, links (value: $v, field: $f, owner: $o); $f has path "parties[].name";`
+  `http://localhost:8000`, user `admin`, password `password`), e.g.
+  `match $t isa tag, has name $n; $n like "^Party";`
 
-Loading replaces the named graph or database.
+An existing vault, graph or database is only overwritten with `--replace`.
 
 ## Results
 

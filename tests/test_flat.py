@@ -105,3 +105,45 @@ def test_mentions_inside_prose(tmp_path):
     found = {t: (p, i["performers[]"]) for t, p, i, m in tags if m}
     assert found["Dana Okafor"][0] == "performers[].name" and found["(percussion)"][0] == "performers[].role"
     assert found["Dana Okafor"][1] == found["(percussion)"][1] != found["Theo Marchetti"][1] == found["(bass)."][1]
+
+
+def _tags(tmp_path, line, rules, joined=()):
+    def g(q):
+        if "hold two or more separate values" in q.instructions:
+            return 0.9
+        if "continue the same single value" in q.instructions:
+            return 0.9 if any(f"Previous word: {a!r}. This word: {b!r}." in q.instructions for a, b in joined) else 0.1
+        return 0.1
+
+    out = run("j", tmp_path, [("b.png", png())], SCHEMA, FakeOcr({"p0001": [line]}), FakeChooser(rule(rules), gate=g))
+    recs = [json.loads(l) for l in out.read_text().splitlines()]
+    nodes = {r["id"]: r for r in recs if r["type"] == "node"}
+    return {nodes[e["from"]]["text"]: (e["to"], e.get("instances")) for e in recs
+            if e["type"] == "edge" and e["rel"] == "tagged" and e["rank"] == 1}
+
+
+def test_other_values_between_do_not_split_an_item(tmp_path):
+    tags = _tags(tmp_path, "Acme 1980 Jane landlord", RULES)  # Acme's role, three values later
+    assert tags["Acme"][1]["parties[]"] == tags["landlord"][1]["parties[]"]
+
+
+def test_words_that_continue_each_other_are_one_value(tmp_path):
+    rules = RULES | {("", "Smith"): "parties[]", ("parties[]", "Smith"): "parties[].name",
+                     ("", "LLP"): "parties[]", ("parties[]", "LLP"): {"parties[].role": 0.4, "parties[].name": 0.35}}
+    tags = _tags(tmp_path, "Counsel: Smith & Co. LLP", rules,
+                 joined=[("Smith", "&"), ("&", "Co."), ("Co.", "LLP")])
+    assert tags["Smith & Co. LLP"][0] == "parties[].name"  # one value: "LLP" leans to role, unsure
+    assert "Smith" not in tags and "LLP" not in tags
+
+
+def test_a_caption_does_not_swallow_its_value(tmp_path):
+    rules = RULES | {("", "Smith"): "parties[]", ("parties[]", "Smith"): "parties[].name"}
+    tags = _tags(tmp_path, "Counsel: Smith", rules, joined=[("Counsel:", "Smith")])
+    assert tags["Smith"][0] == "parties[].name" and "Counsel: Smith" not in tags
+
+
+def test_a_word_sure_of_its_own_field_starts_a_new_value(tmp_path):
+    rules = RULES | {("", "Smith"): "parties[]", ("parties[]", "Smith"): "parties[].name",
+                     ("", "landlord"): "parties[]"}
+    tags = _tags(tmp_path, "Smith landlord", rules, joined=[("Smith", "landlord")])
+    assert tags["Smith"][0] == "parties[].name" and tags["landlord"][0] == "parties[].role"
