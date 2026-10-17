@@ -108,6 +108,9 @@ ingest ──► ocr ──► layout ──► tag ──► emit (JSONL graph)
      line spacing above 1.5× the median. The spacing rule matters for photos,
      where OCR boxes are inflated.
    - Word boxes are estimated from character offsets.
+   - Docling's layout regions were tried as an alternative and removed
+     (2026-10-17): on Clef, 10 documents, F1 0.598 against 0.620 with these
+     rules, 36% slower; it helped only the intake form (13 vs 9/19).
 4. **tag**: see below.
 5. **emit**: see the output section below.
 

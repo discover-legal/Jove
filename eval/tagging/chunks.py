@@ -1,6 +1,6 @@
 """Score chunking alone (no chooser, no credits): do gold values land in good units?
 
-    uv run python eval/tagging/chunks.py rules|docling [--ocr app|tesseract|ppocr4|v6]
+    uv run python eval/tagging/chunks.py [--ocr app|tesseract|ppocr4|v6]
 
   whole   the gold value's text sits inside a single unit (not cut across units)
   alone   ...and that unit holds no other gold value of a different field
@@ -34,31 +34,22 @@ def norm(text: str) -> str:
     return re.sub(r"[^0-9a-z]", "", text.lower())
 
 
-def units_for(engine: str, src: Path, ocr) -> list[str]:
-    data = src.read_bytes()
+def units_for(src: Path, ocr) -> list[str]:
     with tempfile.TemporaryDirectory() as tmp:
-        _, pages = ingest([(src.name, data)], Path(tmp))
-        if engine == "docling":
-            from jove import docling_layout
-
-            regions = docling_layout.DoclingLayout().regions(src.name, data, [(p.width, p.height) for p in pages])
-            blocks = [b for p, r in zip(pages, regions) for b in docling_layout.build(p.page_id, ocr.read(p), r)]
-        else:
-            blocks = [b for p in pages for b in layout.build(p.page_id, ocr.read(p))]
+        _, pages = ingest([(src.name, src.read_bytes())], Path(tmp))
+        blocks = [b for p in pages for b in layout.build(p.page_id, ocr.read(p))]
     return [l.text for b in blocks for l in b.children]  # in reading order
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("layout", choices=["rules", "docling"])
     ap.add_argument("--ocr", choices=["app", "tesseract", "ppocr4", "v6"], default="app")
     args = ap.parse_args()
-    engine = args.layout
     ocr = CachedOcr(args.ocr)
     tot = {"whole": 0, "alone": 0, "read": 0, "n": 0, "units": 0}
     for gold_path in sorted((ROOT / "gold").glob("*.json")):
         gold = json.loads(gold_path.read_text())
-        units = [norm(u) for u in units_for(engine, REPO / gold["file"], ocr)]
+        units = [norm(u) for u in units_for(REPO / gold["file"], ocr)]
         tags = [t for t in gold["tags"] if not t.get("region") and norm(t["text"])]
         whole = alone = read = 0
         page = "".join(units)

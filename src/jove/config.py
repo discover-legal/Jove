@@ -16,13 +16,6 @@ def schemas_dir() -> Path:
     return Path(os.environ.get("JOVE_SCHEMAS_DIR", Path(__file__).resolve().parents[2] / "schemas"))
 
 
-def layout() -> str:
-    name = os.environ.get("JOVE_LAYOUT", "rules")
-    if name not in ("rules", "docling"):
-        raise ValueError(f"unknown JOVE_LAYOUT {name!r}")
-    return name
-
-
 def owners() -> bool:
     return os.environ.get("JOVE_OWNERS", "on") != "off"
 

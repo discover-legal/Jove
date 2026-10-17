@@ -36,7 +36,7 @@ ingest ──► OCR ──► layout ──► tag ──► emit (JSONL graph)
    through PP-OCRv6 (RapidOCR), and three local vision models vote to correct
    its lines. A last pass finds lines the detector never boxed (slanted or
    logo text) and adds them only if a second, cropped reading confirms them.
-3. **Layout:** group lines into blocks (rules by default, or Docling).
+3. **Layout:** group lines into blocks.
 4. **Tag:** for every line, ask a decision model which schema field the line
    gives a value for (or `none`, or `label` for a printed form caption). Running
    prose is asked about a paragraph at a time. Lines holding several values are

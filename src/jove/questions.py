@@ -57,8 +57,6 @@ def choice(doc: DocNode, node: SchemaNode, around: str | None, around_prefix: st
     where = f"the {node.path} section of the schema" if node.path else "the schema"
     context = f" {around_prefix}: {around!r}." if around else ""
     form = " It was typed into a fillable form field, so it is a value, not a label." if doc.form else ""
-    if doc.role:
-        form += f" Layout: {doc.role}."
     return Question(
         instructions=(
             UNTRUSTED
