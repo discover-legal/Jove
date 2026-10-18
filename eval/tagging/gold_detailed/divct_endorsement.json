@@ -24,7 +24,12 @@
     },
     {
       "text": "Carnwath, Day and Whalen JJ.",
-      "path": "proceedings[].judge"
+      "path": "proceedings[].judge",
+      "parts": [
+        "Carnwath",
+        "Day",
+        "Whalen"
+      ]
     },
     {
       "text": "PUBLIC GUARDIAN AND TRUSTEE",

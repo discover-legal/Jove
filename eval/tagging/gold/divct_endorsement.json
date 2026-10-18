@@ -24,7 +24,15 @@
     },
     {
       "text": "Carnwath, Day and Whalen JJ.",
-      "path": "parties[].name"
+      "path": "proceedings[].judges[]",
+      "parts": [
+        "Carnwath",
+        "Day",
+        "Whalen"
+      ],
+      "alt": [
+        "parties[].name"
+      ]
     },
     {
       "text": "PUBLIC GUARDIAN AND TRUSTEE",
@@ -90,7 +98,10 @@
     },
     {
       "text": "Carnwath J.",
-      "path": "parties[].name"
+      "path": "proceedings[].judges[]",
+      "alt": [
+        "parties[].name"
+      ]
     },
     {
       "text": "ONTARIO",

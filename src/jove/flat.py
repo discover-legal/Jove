@@ -24,6 +24,7 @@ the result is assembled with no tuned thresholds on geometry:
 """
 
 import math
+import re
 from itertools import islice
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -35,6 +36,7 @@ from .questions import POV, UNTRUSTED, Path, choice, label, paths, standing
 
 THRESHOLD = 0.5
 SURE = 0.7  # a word this sure of a different field starts its own value, even if it 'continues'
+BULLET = re.compile(r"\s*[●•▪◦■□○‣◆➢✓✔☐☑*·-]\s")  # a bulleted line starts something new
 
 
 @dataclass
@@ -88,7 +90,7 @@ class FlatTagger:
             keys.append(self._choices(choice_qs, f"l{i}", line, ctx, "Neighbouring lines"))
         yn = {}
         for i, line in enumerate(lines):
-            if i >= 1:
+            if i >= 1 and not BULLET.match(line.text):
                 yn[f"cont{i}"] = self._continues_q(lines[i - 1].text, line.text, "line")
                 yn[f"same1_{i}"] = self._same_item_q(lines[i - 1].text, line.text)
             if i >= 2:
@@ -141,7 +143,7 @@ class FlatTagger:
         # Units in reading order: unsplit lines, and the words of split lines.
         units: list[Unit] = []
         for i, line in enumerate(lines):
-            first_link = self._p(yes, f"cont{i}", line.id, default=0.0) if i else 0.0
+            first_link = self._p(yes, f"cont{i}", line.id, default=0.0) if f"cont{i}" in yn else 0.0
             if i in word_keys:
                 kept = True
                 for j, w in enumerate(line.children):
@@ -172,7 +174,7 @@ class FlatTagger:
             current = None
             for j, w in enumerate(lines[i].children):
                 top = self._top(word_choices, word_qs, keys[j], w, start=m)
-                own = top[0].target if top and is_value(top[0].target) else None
+                own = top[0].target if top and is_value(top[0].target) and _mentionable(m, top[0].target) else None
                 continues = self._p(word_yes, f"mc{i}_{k}_{j}", w.id, default=0.0) >= self.threshold if j else False
                 if current and continues and own in (None, current.top[0].target):
                     current.members.append(w)
@@ -213,7 +215,7 @@ class FlatTagger:
 
     def _mention_q(self, line: DocNode, m: SchemaNode) -> YesNo:
         examples = f" (for example {', '.join(m.examples[:3])})" if m.examples else ""
-        fields = ", ".join(c.name for c in m.children)
+        fields = ", ".join(c.name for c in m.children if not m.mention_fields or c.name in m.mention_fields)
         return YesNo(
             instructions=UNTRUSTED + f"Line {line.id} reads: {line.text!r}."
             + f" Does the text itself mention a {m.name} ({m.description or m.name}){examples}:"
@@ -385,6 +387,12 @@ class FlatTagger:
                         edge["mention"] = True  # found inside a prose line that keeps its own tag
                 edges.append(edge)
         return nodes, edges
+
+
+def _mentionable(m: SchemaNode, target: str) -> bool:
+    """Is target a field that x-mentions searches prose for (all of m's, or those it names)?"""
+    return not m.mention_fields or any(target == c.path or target.startswith((c.path + ".", c.path + "[]"))
+                                       for c in m.children if c.name in m.mention_fields)
 
 
 def _separation(top: list[Path]) -> float:

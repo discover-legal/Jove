@@ -4,7 +4,8 @@
 
 Each fine path has one coarse home: names and contact details lose their owner
 (the owners pass records it instead), money moves to amounts[], dates to
-events[] or deadlines[]. Documents with another schema are copied unchanged, so
+events[] or deadlines[]. Judges go to proceedings[].judges[], and may also be
+tagged as party names. Documents with another schema are copied unchanged, so
 totals stay comparable.
 """
 
@@ -23,8 +24,8 @@ RULES = [
     (r"(client|document_issuer|parties\[\])\.contact\.(phones|emails)\[\]", r"contact.\2[]"),
     (r"document_issuer\.contact\.website", "contact.websites[]"),
     (r"client\.identification\[\]\.(\w+)", r"identification[].\1"),
-    (r"client\.person\.full_name|client\.organization\.legal_name|document_issuer\.name|proceedings\[\]\.judge",
-     "parties[].name"),
+    (r"client\.person\.full_name|client\.organization\.legal_name|document_issuer\.name", "parties[].name"),
+    (r"proceedings\[\]\.judge", "proceedings[].judges[]"),
     (r"document_issuer\.department", "parties[].organization"),
     (r"client\.person\.(date_of_birth|occupation)", r"parties[].\1"),
     (r"client\.person\.other_names\[\]", "parties[].other_names[]"),
@@ -54,7 +55,9 @@ def main() -> None:
             gold["schema"] = COARSE
             for tag in gold["tags"]:
                 tag["path"] = coarse(tag["path"])
-                alt = [a for a in dict.fromkeys(coarse(a) for a in tag.get("alt", [])) if a != tag["path"]]
+                alt = [coarse(a) for a in tag.get("alt", [])]
+                alt += ["parties[].name"] if tag["path"] == "proceedings[].judges[]" else []
+                alt = [a for a in dict.fromkeys(alt) if a != tag["path"]]
                 if alt:
                     tag["alt"] = alt
                 else:

@@ -37,7 +37,7 @@
   "properties": {
     "parties": {
       "type": "array",
-      "description": "Every person or organization named: the firm's client, opposing parties, lawyers and firms, judges and adjudicators, the court, tribunal or office that issued the document, witnesses, family members, employers, landlords, insurers. One item per party.",
+      "description": "Every person or organization named: the firm's client, opposing parties, lawyers and firms, the court, tribunal or office that issued the document, witnesses, family members, employers, landlords, insurers. One item per party.",
       "items": {
         "type": "object",
         "description": "One party.",
@@ -527,6 +527,17 @@
             ],
             "x-not-for": "The firm's own file references (matter.reference_numbers)."
           },
+          "citation": {
+            "type": "string",
+            "description": "The decision's neutral citation: year, court abbreviation and number.",
+            "examples": [
+              "2022 ONCA 250",
+              "2021 ONSC 3567",
+              "2019 SCC 65",
+              "2024 HRTO 123"
+            ],
+            "x-not-for": "Court file numbers (case_number)."
+          },
           "sides": {
             "type": "array",
             "description": "The sides of the case as its caption lists them: one item per side (e.g. the applicants, the respondents), with the side's procedural role and every name listed under it.",
@@ -561,6 +572,20 @@
             },
             "x-not-for": "Descriptions of a party that aren't its procedural role (parties[].role: 'Senior Adjudicator', 'landlord')."
           },
+          "judges": {
+            "type": "array",
+            "description": "Judges, adjudicators or officers who heard or decided the case, including the judge appealed from.",
+            "items": {
+              "type": "string",
+              "description": "One judge, or a panel as printed.",
+              "examples": [
+                "Justice Morgan",
+                "Rouleau, van Rensburg and Roberts JJ.A.",
+                "L.B. Roberts J.A.",
+                "Member Leung"
+              ]
+            }
+          },
           "stage": {
             "type": "string",
             "description": "Where the case stands.",
@@ -584,7 +609,13 @@
             }
           }
         }
-      }
+      },
+      "x-mentions": [
+        "forum",
+        "case_number",
+        "citation",
+        "judges"
+      ]
     },
     "documents": {
       "type": "array",

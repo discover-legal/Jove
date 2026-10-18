@@ -12,8 +12,9 @@
     },
     {
       "text": "2022 ONCA 250",
-      "path": "proceedings[].case_number",
+      "path": "proceedings[].citation",
       "alt": [
+        "proceedings[].case_number",
         "matter.reference_numbers[]"
       ]
     },
@@ -33,7 +34,15 @@
     },
     {
       "text": "Rouleau, van Rensburg and Roberts JJ.A.",
-      "path": "parties[].name"
+      "path": "proceedings[].judges[]",
+      "parts": [
+        "Rouleau",
+        "van Rensburg",
+        "Roberts"
+      ],
+      "alt": [
+        "parties[].name"
+      ]
     },
     {
       "text": "Crosslinx Transit Solutions General Partnership",
@@ -82,6 +91,12 @@
       "path": "parties[].represented_by",
       "alt": [
         "parties[].name"
+      ],
+      "parts": [
+        "Sharon Vogel",
+        "Peter Wardle",
+        "Jesse Gardner",
+        "Cheryl Labiris"
       ]
     },
     {
@@ -89,6 +104,11 @@
       "path": "parties[].represented_by",
       "alt": [
         "parties[].name"
+      ],
+      "parts": [
+        "Matthew Sammon",
+        "Andrea Wheeler",
+        "Jacqueline Chan"
       ]
     },
     {
@@ -100,7 +120,10 @@
     },
     {
       "text": "Justice Markus Koehnen",
-      "path": "parties[].name"
+      "path": "proceedings[].judges[]",
+      "alt": [
+        "parties[].name"
+      ]
     },
     {
       "text": "Superior Court of Justice",
@@ -115,8 +138,9 @@
     },
     {
       "text": "2021 ONSC 3567",
-      "path": "proceedings[].case_number",
+      "path": "proceedings[].citation",
       "alt": [
+        "proceedings[].case_number",
         "documents[].reference"
       ]
     },
@@ -129,7 +153,10 @@
     },
     {
       "text": "Paul Rouleau J.A.",
-      "path": "parties[].name"
+      "path": "proceedings[].judges[]",
+      "alt": [
+        "parties[].name"
+      ]
     },
     {
       "text": "(Appellants)",
@@ -147,11 +174,17 @@
     },
     {
       "text": "K. van Rensburg J.A.",
-      "path": "parties[].name"
+      "path": "proceedings[].judges[]",
+      "alt": [
+        "parties[].name"
+      ]
     },
     {
       "text": "L.B. Roberts J.A.",
-      "path": "parties[].name"
+      "path": "proceedings[].judges[]",
+      "alt": [
+        "parties[].name"
+      ]
     },
     {
       "text": "DATE: 20220324",

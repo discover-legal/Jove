@@ -107,6 +107,27 @@ def test_mentions_inside_prose(tmp_path):
     assert found["Dana Okafor"][1] == found["(percussion)"][1] != found["Theo Marchetti"][1] == found["(bass)."][1]
 
 
+def test_mentions_only_of_the_fields_named(tmp_path):
+    # x-mentions: ["name"] finds the names in prose, not words that look like a role
+    flyer = json.loads(json.dumps(FLYER))
+    flyer["properties"]["performers"]["x-mentions"] = ["name"]
+    line = "joined by Dana Okafor (percussion) and Theo Marchetti (bass)."
+    names, roles = {"Dana", "Okafor", "Theo", "Marchetti"}, {"(percussion)", "(bass)."}
+
+    def choice(q):
+        if q.node == "" and q.subject == line:
+            return "description[]"
+        if q.node == "performers[]":
+            return "performers[].name" if q.subject in names else "performers[].role" if q.subject in roles else None
+        return None
+
+    out = run("j", tmp_path, [("b.png", png())], flyer, FakeOcr({"p0001": [line]}), FakeChooser(choice, gate=joins))
+    recs = [json.loads(l) for l in out.read_text().splitlines()]
+    nodes = {r["id"]: r for r in recs if r["type"] == "node"}
+    found = {nodes[e["from"]]["text"]: e["to"] for e in recs if e["type"] == "edge" and e.get("mention")}
+    assert found == {"Dana Okafor": "performers[].name", "Theo Marchetti": "performers[].name"}
+
+
 def _tags(tmp_path, line, rules, joined=()):
     def g(q):
         if "hold two or more separate values" in q.instructions:
@@ -168,3 +189,15 @@ def test_a_value_does_not_run_into_the_next_form_field(tmp_path):
     [line] = block.children
     assert line.text == "Priya Oyelaran Lakeshore Rental Inc."
     assert [w.text for w in line.children if w.new_field] == ["Lakeshore"]
+
+
+def test_a_bulleted_line_starts_a_new_value(tmp_path):
+    # "15/04/2025" then "● pay this amount by…": a value never runs on into a bullet
+    ocr = FakeOcr({"p0001": ["Acme Ltd", "● Acme Bolt", "Acme Corp"]})
+    chooser = FakeChooser(rule(RULES), gate=lambda q: 0.9 if "continue the same single value" in q.instructions else 0.1)
+    out = run("j", tmp_path, [("b.png", png())], SCHEMA, ocr, chooser)
+    recs = [json.loads(l) for l in out.read_text().splitlines()]
+    nodes = {r["id"]: r for r in recs if r["type"] == "node"}
+    names = [nodes[e["from"]]["text"] for e in recs if e["type"] == "edge" and e["rel"] == "tagged"
+             and e["rank"] == 1 and e["to"] == "parties[].name"]
+    assert names == ["Acme Ltd", "● Acme Bolt\nAcme Corp"]

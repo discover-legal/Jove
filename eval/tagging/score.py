@@ -5,7 +5,8 @@
 Predictions are rank-1 `tagged` edges that aren't `#none` or `#label`, with their node's text.
   recall     gold values found with an accepted field. Strict on text: the
              prediction must contain the value without much else (tagging a whole
-             paragraph as a name doesn't count as finding the name).
+             paragraph as a name doesn't count as finding the name). A list
+             with `parts` also counts when each part is found on its own.
   precision  predictions whose field is accepted for some gold value on
              overlapping text. Loose on text. Tags on text the gold doesn't
              mention count as wrong.
@@ -56,8 +57,16 @@ def loose(g: dict, p: dict) -> bool:
     return bool(gt and pt) and p["path"] in paths(g) and (gt in pt or pt in gt)
 
 
+def found_in(g: dict, preds: list[dict]) -> bool:
+    """A list ("Sammon, Wheeler and Chan") counts whole, or name by name with each part found."""
+    if any(strict(g, p) for p in preds):
+        return True
+    parts = [{**g, "text": t, "parts": None} for t in g.get("parts") or []]
+    return bool(parts) and all(any(strict(q, p) for p in preds) for q in parts)
+
+
 def score(gold: dict, preds: list[dict]) -> dict:
-    found = [g for g in gold["tags"] if any(strict(g, p) for p in preds)]
+    found = [g for g in gold["tags"] if found_in(g, preds)]
     right = [p for p in preds if any(loose(g, p) for g in gold["tags"])]
     group_ids = []
     for grp in gold.get("groups", []):

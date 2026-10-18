@@ -12,8 +12,9 @@
     },
     {
       "text": "2022 ONCA 250",
-      "path": "proceedings[].case_number",
+      "path": "proceedings[].citation",
       "alt": [
+        "proceedings[].case_number",
         "matter.reference_numbers[]"
       ]
     },
@@ -33,7 +34,12 @@
     },
     {
       "text": "Rouleau, van Rensburg and Roberts JJ.A.",
-      "path": "proceedings[].judge"
+      "path": "proceedings[].judge",
+      "parts": [
+        "Rouleau",
+        "van Rensburg",
+        "Roberts"
+      ]
     },
     {
       "text": "Crosslinx Transit Solutions General Partnership",
@@ -82,6 +88,12 @@
       "path": "parties[].represented_by",
       "alt": [
         "parties[].name"
+      ],
+      "parts": [
+        "Sharon Vogel",
+        "Peter Wardle",
+        "Jesse Gardner",
+        "Cheryl Labiris"
       ]
     },
     {
@@ -89,6 +101,11 @@
       "path": "parties[].represented_by",
       "alt": [
         "parties[].name"
+      ],
+      "parts": [
+        "Matthew Sammon",
+        "Andrea Wheeler",
+        "Jacqueline Chan"
       ]
     },
     {
@@ -116,8 +133,9 @@
     },
     {
       "text": "2021 ONSC 3567",
-      "path": "proceedings[].case_number",
+      "path": "proceedings[].citation",
       "alt": [
+        "proceedings[].case_number",
         "referenced_documents[].reference"
       ]
     },

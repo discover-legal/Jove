@@ -12,8 +12,9 @@
     },
     {
       "text": "2022 ONCA 100",
-      "path": "proceedings[].case_number",
+      "path": "proceedings[].citation",
       "alt": [
+        "proceedings[].case_number",
         "matter.reference_numbers[]"
       ]
     },
@@ -33,7 +34,15 @@
     },
     {
       "text": "Doherty, Benotto and Huscroft JJ.A.",
-      "path": "parties[].name"
+      "path": "proceedings[].judges[]",
+      "parts": [
+        "Doherty",
+        "Benotto",
+        "Huscroft"
+      ],
+      "alt": [
+        "parties[].name"
+      ]
     },
     {
       "text": "UD Trading Group Holding Pte. Limited",
@@ -82,6 +91,10 @@
       "path": "parties[].represented_by",
       "alt": [
         "parties[].name"
+      ],
+      "parts": [
+        "Michael D. Schafler",
+        "Ara Basmadjian"
       ]
     },
     {
@@ -100,7 +113,10 @@
     },
     {
       "text": "Justice C. Gilmore",
-      "path": "parties[].name"
+      "path": "proceedings[].judges[]",
+      "alt": [
+        "parties[].name"
+      ]
     },
     {
       "text": "March 17, 2021",
@@ -111,8 +127,9 @@
     },
     {
       "text": "2021 ONSC 1957",
-      "path": "proceedings[].case_number",
+      "path": "proceedings[].citation",
       "alt": [
+        "proceedings[].case_number",
         "documents[].reference"
       ]
     },

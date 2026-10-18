@@ -188,6 +188,32 @@ word continues the previous one's value.
   36/44). Still open: counsel lines on the Court of Appeal pages ("George J.
   Pollack and Faiz Lalani, for the respondents …") come out as parties, split
   into name and represented_by.
+- **Court fields (2026-10-17), Jev, 3 runs each, 10 documents.** The gold
+  changed too, so the earlier runs are rescored on it:
+  - schema: `proceedings[].citation` (neutral citations, "2022 ONCA 250") and
+    `proceedings[].judges[]`; parties no longer list judges. The gold files
+    judges there (party name stays accepted) and citations as citations (case
+    number accepted).
+  - gold: a list of counsel or judges carries `parts`, and counts when it comes
+    out whole or name by name ("Sammon, Wheeler and Chan" as three names).
+  - `x-mentions` may name fields: proceedings' prose is searched for the court,
+    file number, citation and judges ("On appeal from the judgment of Justice
+    Koehnen of the Superior Court of Justice, dated May 17, 2021 …"), not for
+    stage or orders. Searching all fields tagged the verbs of the IPC order's
+    narrative ("appealed", "withdrew") as stages (precision 0.81).
+  - a bulleted line ("● pay this amount by …") never continues the line above
+    it, so the N4's "15/04/2025" stays a date of its own.
+
+  | run | F1 (3 runs) | recall | precision |
+  |---|---|---|---|
+  | before, rescored on the new gold | 0.836, 0.845, 0.836 | ~180/217 | ~0.85 |
+  | + citation, judges, mentions of all proceedings fields, bullets | 0.861, 0.858, 0.863 | ~199/217 | ~0.81 |
+  | mentions only of court, file number, citation and judges | **0.889, 0.880, 0.886** | 195–199/217 | ~0.86 |
+
+  Still missed: the decisions' own citations at the top of the page (inside the
+  "CITATION: … v. …" line), the lower court's judge in some runs, and the N4
+  photo's date (OCR lost its bullet). Counsel names on one line still split
+  between name and represented_by.
 - **Halving (`JOVE_TAGGER=halve`, `halve.py`, an option).** Start from the
   whole document and ask, given the schema (in the shared state), "does this
   hold more than one value, so it should be cut in two?"; halve where yes

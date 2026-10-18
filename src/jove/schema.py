@@ -6,7 +6,9 @@ Paths are dotted with ``[]`` for array items (``parties[].name``). Besides
 siblings apart. The root may carry ``x-instructions``: standing context for
 every question, such as whose point of view the data takes. Object or array
 nodes may carry ``x-mentions: true``: their values can appear inside prose
-(a performer named in a biography), so prose lines are searched for them.
+(a performer named in a biography), so prose lines are searched for them; a
+list of field names (``["forum", "judges"]``) limits the search to those
+fields, leaving out narrative ones a verb would match (a case's stage).
 """
 
 import re
@@ -32,6 +34,7 @@ class SchemaNode:
     children: list["SchemaNode"] = field(default_factory=list)
     instructions: str | None = None  # root only: ``x-instructions``, e.g. whose point of view
     mentions: bool = False  # ``x-mentions``: values of this object/list item may sit inside prose
+    mention_fields: tuple[str, ...] = ()  # ... only these children's (empty: any)
 
     def walk(self) -> list["SchemaNode"]:
         """This node and every node below it, depth first."""
@@ -85,12 +88,14 @@ def _node(node: dict, path: str, name: str, described: dict, array_item: bool = 
     if not isinstance(node, dict):
         raise SchemaError(f"schema at {path or '<root>'} must be an object")
     kind = node.get("type")
+    mentions = described.get("x-mentions") or node.get("x-mentions")
     meta = dict(
         description=described.get("description") or node.get("description"),
         examples=tuple(str(e) for e in described.get("examples", node.get("examples", []))),
         not_for=described.get("x-not-for") or node.get("x-not-for"),
         is_array_item=array_item,
-        mentions=bool(described.get("x-mentions") or node.get("x-mentions")),
+        mentions=bool(mentions),
+        mention_fields=tuple(mentions) if isinstance(mentions, list) else (),
     )
     if kind == "array":
         items = node.get("items")

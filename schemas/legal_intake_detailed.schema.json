@@ -844,6 +844,17 @@
             ],
             "x-not-for": "The firm's own file references (matter.reference_numbers)."
           },
+          "citation": {
+            "type": "string",
+            "description": "The decision's neutral citation: year, court abbreviation and number.",
+            "examples": [
+              "2022 ONCA 250",
+              "2021 ONSC 3567",
+              "2019 SCC 65",
+              "2024 HRTO 123"
+            ],
+            "x-not-for": "Court file numbers (case_number)."
+          },
           "sides": {
             "type": "array",
             "description": "The sides of the case as its caption lists them: one item per side (e.g. the applicants, the respondents), with the side's procedural role and every name listed under it.",
