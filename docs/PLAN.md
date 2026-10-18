@@ -168,6 +168,26 @@ word continues the previous one's value.
 
   Paragraphs hid values inside prose (a sign's panels read as one paragraph
   hid its phone number and web address) and never beat line by line.
+- **Grouping and merging fixes (2026-10-17), Jev, 3 runs each, 10 documents:**
+
+  | change | F1 (3 runs) |
+  |---|---|
+  | before (line by line, coarse) | 0.825, 0.820 (2 runs) |
+  | other values between don't split an item; continuing words join ("Smith & Co. LLP"); a word sure of its own field starts a new value | 0.828, 0.835, 0.831 |
+  | + captions repeat without starting a new item; a filled form field's edge needs the "continues" answer | 0.832, 0.840, 0.828 |
+
+  Mostly precision (271 → ~263 tagged values, recall unchanged at ~178/217).
+  The intake form's date of birth now stays with the client in every run (a
+  second caption, "Date of birth:", read as the party's label, had counted as
+  a repeated field). On the filled N4, "Priya Oyelaran" and "Lakeshore Rental
+  Holdings Inc." sit in neighbouring form fields that layout reads as one
+  line: they had run together as one name. Layout now keeps where form fields
+  meet; there, words join only when Jev says they continue (first name | last
+  name, "88" | "Elmwood Avenue" do; tenant | landlord don't). A hard stop at
+  every field edge split names and streets into pieces (N4 precision 29/33 →
+  36/44). Still open: counsel lines on the Court of Appeal pages ("George J.
+  Pollack and Faiz Lalani, for the respondents …") come out as parties, split
+  into name and represented_by.
 - **Halving (`JOVE_TAGGER=halve`, `halve.py`, an option).** Start from the
   whole document and ask, given the schema (in the shared state), "does this
   hold more than one value, so it should be cut in two?"; halve where yes

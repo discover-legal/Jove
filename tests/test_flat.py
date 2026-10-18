@@ -147,3 +147,24 @@ def test_a_word_sure_of_its_own_field_starts_a_new_value(tmp_path):
                      ("", "landlord"): "parties[]"}
     tags = _tags(tmp_path, "Smith landlord", rules, joined=[("Smith", "landlord")])
     assert tags["Smith"][0] == "parties[].name" and tags["landlord"][0] == "parties[].role"
+
+
+def test_a_second_caption_does_not_start_a_new_item(tmp_path):
+    # "Full name: Jane Alexandra Doe Date of birth: 1980-04-03": both captions read as the party's labels
+    rules = RULES | {("", "Name:"): "parties[]", ("parties[]", "Name:"): "parties[]#label",
+                     ("", "Role:"): "parties[]", ("parties[]", "Role:"): "parties[]#label"}
+    tags = _tags(tmp_path, "Name: Acme Role: landlord", rules)
+    assert tags["Role:"][0] == "parties[]#label"
+    assert tags["Acme"][1]["parties[]"] == tags["landlord"][1]["parties[]"]
+
+
+def test_a_value_does_not_run_into_the_next_form_field(tmp_path):
+    from jove.layout import build
+    from jove.ocr import OcrLine
+
+    # Two filled form fields side by side, read as one line: tenant | landlord.
+    [block] = build("p0001", [OcrLine("Priya Oyelaran", (0, 0, 140, 20), 1.0, form=True),
+                              OcrLine("Lakeshore Rental Inc.", (150, 0, 360, 20), 1.0, form=True)])
+    [line] = block.children
+    assert line.text == "Priya Oyelaran Lakeshore Rental Inc."
+    assert [w.text for w in line.children if w.new_field] == ["Lakeshore"]

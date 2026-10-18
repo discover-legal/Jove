@@ -34,6 +34,7 @@ class DocNode:
     text: str
     children: list["DocNode"] = field(default_factory=list)
     form: bool = False  # every fragment came from a filled PDF form field
+    new_field: bool = False  # a word that starts another filled form field than the word before it
 
 
 @dataclass
@@ -42,6 +43,7 @@ class _Frag:
     box: Box  # layout space (de-skewed)
     page_box: Box  # page space
     form: bool = False
+    fields: tuple[int, ...] = ()  # character offsets where a later form field starts, once joined
 
 
 def build(page_id: str, ocr: list[OcrLine]) -> list[DocNode]:
@@ -82,7 +84,8 @@ def build(page_id: str, ocr: list[OcrLine]) -> list[DocNode]:
         for li, row in enumerate(rows_in_block, start=1):
             box, text = row.page_box, row.text
             line_id = f"{block_id}/l{li:02d}"
-            lines.append(DocNode(line_id, "line", page_id, box, text, _words(line_id, page_id, box, text), form=row.form))
+            lines.append(DocNode(line_id, "line", page_id, box, text,
+                                 _words(line_id, page_id, box, text, row.fields), form=row.form))
         out.append(DocNode(block_id, "block", page_id, _union([l.bbox for l in lines]),
                            "\n".join(l.text for l in lines), lines))
     return out
@@ -214,11 +217,19 @@ def _x_overlap(a: Box, b: Box) -> float:
 
 
 def _join(run: list[_Frag]) -> _Frag:
+    """One row from fragments side by side; where two filled form fields meet is kept,
+    since each field holds its own answer ("Marcus Oyelaran" | "Lakeshore Rental Inc.")."""
+    fields, pos = [], 0
+    for i, f in enumerate(run):
+        if i and run[i - 1].form and f.form:
+            fields.append(pos)
+        fields += [pos + x for x in f.fields]
+        pos += len(f.text) + 1
     return _Frag(" ".join(f.text for f in run), _union([f.box for f in run]), _union([f.page_box for f in run]),
-                 all(f.form for f in run))
+                 all(f.form for f in run), tuple(fields))
 
 
-def _words(line_id: str, page_id: str, box: Box, text: str) -> list[DocNode]:
+def _words(line_id: str, page_id: str, box: Box, text: str, fields: tuple[int, ...] = ()) -> list[DocNode]:
     words, pos = [], 0
     width = box[2] - box[0]
     for wi, word in enumerate(text.split(), start=1):
@@ -227,7 +238,7 @@ def _words(line_id: str, page_id: str, box: Box, text: str) -> list[DocNode]:
         x0 = box[0] + width * start / len(text)
         x1 = box[0] + width * pos / len(text)
         words.append(DocNode(f"{line_id}/w{wi:02d}", "word", page_id,
-                             (round(x0, 1), box[1], round(x1, 1), box[3]), word))
+                             (round(x0, 1), box[1], round(x1, 1), box[3]), word, new_field=start in fields))
     return words
 
 

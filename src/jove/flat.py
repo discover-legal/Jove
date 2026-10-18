@@ -123,7 +123,7 @@ class FlatTagger:
                             for j, w in enumerate(words)]
             for j in range(1, len(words)):
                 word_yn[f"cont{i}_{j}"] = self._continues_q(words[j - 1].text, words[j].text, "word",
-                                                            within=lines[i].text)
+                                                            within=lines[i].text, new_box=words[j].new_field)
         # ... and the words of prose that mentions an x-mentions field, asked only within it;
         # whether each word continues the previous one's value draws the value's edges.
         mention_keys = {}
@@ -225,8 +225,11 @@ class FlatTagger:
             subject=line.text,
         )
 
-    def _continues_q(self, prev: str, cur: str, unit: str, within: str | None = None) -> YesNo:
+    def _continues_q(self, prev: str, cur: str, unit: str, within: str | None = None,
+                     new_box: bool = False) -> YesNo:
         where = f" Both are in the line {within!r}." if within else ""
+        if new_box:  # a form splits some values over boxes (first name | last name), not most
+            where += " The form has a separate box that starts at this word."
         return YesNo(
             instructions=UNTRUSTED + f"Previous {unit}: {prev!r}. This {unit}: {cur!r}.{where}"
             + f" Does this {unit} continue the same single value as the previous {unit}?" + self._pov(),
@@ -303,9 +306,11 @@ class FlatTagger:
                     prev.top, prev.separation = u.top, u.separation
                 continue
             same_tag = prev is not None and prev.top[0].target == u.top[0].target and prev.word == u.word
-            # Adjacent words of one line with the same tag are one value ("Senior Adjudicator");
-            # across lines, only the "continues" answer joins them.
-            same_line_words = same_tag and u.word and prev.line_index == u.line_index
+            # Adjacent words of one line with the same tag are one value ("Senior Adjudicator"),
+            # unless a filled form field starts there: then, as across lines, only the
+            # "continues" answer joins them (first name | last name, but not tenant | landlord).
+            same_line_words = same_tag and u.word and prev.line_index == u.line_index \
+                and (not u.doc.new_field or u.link >= self.threshold)
             if same_tag and (same_line_words or (not u.word and u.link >= self.threshold)):
                 prev.members = (prev.members or [prev.doc]) + [u.doc]
                 continue
@@ -334,8 +339,9 @@ class FlatTagger:
                         gap = v.line_index - other.line_index
                         p = yes.get(f"same{gap}_{v.line_index}", 0.0) if gap in (1, 2) else 0.0
                     # A repeated field starts a new item, unless the field is itself a list
-                    # inside the item (a side's names[]: several names, one side).
-                    repeat = leaf in fields.get((arr, oid), set()) and "[]" not in leaf[len(arr):]
+                    # inside the item (a side's names[]: several names, one side). Captions
+                    # repeat freely ("Full name: … Date of birth: …" is one party).
+                    repeat = is_value(leaf) and leaf in fields.get((arr, oid), set()) and "[]" not in leaf[len(arr):]
                     if p >= self.threshold and not repeat:
                         joined = oid
                         break
