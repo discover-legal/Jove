@@ -1,9 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://jove.local/schemas/legal_intake.schema.json",
-  "x-jurisdiction": "Ontario, Canada",
   "title": "Legal intake",
-  "description": "What an Ontario law firm captures when opening a matter, with one home for each kind of value: every person or organization is a party, every contact detail sits under contact, every sum of money is an amount, every dated happening an event or deadline. Whose a name or contact detail is (the client's, another party's, the document issuer's) is decided by a separate question, not by the field.",
+  "description": "What a law firm captures when opening a matter, with one home for each kind of value: every person or organization is a party, every contact detail sits under contact, every sum of money is an amount, every dated happening an event or deadline. Whose a name or contact detail is (the client's, another party's, the document issuer's) is decided by a separate question, not by the field.",
   "x-instructions": "Record everything from the point of view of the law firm opening this file. 'The client' is the firm's own client: the person or organization the intake is about. If state.context.job_context names the firm or the client, use it. Documents from other lawyers (demand letters, pleadings, notices) are usually written for the other side: in them, 'we act for X' or 'our client X' means X is an opposing party.",
   "x-owners": {
     "client": {

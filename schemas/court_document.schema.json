@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://jove.local/schemas/court_document.schema.json",
   "title": "Court document",
-  "description": "What an Ontario court filing says: the court and file, the parties, the document and its form, sworn evidence (deponent, jurat, commissioner), schedules, counsel on the back sheet, and the electronic-signing and page-stamp data added when it was signed and produced. For affidavits, pleadings, motions, factums, orders and endorsements.",
+  "description": "What a court filing says: the court and file, the parties, the document and its form, sworn evidence (deponent, jurat, commissioner), schedules, counsel on the back sheet, and the electronic-signing and page-stamp data added when it was signed and produced. For affidavits, pleadings, motions, factums, orders and endorsements.",
   "x-instructions": "Tag what the text says about the filing. The back sheet (the last page, with the short title of proceeding and the lawyers' block) repeats the court, file number and parties: tag them the same way as on the first page. Text added by an e-signing service (DocuSign, Adobe Sign) or stamped on every page for production is metadata about the copy, not part of the document's own content.",
   "type": "object",
   "properties": {

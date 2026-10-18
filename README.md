@@ -2,15 +2,16 @@
 
 [![tests](https://github.com/discover-legal/Jove/actions/workflows/tests.yml/badge.svg)](https://github.com/discover-legal/Jove/actions/workflows/tests.yml)
 
-Jove turns scanned documents into structured data. Give it scanned pages
-(PDFs or images) and a data schema (a JSON Schema). It tags every piece of text
-with the schema field that text gives a value for, and it emits a JSONL graph
-for downstream systems. Each tag carries a hash that points back to the exact
-page and bytes it came from.
+Jove turns scanned documents into structured data and a knowledge graph. Give
+it scanned pages (PDFs or images) and a data schema (a JSON Schema). It tags
+every piece of text with the schema field that text gives a value for, and it
+emits a JSONL graph for downstream systems, with exports to Obsidian, FalkorDB
+and TypeDB. Each tag carries a hash that points back to the exact page and
+bytes it came from.
 
-It was built for Ontario law-firm intake (court endorsements, tribunal forms,
-demand letters, client intake forms), but the schema is yours: the repo also
-ships schemas for court filings (with e-signing and production-stamp data),
+It is a general tool: the schema is yours, and nothing in the pipeline is tied
+to one kind of document or one jurisdiction. The repo ships example schemas
+for legal intake, court filings (with e-signing and production-stamp data),
 flyers and posted notices, and document structure.
 
 - **Fully automatic.** There is no review UI. Jove tags and does not choose: if

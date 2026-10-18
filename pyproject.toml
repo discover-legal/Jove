@@ -1,7 +1,7 @@
 [project]
 name = "jove"
 version = "0.1.0"
-description = "Place chunks of scanned pages into a data schema; emit JSONL."
+description = "Tag scanned documents against any data schema; emit JSONL and knowledge graphs."
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",

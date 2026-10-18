@@ -39,18 +39,18 @@ Schemas:
   letterhead's address and phones under `letterhead` (the legal schema had
   given them to the client). On the N4 it separated printed labels from
   filled values.
-- `schemas/court_document.schema.json`: an Ontario court filing (court, file
+- `schemas/court_document.schema.json`: a court filing (court, file
   numbers, parties, title and form, deponent, body paragraphs, schedules, jurat
   with remote commissioning, lawyer's certificate, signatures, back-sheet
   counsel), plus the copy's metadata: e-signing data (platform, envelope ID,
   signer stamps, timestamps, certificate of completion), production page stamps
   and law-firm document numbers. Deponent and jurat are `x-mentions`. 46 fields.
-- `schemas/legal_intake.schema.json` is the reference schema: Ontario law-firm
+- `schemas/legal_intake.schema.json` is the reference schema: law-firm
 intake with one home per kind of value (62 fields, 14 sections; see "Coarse
 schema" below). `schemas/legal_intake_detailed.schema.json` is the earlier
 version that files names and contact details under their owner (134 fields,
-30 sections). Their examples use Ontario courts,
-tribunals, IDs and file-number formats. SIN and OHIP numbers are deliberately
+30 sections). Their examples happen to come from Ontario courts, tribunals,
+IDs and file-number formats, like the eval set; the schemas are not limited to them. SIN and OHIP numbers are deliberately
 absent.
 
 ## Pipeline
@@ -562,7 +562,7 @@ Jobs run in the background, in-process, and store their state under `data/jobs/<
   low-light flyer photo went from 0.31 to 0.94. The local LLM chooser was run end to end on
   that flyer. Jev request packing and response parsing are checked against the
   SDK's own types.
-- **Next: run it for real.** Put real Ontario scans through Jev (needs a key)
+- **Next: run it for real.** Put real scans through Jev (needs a key)
   and through Ollama. Build a small labelled evaluation set and a scorer
   (per-field precision and recall on spans, and whether list items group
   correctly). Tune the split gate and the block gap on that set.
