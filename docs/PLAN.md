@@ -445,6 +445,8 @@ One JSON object per line. The order is `job`, `page`, `node`, `edge`, `warning`.
 - `python -m jove.graph` renders results as a text tree, an Obsidian vault,
   Cypher (FalkorDB, Neo4j, Memgraph) or a TypeDB hypergraph in which each tag
   is one relation over text, field, list items and owner (README, "Graphs").
+  `jove.entities` groups the names across documents into people and
+  organisations, with a reason per merge and conflict-check flags.
 
 ## Web surface
 

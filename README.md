@@ -152,6 +152,7 @@ intake_form.photo.jpg
   - `Records/` holds a note per record: its values as properties and a table
     linking each value to its source line.
   - `Owners/` links each owner to their records.
+  - `People/` holds a note per person or organisation (see below).
   - The page lines (`Source/`) and the schema (`Schema/`) are hidden from the
     graph view, which shows records, owners and documents.
 - **FalkorDB** (or Neo4j or Memgraph via the `.cypher` file) holds a property
@@ -175,6 +176,46 @@ intake_form.photo.jpg
   View it in [TypeDB Studio](https://studio.typedb.com) (connect to
   `http://localhost:8000`, user `admin`, password `password`), e.g.
   `match $t isa tag, has name $n; $n like "^Party";`
+
+### People and organisations across documents
+
+Every name the tagger found is a mention: a party's name, their lawyer, the
+names on each side of a case, a document's author or recipient. `jove.entities`
+groups mentions that name the same person or organisation, across all the
+documents given, and says why each joined:
+
+- the same name, ignoring case, titles ("Ms.") and the form of a company suffix
+  ("Inc." / "Incorporated", "Professional Corporation");
+- a letter or two apart in a long name (OCR);
+- a shorter form of one person's name ("D. Whitcombe", "Jane Doe" for "Jane
+  Alexandra Doe"), only when exactly one person fits; otherwise the entity is
+  flagged as ambiguous;
+- a lone word ("Whitcombe") only within its own document, and only when one
+  fuller name fits.
+
+Values naming several are split first ("Marcus Oyelaran and Priya Oyelaran"),
+but not organisations with "and" or "&" in their name ("Smith & Co. LLP"). In a
+counsel line ("Rahul Shastri, for the respondents Rutmet Inc.") the names after
+"for the …" are the represented party. Each entity is flagged for a conflict
+check when it is our client in one place and another party in another, and when
+its dates of birth or registration numbers differ. It is deterministic: no
+model is asked.
+
+```
+People and organisations
+  Jane Alexandra Doe  (person, 2 mentions in 2 documents)
+    demand_letter.photo.jpg  Party 1 › Name, Our client: “Jane Doe”  p1 l6  [a shorter form of the name]
+    intake_form.photo.jpg    Party 1 › Name, Our client: “Jane Alexandra Doe”  p1 l4
+  Priya Oyelaran  (person, 2 mentions in 2 documents)
+    ⚠ Conflict check: our client in n4_photo.pdf; another party in n4_filled.pdf
+```
+
+The summary ends with this list. In the vault, `People/` has a note per entity
+(its mentions, where each was read and why it is the same, flags as warnings),
+and every name in a record's table links to it, so the graph view joins
+documents through the people they share. Cypher adds `Entity` nodes with
+`NAMES` edges from the text; TypeDB adds `actor` entities and `mention`
+relations.
 
 An existing vault, graph or database is only overwritten with `--replace`.
 

@@ -37,6 +37,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urlparse
 
+from . import entities as er
 from .choose import NONE, is_value
 
 
@@ -46,6 +47,7 @@ class Graph:
     edges: list[tuple[str, str, str, dict]] = field(default_factory=list)  # (from, rel, to, props)
     tags: list[dict] = field(default_factory=list)  # hyperedges: text, field, items, owner, props
     nested: set[tuple[str, str]] = field(default_factory=set)  # (item, parent item) already linked
+    entities: list[dict] = field(default_factory=list)  # jove.entities groups, across documents
 
     def add(self, nid: str, label: str, **props) -> str:
         self.nodes.setdefault(nid, {"label": label, **{k: v for k, v in props.items() if v is not None}})
@@ -98,7 +100,37 @@ def build(results: list[list[dict]], everything: bool = False) -> Graph:
     if not everything:
         _prune(g)
     _name(g)
+    _resolve(g)
     return g
+
+
+def _resolve(g: Graph) -> None:
+    """Entity nodes: the people and organisations named, each linked from the text naming it."""
+    recs = records(g)
+    for rec in recs:
+        rec["owner_key"] = g.nodes[rec["owner"]]["key"] if rec["owner"] else None
+    found = er.mentions(recs)
+    for m in found:
+        m["doc_name"] = g.nodes[m["doc"]]["name"]
+    g.entities = er.resolve(found)
+    owners = {n["name"]: nid for nid, n in g.nodes.items()}
+    taken = set(owners)
+    for i, e in enumerate(g.entities, start=1):
+        e["id"] = nid = f"entity:{i}"
+        name = _safe(e["name"])
+        clash = owners.get(name)
+        if clash and g.nodes[clash]["label"] in ("Line", "Block", "Span", "Segment", "Chunk"):
+            g.nodes[clash]["name"] = other = _safe(f"{name} (text)")  # the entity keeps the plain name
+            taken.add(other)
+            taken.discard(name)
+        k = 2
+        while name in taken:
+            name, k = f"{_safe(e['name'])} {k}", k + 1
+        taken.add(name)
+        g.add(nid, "Entity", kind=e["kind"], aliases=e["aliases"], flags=e["flags"])
+        g.nodes[nid]["name"] = name
+        for m in e["mentions"]:
+            g.link(m["text"], "names", nid, written=m["as"], how=m["how"] or None)
 
 
 def _prune(g: Graph) -> None:
@@ -350,13 +382,36 @@ def summary(g: Graph) -> str:
                 unsure = f"  ? {r['score']:.2f}" if r["score"] < LOW else ""
                 out.append(f"    {r['field']:<20} {_clip(r['value'], 60):<60}  p{r['page']} l{r['line']}{unsure}")
         out.append("")
-    return "\n".join(out)
+    return "\n".join(out + people(g))
+
+
+def people(g: Graph) -> list[str]:
+    """Who is named, across the documents: each entity, where it is mentioned and as what,
+    then its flags (conflict check, facts that disagree). Lone fragments come last."""
+    whole = [e for e in g.entities if e["kind"] != "partial"]
+    parts = [e for e in g.entities if e["kind"] == "partial"]
+    if not g.entities:
+        return []
+    out = ["People and organisations"]
+    for e in whole + parts:
+        docs = len({m["doc"] for m in e["mentions"]})
+        out.append(f"  {g.nodes[e['id']]['name']}  ({e['kind']}, {len(e['mentions'])} mention"
+                   f"{'s' if len(e['mentions']) != 1 else ''}{f' in {docs} documents' if docs > 1 else ''})")
+        for flag in e["flags"]:
+            out.append(f"    ⚠ {flag}")
+        for m in e["mentions"]:
+            who = f", {OWNER_NAMES.get(m['owner'], m['owner'])}" if m["owner"] else ""
+            how = f"  [{m['how']}]" if m["how"] else ""
+            out.append(f"    {_clip(m['doc_name'], 24):<24} {m['title']} › {m['field']}{who}: “{m['as']}”"
+                       f"  p{m['page']} l{m['line']}{how}")
+    return out + [""]
 
 
 # ------------------------------------------------------------------ obsidian
 
 COLOURS = {"Document": 0x2B44C7, "Page": 0x6B7280, "Block": 0x9CA3AF, "Line": 0x0F8FA8, "Span": 0x1F9D6B,
-           "Segment": 0x1F9D6B, "Chunk": 0x1F9D6B, "Field": 0xD6452F, "Item": 0xE08A00, "Owner": 0x9B4FD0}
+           "Segment": 0x1F9D6B, "Chunk": 0x1F9D6B, "Field": 0xD6452F, "Item": 0xE08A00, "Owner": 0x9B4FD0,
+           "Entity": 0xBE185D}
 # Owner keys -> (strong, pale) colours; anything else is grey.
 OWNER_COLOURS = {"client": ("#7C3AED", "#F3EEFF"), "party": ("#C2410C", "#FFF1E8"),
                  "issuer": ("#0F766E", "#E6F6F4"), "property": ("#15803D", "#EAF7EE")}
@@ -364,9 +419,9 @@ GREY = ("#4B5563", "#F3F4F6")
 
 # How each edge reads to a person, from its source note.
 REL_WORDS = {"contains": "includes", "tagged": "is", "in": "about", "item_of": "one of",
-             "owned_by": "belongs to", "of": "in", "part_of": "under"}
+             "owned_by": "belongs to", "of": "in", "part_of": "under", "names": "names"}
 # Vault folders: what a person reads at the top, provenance and schema out of the way.
-FOLDERS = {"Document": "Documents", "Item": "Records", "Owner": "Owners", "Field": "Schema",
+FOLDERS = {"Document": "Documents", "Item": "Records", "Owner": "Owners", "Field": "Schema", "Entity": "People",
            "Page": "Source", "Block": "Source", "Line": "Source", "Chunk": "Source"}
 
 
@@ -381,10 +436,20 @@ def obsidian(g: Graph, out: Path, replace: bool = False) -> None:
     for folder in ours:  # only the folders this writes, so stale notes don't linger
         shutil.rmtree(folder)
     recs = records(g)
-    names = {nid: n["name"] for nid, n in g.nodes.items()}
+    names = {nid: _note(n["name"]) for nid, n in g.nodes.items()}
     for rec in recs:  # sections outside lists are records too; name them per document if needed
         if rec["key"] not in names:
             names[rec["key"]] = _unique(rec["name"], names, g.nodes[rec["doc"]]["name"])
+
+    named: dict[str, list[str]] = {}  # text id -> the entities it names
+    for e in g.entities:
+        for m in e["mentions"]:
+            if names[e["id"]] not in named.setdefault(m["text"], []):
+                named[m["text"]].append(names[e["id"]])
+
+    def value(x: dict) -> str:
+        who = named.get(x["text"], [])
+        return f"**{_cell(x['value'])}**" + (" → " + ", ".join(f"[[{w}]]" for w in who) if who else "")
 
     def write(nid: str, kind: str, front: dict, body: str) -> None:
         folder = out / FOLDERS[kind]
@@ -398,7 +463,7 @@ def obsidian(g: Graph, out: Path, replace: bool = False) -> None:
         values = {}
         for r in rec["rows"]:
             values.setdefault(r["field"], r["value"])
-        rows = "\n".join(f"| {r['field']} | **{_cell(r['value'])}** | [[{names[r['line_id']]}\\|p{r['page']} l{r['line']}]] |"
+        rows = "\n".join(f"| {r['field']} | {value(r)} | [[{names[r['line_id']]}\\|p{r['page']} l{r['line']}]] |"
                          f" {'⚠ ' if r['score'] < LOW else ''}{r['score']:.2f} |" for r in rec["rows"])
         body = (f"{'Belongs to [[' + names[owner] + ']] · ' if owner else ''}In [[{names[rec['doc']]}]]\n\n"
                 f"| Field | Value | Read from | Score |\n|---|---|---|---|\n{rows}\n")
@@ -417,9 +482,20 @@ def obsidian(g: Graph, out: Path, replace: bool = False) -> None:
             for r in mine:
                 who = f" · {names[r['owner']]}" if r["owner"] else ""
                 body += f"\n### [[{names[r['key']]}|{r['title']}]]{who}\n\n| Field | Value | Read from |\n|---|---|---|\n"
-                body += "\n".join(f"| {x['field']} | {'⚠ ' if x['score'] < LOW else ''}**{_cell(x['value'])}** |"
+                body += "\n".join(f"| {x['field']} | {'⚠ ' if x['score'] < LOW else ''}{value(x)} |"
                                    f" [[{names[x['line_id']]}\\|p{x['page']} l{x['line']}]] |" for x in r["rows"]) + "\n"
             write(nid, kind, {"source": n.get("source"), "created": n.get("created_at"), "context": n.get("context")}, body)
+        elif kind == "Entity":
+            e = next(x for x in g.entities if x["id"] == nid)
+            body = "".join(f"> [!warning] {f}\n" for f in e["flags"]) + ("\n" if e["flags"] else "")
+            body += "| Document | Record | Field | Written | Whose | Read from | Why the same |\n|---|---|---|---|---|---|---|\n"
+            body += "\n".join(f"| [[{names[m['doc']]}]] | [[{names[m['record']]}\\|{m['title']}]] | {m['field']} |"
+                               f" {_cell(m['as'])} | {OWNER_NAMES.get(m['owner'], m['owner'] or '')} |"
+                               f" [[{names[m['line_id']]}\\|p{m['page']} l{m['line']}]] | {m['how']} |"
+                               for m in e["mentions"]) + "\n"
+            write(nid, kind, {"kind": e["kind"], "aliases": e["aliases"],
+                              "documents": sorted({f"[[{names[m['doc']]}]]" for m in e["mentions"]}),
+                              "flags": e["flags"]}, body)
         elif kind == "Owner":
             mine = [r for r in recs if r["owner"] == nid]
             write(nid, kind, {"document": f"[[{names[nid.split('/', 1)[0]]}]]"},
@@ -440,11 +516,23 @@ def obsidian(g: Graph, out: Path, replace: bool = False) -> None:
               for o in {r["owner"] for r in recs if r["owner"]}]
     groups += [{"query": "path:Records", "color": {"a": 1, "rgb": int(GREY[0][1:], 16)}},
                {"query": "path:Owners", "color": {"a": 1, "rgb": 0x9B4FD0}},
+               {"query": "path:People", "color": {"a": 1, "rgb": COLOURS["Entity"]}},
                {"query": "path:Documents", "color": {"a": 1, "rgb": 0x2B44C7}}]
     (settings / "graph.json").write_text(json.dumps({
         "search": "-path:Source -path:Schema", "showTags": False, "showOrphans": False, "colorGroups": groups,
         "textFadeMultiplier": -1, "nodeSizeMultiplier": 1.3, "lineSizeMultiplier": 0.6,
         "linkDistance": 120, "repelStrength": 15}, indent=2))
+
+
+def _note(name: str) -> str:
+    """A note name Obsidian links to as a note: "scan.pdf" would link to a PDF attachment,
+    so it becomes "scan (pdf)"; a trailing full stop is dropped."""
+    name = re.sub(r"\.(\w{2,4})$", lambda m: f" ({m[1].lower()})" if m[1].lower() in _EXTS else m[0], name)
+    return name.rstrip(".") or name
+
+
+_EXTS = {"pdf", "jpg", "jpeg", "png", "gif", "webp", "tif", "tiff", "bmp", "heic", "svg", "mp3", "mp4", "webm",
+         "docx", "doc", "txt", "csv", "json", "html", "htm", "xml", "md", "canvas", "base"}
 
 
 def _unique(name: str, names: dict, doc: str) -> str:
@@ -616,11 +704,16 @@ TYPEQL_SCHEMA = """define
   attribute owner-p, value double;
 
   attribute key, value string;
+  attribute kind, value string;
+  attribute other-name, value string;
+  attribute flag, value string;
+  attribute written, value string;
+  attribute how, value string;
 
   entity node @abstract, owns node-id @key, owns name, plays containment:container, plays containment:part;
   entity document sub node, owns source, owns created-at, owns chooser, owns tagger, owns context, plays ownership:document;
   entity page sub node, owns source, owns sha256, owns page-number;
-  entity region @abstract, sub node, owns text, owns bbox, plays tag:value;
+  entity region @abstract, sub node, owns text, owns bbox, plays tag:value, plays mention:text;
   entity block sub region;
   entity line sub region;
   entity span sub region;
@@ -629,6 +722,8 @@ TYPEQL_SCHEMA = """define
   entity field sub node, owns path, plays tag:field, plays listing:list;
   entity item sub node, owns path, plays tag:item, plays listing:item;
   entity owner sub node, owns key, plays tag:owner, plays ownership:owner;
+  # A person or organisation, across documents (jove.entities).
+  entity actor sub node, owns kind, owns other-name @card(0..), owns flag @card(0..), plays mention:actor;
 
   # A tag is one hyperedge: the text, the field it gives, the list items it is part of, whose it is.
   relation tag, relates value, relates field, relates item @card(0..), relates owner, owns name,
@@ -637,13 +732,15 @@ TYPEQL_SCHEMA = """define
   relation containment, relates container, relates part;
   relation listing, relates list, relates item;
   relation ownership, relates owner, relates document;
+  relation mention, relates text, relates actor, owns written, owns how;
 """
 
 _ENTITY = {"Document": "document", "Page": "page", "Block": "block", "Line": "line", "Span": "span",
-           "Segment": "segment", "Chunk": "chunk", "Field": "field", "Item": "item", "Owner": "owner"}
+           "Segment": "segment", "Chunk": "chunk", "Field": "field", "Item": "item", "Owner": "owner",
+           "Entity": "actor"}
 _ATTR = {"text": "text", "bbox": "bbox", "path": "path", "name": "name", "source": "source", "sha256": "sha256",
          "page": "page-number", "created_at": "created-at", "chooser": "chooser", "tagger": "tagger",
-         "context": "context", "list": "path", "key": "key"}
+         "context": "context", "list": "path", "key": "key", "kind": "kind", "aliases": "other-name", "flags": "flag"}
 
 
 def typeql(g: Graph, batch: int = 100) -> tuple[str, list[str]]:
@@ -654,7 +751,8 @@ def typeql(g: Graph, batch: int = 100) -> tuple[str, list[str]]:
         has = [f"has node-id {_lit(nid)}"]
         for k, v in n.items():
             if k in _ATTR and not (n["label"] == "Field" and k == "list"):
-                has.append(f"has {_ATTR[k]} {_lit(','.join(map(str, v)) if k == 'bbox' else v)}")
+                for x in v if isinstance(v, list) and k != "bbox" else [v]:
+                    has.append(f"has {_ATTR[k]} {_lit(','.join(map(str, x)) if k == 'bbox' else x)}")
         ents.append(f"$n{len(ents)} isa {_ENTITY[n['label']]}, " + ", ".join(has) + ";")
     queries += ["insert\n" + "\n".join(ents[i:i + batch]) for i in range(0, len(ents), batch)]
 
@@ -666,6 +764,8 @@ def typeql(g: Graph, batch: int = 100) -> tuple[str, list[str]]:
             rels.append(("listing", {"item": a, "list": b}, {}))
         elif rel == "of":
             rels.append(("ownership", {"owner": a, "document": b}, {}))
+        elif rel == "names":
+            rels.append(("mention", {"text": a, "actor": b}, {"written": props.get("written"), "how": props.get("how")}))
     for t in g.tags:
         players = {"value": [t["text"]], "field": [t["field"]], "item": t["items"], "owner": [t["owner"]] if t["owner"] else []}
         attrs = {"name": f"{g.nodes[t['field']]['name']} = {clean(g.nodes[t['text']]['text'])}",

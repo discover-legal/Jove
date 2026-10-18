@@ -53,10 +53,12 @@ def test_tree_and_summary():
 def test_renderings(tmp_path):
     g = build([RESULT])
     lines = cypher(g)
-    assert 'CREATE (:Span {id: "j1/p0001/v001", label: "Span", text: "Jane Doe", bbox: [5, 0, 9, 9], name: "Jane Doe"})' in lines \
-        or any('name: "Jane Doe"' in l and ":Span" in l for l in lines)
+    assert any('name: "Jane Doe (text)"' in l and ":Span" in l for l in lines)  # the person keeps the plain name
+    assert any(':Entity' in l and 'name: "Jane Doe"' in l and 'kind: "person"' in l for l in lines)
+    assert any("CREATE (a)-[:NAMES {written: \"Jane Doe\"}]->(b)" in l for l in lines)
     assert any("CREATE (a)-[:TAGGED {rank: 1, score: 0.9}]->(b)" in s for s in lines)
     schema, queries = typeql(g)
+    assert "relation mention" in schema and any("mention (text: " in q for q in queries)
     assert "relation tag" in schema and 'has name "Party 1 – Jane Doe"' in queries[0]
     assert any("tag (value: " in q and "item: " in q and "owner: " in q and "has rank 1" in q for q in queries)
     cards = dot(g)
@@ -67,10 +69,11 @@ def test_renderings(tmp_path):
     obsidian(g, tmp_path)
     item = (tmp_path / "Records" / "Party 1 – Jane Doe.md").read_text()
     assert 'Name: "Jane Doe"' in item and 'owner: "[[Our client]]"' in item  # values as properties
-    assert "| Name | **Jane Doe** | [[Name – Jane Doe\\|p1 l1]] |" in item  # and a table linked to the source line
+    assert "| Name | **Jane Doe** → [[Jane Doe]] | [[Name – Jane Doe\\|p1 l1]] |" in item  # linked to the line and the person
     assert (tmp_path / "Source" / "Name – Jane Doe.md").exists() and (tmp_path / "Schema" / "Party › Name.md").exists()
     assert '"search": "-path:Source -path:Schema"' in (tmp_path / ".obsidian" / "graph.json").read_text()
-    assert (tmp_path / ".obsidian" / "graph.json").exists()
+    assert "| [[j1]] | [[Party 1 – Jane Doe\\|Party 1]] | Name | Jane Doe | Our client |" in \
+        (tmp_path / "People" / "Jane Doe.md").read_text()
 
 
 def test_refuses_what_it_would_clobber(tmp_path):
