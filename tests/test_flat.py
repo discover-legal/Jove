@@ -201,3 +201,36 @@ def test_a_bulleted_line_starts_a_new_value(tmp_path):
     names = [nodes[e["from"]]["text"] for e in recs if e["type"] == "edge" and e["rel"] == "tagged"
              and e["rank"] == 1 and e["to"] == "parties[].name"]
     assert names == ["Acme Ltd", "● Acme Bolt\nAcme Corp"]
+
+
+def test_names_in_one_list_share_a_field(tmp_path):
+    # "Sammon, Wheeler and Chan": Jev torn between two fields name by name; the list takes one
+    rules = RULES | {(n, w): "parties[]" for n, w in [("", "Sammon,"), ("", "Wheeler"), ("", "Chan")]} | {
+        ("parties[]", "Sammon,"): {"parties[].role": 0.6, "parties[].name": 0.4},
+        ("parties[]", "Wheeler"): {"parties[].name": 0.55, "parties[].role": 0.45},
+        ("parties[]", "Chan"): {"parties[].role": 0.65, "parties[].name": 0.35}}
+    tags = _tags(tmp_path, "Sammon, Wheeler and Chan", rules)
+    assert [tags[w][0] for w in ("Sammon,", "Wheeler", "Chan")] == ["parties[].role"] * 3
+
+
+def test_a_certain_member_keeps_its_field(tmp_path):
+    rules = RULES | {("parties[]", "Acme,"): "parties[].name", ("", "Acme,"): "parties[]"}
+    tags = _tags(tmp_path, "Acme, landlord", rules)  # both certain: a name and a role, not a list
+    assert tags["Acme,"][0] == "parties[].name" and tags["landlord"][0] == "parties[].role"
+
+
+def test_a_name_cut_in_two_inside_a_list_is_one_value(tmp_path):
+    # "Sammon, Andrea Wheeler": Andrea and Wheeler each torn between the same two fields
+    rules = RULES | {(n, w): "parties[]" for n, w in [("", "Sammon,"), ("", "Andrea"), ("", "Wheeler"), ("", "tenant")]} | {
+        ("parties[]", "Sammon,"): {"parties[].role": 0.8, "parties[].name": 0.2},
+        ("parties[]", "Andrea"): {"parties[].name": 0.52, "parties[].role": 0.48},
+        ("parties[]", "Wheeler"): {"parties[].role": 0.55, "parties[].name": 0.45}}
+    tags = _tags(tmp_path, "Sammon, Andrea Wheeler", rules)
+    assert tags["Andrea Wheeler"][0] == tags["Sammon,"][0] == "parties[].role"
+
+
+def test_a_role_beside_a_name_is_not_a_list(tmp_path):
+    rules = RULES | {("", "Bolt"): "parties[]", ("parties[]", "Bolt"): {"parties[].name": 0.8, "parties[].role": 0.2},
+                     ("parties[]", "landlord"): {"parties[].role": 0.6, "parties[].name": 0.4}}
+    tags = _tags(tmp_path, "Bolt landlord", rules)
+    assert tags["Bolt"][0] == "parties[].name" and tags["landlord"][0] == "parties[].role"

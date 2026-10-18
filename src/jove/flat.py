@@ -36,6 +36,8 @@ from .questions import POV, UNTRUSTED, Path, choice, label, paths, standing
 
 THRESHOLD = 0.5
 SURE = 0.7  # a word this sure of a different field starts its own value, even if it 'continues'
+CERTAIN = 0.9  # a list member this sure of its field keeps it ("Toronto, Ontario": city, province)
+LINKS = {"and", "&", "or", "et", ""}  # words that join a list's members ("A, B and C")
 BULLET = re.compile(r"\s*[●•▪◦■□○‣◆➢✓✔☐☑*·-]\s")  # a bulleted line starts something new
 
 
@@ -158,7 +160,7 @@ class FlatTagger:
                 top = line_tops[i]
                 units.append(Unit(line, i, top, _separation(top), first_link))
 
-        values = self._merge(units)
+        values = _lists(self._merge(units), lines)
         instances = self._items(values, yes)
         nodes, edges = self._records(page_id, lines, values, instances, split)
         # The document tree: page → block → line (spans hang off their lines below).
@@ -311,8 +313,10 @@ class FlatTagger:
             # Adjacent words of one line with the same tag are one value ("Senior Adjudicator"),
             # unless a filled form field starts there: then, as across lines, only the
             # "continues" answer joins them (first name | last name, but not tenant | landlord).
+            # A comma ends a value too ("Sammon, Wheeler"), unless the next word continues it.
             same_line_words = same_tag and u.word and prev.line_index == u.line_index \
-                and (not u.doc.new_field or u.link >= self.threshold)
+                and (not (u.doc.new_field or (prev.members or [prev.doc])[-1].text.endswith((",", ";")))
+                     or u.link >= self.threshold)
             if same_tag and (same_line_words or (not u.word and u.link >= self.threshold)):
                 prev.members = (prev.members or [prev.doc]) + [u.doc]
                 continue
@@ -387,6 +391,75 @@ class FlatTagger:
                         edge["mention"] = True  # found inside a prose line that keeps its own tag
                 edges.append(edge)
         return nodes, edges
+
+
+def _lists(values: list[Unit], lines: list[DocNode]) -> list[Unit]:
+    """Values listed on one line ("Sammon, Wheeler and Chan, for the respondents") share a field.
+
+    Jev labels each word with the whole line as context and can split such a list between
+    near-tied fields (name 0.69 | represented_by 0.70). Members joined only by commas or
+    "and", or side by side and torn between the same fields, take the field with the most
+    score summed over the list, unless one is certain.
+    """
+    def words(u: Unit) -> list[DocNode]:
+        return u.members or [u.doc]
+
+    def gap(a: Unit, b: Unit) -> list[str]:
+        """The words between two values on one line, bare and lowercased."""
+        line = lines[a.line_index].children
+        i = next(k for k, w in enumerate(line) if w is words(a)[-1])
+        j = next(k for k, w in enumerate(line) if w is words(b)[0])
+        return [re.sub(r"[^\w&]", "", w.text).lower() for w in line[i + 1:j]]
+
+    def joined(a: Unit, b: Unit) -> bool:
+        if not (a.word and b.word and a.line_index == b.line_index
+                and is_value(a.top[0].target) and is_value(b.top[0].target)
+                and a.top[0].target.rsplit(".", 1)[0] == b.top[0].target.rsplit(".", 1)[0]):
+            return False
+        between = gap(a, b)
+        if between:
+            return all(t in LINKS for t in between)
+        if words(b)[0].new_field:  # a form's next box
+            return False
+        if words(a)[-1].text.endswith((",", ";")):
+            return True
+        # Side by side, both torn between the same two fields: a name Jev cut in two
+        # ("Andrea" name 0.69 | represented_by 0.63, "Wheeler" represented_by 0.71 | name 0.61).
+        pair = {a.top[0].target, b.top[0].target}
+        return len(pair) == 2 and all({p.target for p in u.top if p.score >= THRESHOLD} >= pair for u in (a, b))
+
+    runs, run = [], [values[0]] if values else []
+    torn = set()  # ids of values side by side with the one before, both torn between the same fields
+    for prev, u in zip(values, values[1:]):
+        if joined(prev, u):
+            run.append(u)
+            if not gap(prev, u) and not words(prev)[-1].text.endswith((",", ";")):
+                torn.add(id(u))
+        else:
+            runs.append(run)
+            run = [u]
+    runs.append(run)
+    for run in runs:
+        targets = {u.top[0].target for u in run}
+        if len(targets) < 2 or any(u.top[0].score >= CERTAIN for u in run):
+            continue
+        total = {t: sum(max((p.score for p in u.top if p.target == t), default=0.0) for u in run) for t in targets}
+        best = max(sorted(targets), key=lambda t: total[t])
+        for u in run:
+            if u.top[0].target != best:
+                own = next((p for p in u.top if p.target == best), None)
+                lead = own or Path(best, u.top[0].nodes, u.top[0].probs)
+                u.top = [lead] + [p for p in u.top if p is not own]
+    # Members now of one field that sit side by side, with no comma, are one value again.
+    out: list[Unit] = []
+    for u in values:
+        prev = out[-1] if out else None
+        if prev is not None and id(u) in torn and prev.top[0].target == u.top[0].target \
+                and prev.line_index == u.line_index and not gap(prev, u):
+            prev.members = words(prev) + words(u)
+            continue
+        out.append(u)
+    return out
 
 
 def _mentionable(m: SchemaNode, target: str) -> bool:

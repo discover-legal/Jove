@@ -214,6 +214,18 @@ word continues the previous one's value.
   "CITATION: … v. …" line), the lower court's judge in some runs, and the N4
   photo's date (OCR lost its bullet). Counsel names on one line still split
   between name and represented_by.
+- **Lists share a field (2026-10-18).** Jev is torn on counsel: the schema gives a
+  lawyer two homes (a party's name, the represented_by of whom they act for), at
+  ~0.7 each, word by word, so "Matthew Sammon, Andrea Wheeler and Jacqueline Chan"
+  came out name | represented_by | represented_by. Values joined only by commas or
+  "and" (or side by side and torn between the same two fields, a name Jev cut in
+  two) now take the field with the most summed score, unless one member is
+  certain (≥ 0.9: "Toronto, Ontario" stays city, province); a comma ends a value
+  unless the next word continues it. The gold accepts both fields, so this is for
+  consistency, not score: first version 0.896, 0.881, 0.883 (noise), each counsel
+  line one field in 5 of 6 lines; the miss was a name cut in two ("Andrea" |
+  "Wheeler"), which the final version joins. That version is unit-tested but not
+  yet run on Jev (credits ran out).
 - **Halving (`JOVE_TAGGER=halve`, `halve.py`, an option).** Start from the
   whole document and ask, given the schema (in the shared state), "does this
   hold more than one value, so it should be cut in two?"; halve where yes
